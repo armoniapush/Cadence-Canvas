@@ -174,8 +174,8 @@ CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_en
 |---|---|---|---|---|---|
 | **Slice 1.1** | `storage` | Conexión SQLite WAL, pragmas, schema DDL v1 y test de integridad. | <= 300 LOC | `feat(storage): initialize sqlite wal schema v1 with pragmas` | ✅ Delivered (`e9dcdcb`, 4/4 tests ok, 299 LOC) |
 | **Slice 1.2** | `domain` | Tipos de dominio, validadores y CRUD de `Project` y `Track`. | <= 320 LOC | `feat(domain): track and project entities with causal validation` | ✅ Delivered (`ac04323`, 7/7 tests ok, 263 LOC) |
-| **Slice 1.3** | `domain/scene` | CRUD de `Scene` con OCC (`version`), contadores de palabras y retry helper. | <= 350 LOC | `feat(domain): scene operations with optimistic version locking` | ⏳ Ready |
-| **Slice 1.4** | `cli` | Scaffolding de `cadence` CLI (`init`, `track`, `scene`) con soporte `--json`. | <= 380 LOC | `feat(cli): bimodal cli scaffolding for project, tracks and scenes` |
+| **Slice 1.3** | `domain/scene` | CRUD de `Scene` con OCC (`version`), contadores de palabras y retry helper. | <= 350 LOC | `feat(domain): scene operations with optimistic version locking` | ✅ Delivered (`c819a6e`, 11/11 tests ok, 282 LOC) |
+| **Slice 1.4** | `cli` | Scaffolding de `cadence` CLI (`init`, `track`, `scene`) con soporte `--json`. | <= 380 LOC | `feat(cli): bimodal cli scaffolding for project, tracks and scenes` | ⏳ Ready |
 | **Slice 2.1** | `sweep_line` | Algoritmo Sweep-Line puro 2D con tupla total de desempate y golden hash test. | <= 310 LOC | `feat(sweep): 2d sweep-line assembly engine with total tie-breaking` |
 | **Slice 2.2** | `anchors` | DAG de lectura, validación acíclica Kahn y ordenación topológica. | <= 330 LOC | `feat(anchors): reading anchors dag with cycle detection` |
 | **Slice 2.3** | `export/md` | Exporter Markdown puro con write-to-temp atómico y tests byte-exact. | <= 260 LOC | `feat(export): deterministic markdown manuscript generator` |
