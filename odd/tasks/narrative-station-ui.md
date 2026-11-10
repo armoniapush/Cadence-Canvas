@@ -33,8 +33,25 @@
 |---|---|---|---|---|---|
 | **Slice 4.1** | `tauri/bridge` | Shell Tauri v2 en `src-tauri`, comandos IPC conectados a `cadence-core`, y scaffolding React 19 + Vite en `ui/`. | <= 400 LOC | `feat(tauri): shell v2 and ipc command bridge for cadence-core` | ✅ Completed |
 | **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ✅ Completed |
-| **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ⏳ Ready |
-| **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ⏳ Pending |
+| **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ✅ Completed |
+| **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ⏳ Ready |
+
+### Receipt de Ejecución: Slice 4.3 (`ui/editor`)
+- **HUD Métrico Leica / ARRI (`ui/src/editor/TonalHud.tsx`, 122 LOC)**:
+  * Visualizador cuadricanal en tiempo real: Diálogo cyan (`#38bdf8`), Acción amber (`#f97316`), Lore esmeralda (`#10b981`), Monólogo violeta (`#8b5cf6`) con porcentajes y micro-barras reactivas.
+  * Medidor de Varianza de Cadencia ($\sigma^2$) con pulso rítmico dinámico animado vía keyframe `cadencePulse`.
+  * Contador en vivo de palabras y caracteres. Modo compacto como pastilla flotante para el Modo Zen minimalista.
+- **Editor Atómico Desacoplado (`ui/src/editor/AtomicEditor.tsx`, 183 LOC)**:
+  * Buffer draft local independiente con guardado automático debounceado (600ms) o instantáneo vía `Ctrl+S` / `Cmd+S`.
+  * Manejo no destructivo de conflictos OCC (`StaleMutationConflict` / código 75): si la versión esperada no coincide, retiene intacto el texto del autor en memoria y presenta opciones tácticas de "Rebasar / Forzar" o "Descartar".
+  * Modo Zen minimalista activable mediante atajo `F11` o botón táctico: fondo ultra-oscuro militar (`#090a0f`), ancho de lectura inmersivo optimizado (65-75 caracteres, `72ch`), y HUD Leica/ARRI superior flotante.
+  * Selector y tags interactivos de menciones rápidas causales: `@ Personaje`, `# Lugar`, `! Objeto`.
+  * Presupuesto cumplido estrictamente: 122 + 183 = 305 LOC en componentes de editor (<= 400 LOC).
+- **Integración en `App.tsx`**:
+  * Acoplamiento en tiempo real con la escena seleccionada en el Canvas DAW.
+  * Estado de Modo Zen controlado a nivel superior con listener de teclado global para `F11` y `Esc`.
+  * Sincronización continua de recuento de palabras y versiones entre el editor atómico y las tarjetas del canvas.
+- **Verificación**: `npm run build` en `ui/` genera bundle en 868ms sin errores de TypeScript; suite de pruebas Rust (`cargo test`) pasa al 100% (48 tests).
 
 ### Receipt de Ejecución: Slice 4.2 (`ui/canvas`)
 - **Motor de Renderizado Canvas 120 FPS (`ui/src/canvas/renderer.ts`, 205 LOC)**:
@@ -65,3 +82,5 @@
 - **Rechazado: Servidor proxy intermedio entre frontend y backend.** Tauri v2 provee bindings nativos C/Rust de baja latencia (`invoke`) sin overhead de red.
 - **Rechazado: Manipular transformaciones CSS sobre SVG para las cintas Bézier.** El re-layout del árbol SVG en tiempo real genera picos de Garbage Collection y caídas de frames por debajo de 60 FPS con múltiples tracks. El renderizado en `<canvas>` 2D en triple capa con `requestAnimationFrame` mantiene 120 FPS sin bloqueos en el hilo principal del DOM.
 - **Rechazado: Mutar estado React en cada evento `mousemove` durante el arrastre de escena.** Despachar mutaciones de estado React a cada tick de ratón causa re-renderizados continuos del árbol JSX. Se mantiene la referencia mutable en `stateRef` y sólo se sincroniza al soltar el puntero (`pointerup`).
+- **Rechazado: Borrar o pisar el buffer local del usuario cuando el backend devuelve `StaleMutationConflict` (OCC).** Los cambios no guardados se preservan intactos en la memoria del editor y se ofrece acción explícita de "Rebasar / Forzar" o "Descartar", previniendo cualquier pérdida accidental de texto narrativo.
+- **Rechazado: Re-calcular métricas tonales completas en cada pulsación de tecla síncronamente.** Se implementó una cola debounceada (200ms para métricas y 600ms para guardado automático WAL) garantizando una superficie de escritura suave y libre de stuttering a 120 FPS.

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Project, Track, Scene, ReadingAnchor, TonalHistogram } from './types';
+import type { Project, Track, Scene, ReadingAnchor } from './types';
 import {
   openProject,
   listTracks,
@@ -7,9 +7,9 @@ import {
   listAnchors,
   createScene,
   moveScene,
-  computeTonalMetrics,
 } from './api';
 import { DawCanvas } from './canvas/DawCanvas';
+import { AtomicEditor } from './editor/AtomicEditor';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string>('project.cadence');
@@ -18,9 +18,9 @@ export function App() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [anchors, setAnchors] = useState<ReadingAnchor[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<TonalHistogram | null>(null);
   const [status, setStatus] = useState<string>('Inicializando Estación Narrativa...');
   const [error, setError] = useState<string | null>(null);
+  const [isZen, setIsZen] = useState<boolean>(false);
 
   const initProject = async (path: string) => {
     try {
@@ -37,11 +37,6 @@ export function App() {
       setTracks(loadedTracks);
       setScenes(loadedScenes);
       setAnchors(loadedAnchors);
-
-      const sampleMetrics = await computeTonalMetrics(
-        '“Iniciando calibración táctica del motor de montaje,” susurró el autor.'
-      );
-      setMetrics(sampleMetrics);
       setStatus(`Puente IPC activo. Conectado a proyecto '${proj.title}'.`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -54,8 +49,29 @@ export function App() {
     initProject(projectPath);
   }, []);
 
+  // Global F11 listener for Zen mode toggle
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F11') {
+        e.preventDefault();
+        setIsZen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
   const handleSelectScene = useCallback((scene: Scene | null) => {
     setSelectedSceneId(scene ? scene.id : null);
+  }, []);
+
+  const handleToggleZen = useCallback(() => {
+    setIsZen((prev) => !prev);
+  }, []);
+
+  const handleSceneUpdated = useCallback((updated: Scene) => {
+    setScenes((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    setStatus(`Escena '${updated.title}' guardada en WAL (v${updated.version}, ${updated.word_count} pal).`);
   }, []);
 
   const handleMoveScene = useCallback(
@@ -105,8 +121,21 @@ export function App() {
     [projectPath, scenes.length]
   );
 
-  const selectedScene = scenes.find((s) => s.id === selectedSceneId);
+  const selectedScene = scenes.find((s) => s.id === selectedSceneId) || null;
   const selectedTrack = tracks.find((t) => t.id === selectedScene?.track_id);
+
+  // Zen Mode View
+  if (isZen && selectedScene) {
+    return (
+      <AtomicEditor
+        scene={selectedScene}
+        projectPath={projectPath}
+        isZen={true}
+        onToggleZen={handleToggleZen}
+        onSceneUpdated={handleSceneUpdated}
+      />
+    );
+  }
 
   return (
     <div
@@ -169,6 +198,23 @@ export function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {selectedScene && (
+            <button
+              onClick={handleToggleZen}
+              style={{
+                padding: '4px 10px',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                color: 'var(--accent-cyan)',
+                border: '1px solid rgba(56, 189, 248, 0.3)',
+                borderRadius: '4px',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              ⛶ Modo Zen (F11)
+            </button>
+          )}
+
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Archivo:</span>
           <input
             type="text"
@@ -203,10 +249,10 @@ export function App() {
 
       {/* Main Workspace Body */}
       <main style={{ flex: 1, display: 'flex', gap: '12px', padding: '12px', overflow: 'hidden' }}>
-        {/* Left Rack: Telemetry, Selection & Invariants */}
+        {/* Left Rack: Telemetry, Project & Invariants */}
         <section
           style={{
-            width: '300px',
+            width: '260px',
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-specular)',
             borderRadius: '6px',
@@ -250,143 +296,35 @@ export function App() {
                 border: '1px solid var(--border-specular)',
               }}
             >
-              Proyecto: <strong style={{ color: '#e2e8f0' }}>{project.title}</strong> ({project.author || 'Autor'})
+              Proyecto: <strong style={{ color: '#e2e8f0' }}>{project.title}</strong> (
+              {project.author || 'Autor'})
             </div>
           )}
 
-          {/* Selected Scene Inspector */}
-          {selectedScene ? (
+          {selectedTrack && (
             <div
               style={{
                 backgroundColor: 'var(--bg-rack)',
-                border: '1px solid var(--accent-cyan)',
-                borderRadius: '6px',
-                padding: '12px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ fontWeight: 600, fontSize: '13px', color: '#f1f5f9' }}>
-                  {selectedScene.title}
-                </div>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    color: 'var(--accent-cyan)',
-                    fontFamily: 'monospace',
-                  }}
-                >
-                  v{selectedScene.version}
-                </span>
-              </div>
-
-              {selectedTrack && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-                  <div
-                    style={{
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: selectedTrack.color_hex,
-                    }}
-                  />
-                  <span style={{ color: 'var(--text-muted)' }}>Carril:</span>
-                  <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{selectedTrack.name}</span>
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '6px',
-                  fontSize: '11px',
-                  color: 'var(--text-muted)',
-                }}
-              >
-                <div>
-                  Inicio: <strong style={{ color: '#e2e8f0' }}>T:{selectedScene.t_start}</strong>
-                </div>
-                <div>
-                  Duración: <strong style={{ color: '#e2e8f0' }}>{selectedScene.duration}</strong>
-                </div>
-                <div>
-                  Palabras: <strong style={{ color: '#e2e8f0' }}>{selectedScene.word_count}</strong>
-                </div>
-                <div>
-                  Caracteres: <strong style={{ color: '#e2e8f0' }}>{selectedScene.char_count}</strong>
-                </div>
-              </div>
-
-              <div
-                style={{
-                  marginTop: '4px',
-                  padding: '8px',
-                  backgroundColor: '#0c0e16',
-                  borderRadius: '4px',
-                  border: '1px solid var(--border-specular)',
-                  fontSize: '11px',
-                  color: '#94a3b8',
-                  maxHeight: '70px',
-                  overflowY: 'auto',
-                  lineHeight: '1.4',
-                }}
-              >
-                {selectedScene.text || 'Sin texto inicial...'}
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: '12px',
-                backgroundColor: 'var(--bg-rack)',
-                borderRadius: '6px',
-                border: '1px dashed var(--border-specular)',
-                fontSize: '12px',
-                color: 'var(--text-muted)',
-                textAlign: 'center',
-              }}
-            >
-              Selecciona una escena en el canvas para inspeccionar métricas y enlaces causales.
-            </div>
-          )}
-
-          {metrics && (
-            <div
-              style={{
-                backgroundColor: 'var(--bg-rack)',
-                border: '1px solid var(--border-specular)',
                 borderRadius: '4px',
-                padding: '10px',
-                fontSize: '11px',
+                padding: '8px',
+                border: '1px solid var(--border-specular)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '4px',
+                fontSize: '11px',
               }}
             >
-              <div
-                style={{
-                  fontWeight: 600,
-                  color: 'var(--accent-amber)',
-                  marginBottom: '2px',
-                }}
-              >
-                HUD Tonal Cuadricanal
-              </div>
-              <div>Diálogo: {(metrics.dialogue * 100).toFixed(1)}%</div>
-              <div>Acción: {(metrics.action * 100).toFixed(1)}%</div>
-              <div>Lore: {(metrics.lore * 100).toFixed(1)}%</div>
-              <div>Monólogo: {(metrics.monologue * 100).toFixed(1)}%</div>
-              <div style={{ color: 'var(--text-muted)', marginTop: '2px' }}>
-                Varianza: {metrics.cadence_variance.toFixed(2)} | Palabras: {metrics.total_words}
+              <div style={{ color: 'var(--text-muted)' }}>Carril Activo:</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: selectedTrack.color_hex,
+                  }}
+                />
+                <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{selectedTrack.name}</span>
               </div>
             </div>
           )}
@@ -405,11 +343,12 @@ export function App() {
               gap: '4px',
             }}
           >
-            <div style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>Controles DAW</div>
-            <div>• Rueda: Zoom centrado en cursor</div>
-            <div>• Arrastre espacio: Panning</div>
+            <div style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>Controles Tácticos</div>
+            <div>• Clic: Seleccionar / Abrir Editor</div>
             <div>• Arrastre tarjeta: Mover escena (OCC)</div>
             <div>• Doble clic: Crear nueva escena</div>
+            <div>• F11: Activar Modo Zen</div>
+            <div>• Ctrl+S: Guardar escena</div>
           </div>
         </section>
 
@@ -434,6 +373,67 @@ export function App() {
             onMoveScene={handleMoveScene}
             onCreateScene={handleCreateScene}
           />
+        </section>
+
+        {/* Right Stage: Atomic Editor with Leica/ARRI Tonal HUD */}
+        <section
+          style={{
+            width: '420px',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
+          {selectedScene ? (
+            <AtomicEditor
+              scene={selectedScene}
+              projectPath={projectPath}
+              isZen={false}
+              onToggleZen={handleToggleZen}
+              onSceneUpdated={handleSceneUpdated}
+              onClose={() => setSelectedSceneId(null)}
+            />
+          ) : (
+            <div
+              style={{
+                height: '100%',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px dashed var(--border-specular)',
+                borderRadius: '6px',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                gap: '12px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  border: '1px solid var(--border-specular)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--accent-cyan)',
+                  fontSize: '16px',
+                }}
+              >
+                ✎
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1' }}>
+                Editor Atómico Desacoplado
+              </div>
+              <div style={{ fontSize: '11px', lineHeight: 1.5, maxWidth: '240px' }}>
+                Selecciona una escena en el Canvas DAW para editar su contenido con HUD tonal
+                cuadricanal y control de concurrencia optimista (OCC).
+              </div>
+            </div>
+          )}
         </section>
       </main>
     </div>

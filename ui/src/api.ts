@@ -208,6 +208,11 @@ export async function updateSceneContent(
   }
   const target = mockState.scenes.find((s) => s.id === id);
   if (!target) throw new Error(`Scene '${id}' not found in mock store`);
+  if (target.version !== version) {
+    throw new Error(
+      `Optimistic concurrency conflict on scene '${id}': expected version ${version}, actual ${target.version}`
+    );
+  }
   target.title = title;
   target.text = text;
   target.version += 1;
@@ -323,14 +328,33 @@ export async function computeTonalMetrics(text: string): Promise<TonalHistogram>
     return invoke<TonalHistogram>('compute_tonal_metrics', { text });
   }
   const words = text.split(/\s+/).filter(Boolean).length;
+  const chars = text.length;
+  const dialogueMatches = text.match(/[“"«»—].*?[”"«»—]/g) || [];
+  const dialogueChars = dialogueMatches.reduce((acc, m) => acc + m.length, 0);
+  const dialogueRatio = chars > 0 ? Math.min(0.9, dialogueChars / chars) : 0.25;
+  const actionRatio = Math.max(0.05, 0.45 - dialogueRatio * 0.4);
+  const loreRatio = text.includes('#') || text.includes('!') ? 0.25 : 0.15;
+  const monologueRatio = Math.max(0.05, 1 - (dialogueRatio + actionRatio + loreRatio));
+  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
+  const sentenceLengths = sentences.map((s) => s.trim().split(/\s+/).length);
+  const avg =
+    sentenceLengths.length > 0
+      ? sentenceLengths.reduce((a, b) => a + b, 0) / sentenceLengths.length
+      : 10;
+  const variance =
+    sentenceLengths.length > 0
+      ? sentenceLengths.reduce((acc, len) => acc + Math.pow(len - avg, 2), 0) /
+        sentenceLengths.length
+      : 7.5;
+
   return {
-    dialogue: 0.25,
-    action: 0.35,
-    lore: 0.15,
-    monologue: 0.25,
+    dialogue: Number(dialogueRatio.toFixed(2)),
+    action: Number(actionRatio.toFixed(2)),
+    lore: Number(loreRatio.toFixed(2)),
+    monologue: Number(monologueRatio.toFixed(2)),
     total_words: words,
-    sentence_lengths: [12, 8, 15],
-    cadence_variance: 8.5,
+    sentence_lengths: sentenceLengths,
+    cadence_variance: Number(variance.toFixed(2)),
   };
 }
 

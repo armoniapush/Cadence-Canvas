@@ -35,3 +35,31 @@ button {
 input, textarea {
   font-family: inherit;
 }
+
+@keyframes cadencePulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+}
+
+/* Tactical slim scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(9, 10, 15, 0.4);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-specular);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3a4256;
+}
+
