@@ -77,7 +77,7 @@ function CreateTrackModal({
                 height: '8px',
                 borderRadius: '50%',
                 backgroundColor: color,
-                boxShadow: `0 0 10px ${color}`,
+                border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             />
             <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -137,11 +137,11 @@ function CreateTrackModal({
                     borderRadius: '50%',
                     backgroundColor: hex,
                     border: color === hex ? '2px solid #ffffff' : '2px solid transparent',
-                    boxShadow: color === hex ? `0 0 12px ${hex}` : 'none',
+                    boxShadow: color === hex ? '0 2px 4px rgba(0, 0, 0, 0.4)' : 'none',
                     cursor: 'pointer',
                     padding: 0,
                     transition: 'transform 0.15s ease',
-                    transform: color === hex ? 'scale(1.15)' : 'scale(1)',
+                    transform: color === hex ? 'scale(1.12)' : 'scale(1)',
                   }}
                 />
               ))}
@@ -169,13 +169,13 @@ function CreateTrackModal({
               disabled={!name.trim()}
               style={{
                 padding: '6px 16px',
-                backgroundColor: name.trim() ? '#6366f1' : 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: name.trim() ? '#4f46e5' : 'rgba(255, 255, 255, 0.05)',
                 color: name.trim() ? '#ffffff' : 'var(--text-muted)',
                 borderRadius: '8px',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: name.trim() ? 'pointer' : 'not-allowed',
-                boxShadow: name.trim() ? '0 4px 14px rgba(99, 102, 241, 0.4)' : 'none',
+                boxShadow: name.trim() ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
               }}
             >
               Crear Hilo Narrativo
@@ -194,7 +194,9 @@ export function App() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [anchors, setAnchors] = useState<ReadingAnchor[]>([]);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>('Inicializando Estación Narrativa...');
+  const setStatus = useCallback((msg: string) => {
+    console.debug('[Cadence]', msg);
+  }, []);
   const [error, setError] = useState<string | null>(null);
   const [isZen, setIsZen] = useState<boolean>(false);
   const [showConstellation, setShowConstellation] = useState<boolean>(false);
@@ -420,21 +422,23 @@ export function App() {
             boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
           }}
         >
-          {/* Left: Brand Monogram & WAL Status Pill */}
+          {/* Left: Brand Monogram & Application Title */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
                 width: '26px',
                 height: '26px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)',
+                borderRadius: '7px',
+                backgroundColor: '#171922',
+                border: '1px solid rgba(255, 255, 255, 0.10)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 0 12px rgba(99, 102, 241, 0.45)',
-                fontWeight: 700,
+                fontWeight: 600,
                 fontSize: '13px',
-                color: '#ffffff',
+                color: '#f8fafc',
+                letterSpacing: '-0.02em',
+                userSelect: 'none',
               }}
             >
               C
@@ -445,33 +449,24 @@ export function App() {
                 Cadence Canvas
               </span>
 
-              {/* Status Pill */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '2px 8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  borderRadius: '9999px',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  fontSize: '11px',
-                }}
-              >
+              {error && (
                 <div
                   style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: error ? '#ef4444' : '#10b981',
-                    boxShadow: error ? '0 0 8px #ef4444' : '0 0 8px #10b981',
-                    animation: 'cadencePulse 2.5s infinite ease-in-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '2px 8px',
+                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(239, 68, 68, 0.3)',
+                    fontSize: '11px',
+                    color: '#fca5a5',
                   }}
-                />
-                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-                  {error ? 'Error IPC' : 'WAL Activo'}
-                </span>
-              </div>
+                >
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -496,7 +491,7 @@ export function App() {
                 color: !showConstellation ? '#ffffff' : 'var(--text-secondary)',
                 backgroundColor: !showConstellation ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
                 border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                boxShadow: !showConstellation ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none',
+                boxShadow: !showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -514,9 +509,9 @@ export function App() {
                 fontSize: '12px',
                 fontWeight: showConstellation ? 600 : 500,
                 color: showConstellation ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: showConstellation ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
-                border: showConstellation ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid transparent',
-                boxShadow: showConstellation ? '0 2px 10px rgba(56, 189, 248, 0.25)' : 'none',
+                backgroundColor: showConstellation ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                border: showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+                boxShadow: showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -607,7 +602,7 @@ export function App() {
           flex: 1,
           display: 'flex',
           gap: '12px',
-          padding: '12px 18px',
+          padding: '12px 18px 16px 18px',
           overflow: 'hidden',
           minHeight: 0,
         }}
@@ -672,56 +667,6 @@ export function App() {
           </aside>
         )}
       </main>
-
-      {/* Bottom Status Bar: Ultra-Minimalist Telemetry & WAL Heartbeat */}
-      <footer
-        style={{
-          height: '24px',
-          backgroundColor: 'transparent',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 22px 4px 22px',
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          userSelect: 'none',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: error ? '#ef4444' : '#10b981',
-                boxShadow: error ? '0 0 6px #ef4444' : '0 0 6px #10b981',
-              }}
-            />
-            <span style={{ color: error ? '#f87171' : 'var(--text-secondary)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
-              {projectPath}
-            </span>
-          </div>
-          <span style={{ color: 'var(--border-specular)' }}>·</span>
-          <span>
-            {tracks.length} hilos narrativos · {scenes.length} escenas
-          </span>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span
-            style={{
-              color: error ? '#fca5a5' : 'var(--text-secondary)',
-              maxWidth: '600px',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {error ? `⚠️ ${error}` : status}
-          </span>
-        </div>
-      </footer>
 
       <CreateTrackModal
         isOpen={isCreateTrackOpen}

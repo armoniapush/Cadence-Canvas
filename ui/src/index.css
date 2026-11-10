@@ -87,29 +87,29 @@ button:active {
 }
 
 .pill-btn-primary {
-  background-color: rgba(99, 102, 241, 0.14);
-  border-color: rgba(99, 102, 241, 0.35);
-  color: #a5b4fc;
+  background-color: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.32);
+  color: #c7d2fe;
 }
 
 .pill-btn-primary:hover {
-  background-color: rgba(99, 102, 241, 0.24);
-  border-color: rgba(99, 102, 241, 0.55);
+  background-color: rgba(99, 102, 241, 0.26);
+  border-color: rgba(99, 102, 241, 0.48);
   color: #ffffff;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.32);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .pill-btn-cyan {
-  background-color: rgba(56, 189, 248, 0.10);
-  border-color: rgba(56, 189, 248, 0.28);
-  color: var(--accent-cyan);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.10);
+  color: var(--text-secondary);
 }
 
 .pill-btn-cyan:hover {
-  background-color: rgba(56, 189, 248, 0.18);
-  border-color: rgba(56, 189, 248, 0.45);
-  color: #ffffff;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.28);
+  background-color: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
 
 .pill-icon-btn {

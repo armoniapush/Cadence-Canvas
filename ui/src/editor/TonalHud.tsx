@@ -321,7 +321,6 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             style={{
               width: `${pDialogue}%`,
               backgroundColor: '#38bdf8',
-              boxShadow: '0 0 10px rgba(56, 189, 248, 0.35)',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Diálogo: ${pDialogue}%`}
@@ -330,7 +329,6 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             style={{
               width: `${pAction}%`,
               backgroundColor: '#f97316',
-              boxShadow: '0 0 10px rgba(249, 115, 22, 0.35)',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Acción: ${pAction}%`}
@@ -339,7 +337,6 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             style={{
               width: `${pLore}%`,
               backgroundColor: '#10b981',
-              boxShadow: '0 0 10px rgba(16, 185, 129, 0.35)',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Lore: ${pLore}%`}
@@ -348,7 +345,6 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             style={{
               width: `${pMonologue}%`,
               backgroundColor: '#a855f7',
-              boxShadow: '0 0 10px rgba(168, 85, 247, 0.35)',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Monólogo: ${pMonologue}%`}
@@ -388,7 +384,6 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
                       height: '6px',
                       borderRadius: '50%',
                       backgroundColor: color,
-                      boxShadow: `0 0 6px ${color}`,
                     }}
                   />
                   <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>

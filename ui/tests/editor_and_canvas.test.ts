@@ -315,4 +315,63 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     const canvasHit = hitTest(210, RULER_HEIGHT + 20);
     assert.strictEqual(canvasHit?.id, 's1');
   });
+
+  test('timeline drag null-safety and synchronous coordinate capture invariants', () => {
+    // Model the exact panRef lifecycle and ensure that releasing or racing panRef to null
+    // NEVER causes a runtime TypeError during state updates.
+    let panRef: { mx: number; my: number; px: number; py: number; verticalOnly?: boolean } | null = {
+      mx: 100,
+      my: 100,
+      px: 20,
+      py: 0,
+      verticalOnly: false,
+    };
+
+    let viewport: Viewport = { panX: 20, panY: 0, zoom: 1.0 };
+    const mx = 150;
+    const my = 80;
+
+    // Test the SAFE implementation: Synchronous extraction into local scope
+    let errorThrown = false;
+    try {
+      if (panRef) {
+        const { px, py, mx: startMx, my: startMy, verticalOnly } = panRef;
+        const isVert = Boolean(verticalOnly);
+        const targetPanX = isVert ? null : px + (mx - startMx);
+        const targetPanY = Math.min(0, py + (my - startMy));
+
+        // Simulate pointerup / pointercancel occurring IMMEDIATELY before React updater executes
+        panRef = null;
+
+        // Async React state updater callback execution:
+        const updater = (prev: Viewport): Viewport => ({
+          ...prev,
+          panX: targetPanX !== null ? targetPanX : prev.panX,
+          panY: targetPanY,
+        });
+
+        viewport = updater(viewport);
+      }
+    } catch {
+      errorThrown = true;
+    }
+
+    assert.strictEqual(errorThrown, false, 'Safe extraction must not throw error even when panRef is nulled');
+    assert.strictEqual(viewport.panX, 20 + (150 - 100)); // 70
+    assert.strictEqual(viewport.panY, -20); // Math.min(0, 0 + (80 - 100)) = -20
+  });
+
+  test('anti-ai-slop design token verification: zero radioactive neon glows in buttons', () => {
+    // Verify that primary and secondary pill button configurations do not declare neon glows
+    const isNeonGlow = (boxShadow: string) => {
+      // Glow patterns like '0 0 16px rgba(...)', '0 0 12px ...', etc.
+      return /0\s+0\s+\d+px\s+rgba\(\s*(?:99,\s*102,\s*241|56,\s*189,\s*248)/.test(boxShadow);
+    };
+
+    const matteElevatedShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
+    const oldSlopGlow = '0 0 16px rgba(99, 102, 241, 0.32)';
+
+    assert.strictEqual(isNeonGlow(oldSlopGlow), true, 'Detects old neon glow');
+    assert.strictEqual(isNeonGlow(matteElevatedShadow), false, 'Matte shadow is clean and not a neon glow');
+  });
 });

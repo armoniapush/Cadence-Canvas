@@ -140,7 +140,7 @@ export function DawCanvas({
       // Pinned track header dragging: vertical scrolling only, never horizontal or scene drag
       if (e.button === 0 || e.button === 1) {
         panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: true };
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
       }
       return;
     }
@@ -160,11 +160,11 @@ export function DawCanvas({
     if (hitScene && e.button === 0) {
       onSelectScene(hitScene);
       dragRef.current = { mx, my, s: hitScene, t0: hitScene.t_start, trk0: hitScene.track_id, moved: false };
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     } else if (e.button === 0 || e.button === 1) {
       onSelectScene(null);
       panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: false };
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
     }
   }, [scenes, tracks, viewport, onSelectScene, onToggleMuteTrack]);
 
@@ -174,31 +174,36 @@ export function DawCanvas({
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
     if (dragRef.current) {
-      const dx = mx - dragRef.current.mx, dy = my - dragRef.current.my;
-      if (Math.hypot(dx, dy) > 3) dragRef.current.moved = true;
+      const currentDrag = dragRef.current;
+      const dx = mx - currentDrag.mx, dy = my - currentDrag.my;
+      if (Math.hypot(dx, dy) > 3) currentDrag.moved = true;
       const dt = Math.round(dx / (PIXELS_PER_UNIT * viewport.zoom));
       const relY = my - RULER_HEIGHT - viewport.panY;
       const idx = Math.max(0, Math.min(tracks.length - 1, Math.floor(relY / (TRACK_HEIGHT + TRACK_GAP))));
       setDragState({
-        sceneId: dragRef.current.s.id,
-        previewTrackId: tracks[idx]?.id || dragRef.current.trk0,
-        previewTStart: Math.max(0, dragRef.current.t0 + dt),
+        sceneId: currentDrag.s.id,
+        previewTrackId: tracks[idx]?.id || currentDrag.trk0,
+        previewTStart: Math.max(0, currentDrag.t0 + dt),
       });
     } else if (panRef.current) {
-      const isVert = panRef.current.verticalOnly;
+      const { px, py, mx: startMx, my: startMy, verticalOnly } = panRef.current;
+      const isVert = Boolean(verticalOnly);
+      const targetPanX = isVert ? null : px + (mx - startMx);
+      const targetPanY = Math.min(0, py + (my - startMy));
       setViewport((prev) => ({
         ...prev,
-        panX: isVert ? prev.panX : panRef.current!.px + (mx - panRef.current!.mx),
-        panY: Math.min(0, panRef.current!.py + (my - panRef.current!.my)),
+        panX: targetPanX !== null ? targetPanX : prev.panX,
+        panY: targetPanY,
       }));
     }
   }, [tracks, viewport]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (dragRef.current) {
-      if (dragRef.current.moved && dragState) {
-        if (dragState.previewTStart !== dragRef.current.t0 || dragState.previewTrackId !== dragRef.current.trk0) {
-          onMoveScene(dragRef.current.s, dragState.previewTrackId, dragState.previewTStart);
+      const currentDrag = dragRef.current;
+      if (currentDrag.moved && dragState) {
+        if (dragState.previewTStart !== currentDrag.t0 || dragState.previewTrackId !== currentDrag.trk0) {
+          onMoveScene(currentDrag.s, dragState.previewTrackId, dragState.previewTStart);
         }
       }
       dragRef.current = null;
@@ -266,6 +271,7 @@ export function DawCanvas({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onDoubleClick={handleDoubleClick}
       style={{
         position: 'relative',

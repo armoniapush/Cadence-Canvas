@@ -218,12 +218,10 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fillStyle = g;
     ctx.fill();
 
-    // Organic glowing edges with specular illumination when selected
+    // Crisp edges with clear distinction when selected
     ctx.save();
     if (isConnectedToSel) {
-      ctx.shadowColor = colSrc;
-      ctx.shadowBlur = 8;
-      ctx.strokeStyle = hexToRgba(colSrc, 0.85);
+      ctx.strokeStyle = hexToRgba(colSrc, 0.9);
       ctx.lineWidth = 1.5;
     } else {
       ctx.strokeStyle = hexToRgba(colSrc, 0.4);
@@ -481,14 +479,11 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
   ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
 
-  // Subtle indigo jewel dot + label
+  // Matte indigo dot + label
   ctx.fillStyle = '#6366f1';
-  ctx.shadowColor = 'rgba(99, 102, 241, 0.6)';
-  ctx.shadowBlur = 6;
   ctx.beginPath();
   ctx.arc(20, RULER_HEIGHT / 2, 3, 0, Math.PI * 2);
   ctx.fill();
-  ctx.shadowBlur = 0;
 
   ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#e2e8f0';
