@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 use clap::{Parser, Subcommand};
-use cadence_core::{CadenceError, Database, Project, Scene, Track, DEFAULT_TRACK_COLOR};
+use cadence_core::{
+    assemble_project, export_markdown_to_file, CadenceError, Database, MarkdownExportOptions,
+    Project, Scene, Track, DEFAULT_TRACK_COLOR,
+};
 
 const EX_CONFLICT: i32 = 75;
 const EX_GENERAL: i32 = 1;
@@ -39,6 +42,27 @@ enum Commands {
     Scene {
         #[command(subcommand)]
         command: SceneCommands,
+    },
+    /// Export narrative manuscripts
+    Export {
+        #[command(subcommand)]
+        command: ExportCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum ExportCommands {
+    /// Export manuscript to Markdown
+    Md {
+        path: PathBuf,
+        #[arg(long)]
+        project: String,
+        #[arg(short, long)]
+        output: PathBuf,
+        #[arg(long)]
+        no_title: bool,
+        #[arg(long)]
+        metadata: bool,
     },
 }
 
@@ -248,6 +272,49 @@ fn run(cli: &Cli) -> Result<(), CadenceError> {
                     println!("{}", serde_json::to_string_pretty(&scene)?);
                 } else {
                     println!("Moved scene '{}' to track={}, t={}, dur={}, v={}", scene.id, scene.track_id, scene.t_start, scene.duration, scene.version);
+                }
+            }
+        },
+        Commands::Export { command } => match command {
+            ExportCommands::Md {
+                path,
+                project,
+                output,
+                no_title,
+                metadata,
+            } => {
+                let db = Database::open(path)?;
+                let proj = Project::get_by_id(db.conn(), project)?;
+                let scenes = assemble_project(db.conn(), project)?;
+                let options = MarkdownExportOptions {
+                    include_title: !*no_title,
+                    include_metadata: *metadata,
+                    ..Default::default()
+                };
+                export_markdown_to_file(output, &proj, &scenes, &options)?;
+
+                if cli.json {
+                    let total_words: i64 = scenes.iter().map(|s| s.scene.word_count).sum();
+                    let bytes_written = std::fs::metadata(output).map(|m| m.len()).unwrap_or(0);
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "status": "ok",
+                            "project_id": proj.id,
+                            "format": "markdown",
+                            "output": output.display().to_string(),
+                            "scene_count": scenes.len(),
+                            "word_count": total_words,
+                            "bytes_written": bytes_written,
+                        })
+                    );
+                } else {
+                    println!(
+                        "Exported {} scenes to {} (project: '{}')",
+                        scenes.len(),
+                        output.display(),
+                        proj.title
+                    );
                 }
             }
         },

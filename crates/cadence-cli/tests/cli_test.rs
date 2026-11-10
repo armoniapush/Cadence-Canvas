@@ -235,3 +235,121 @@ fn test_cli_human_readable_output() {
         .success()
         .stdout(predicate::str::contains("Human Readable Project"));
 }
+
+#[test]
+fn test_cli_export_md() {
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("export_test.cadence");
+    let db_str = db_path.to_str().unwrap();
+    let out_path = dir.path().join("manuscript.md");
+    let out_str = out_path.to_str().unwrap();
+
+    // 1. Initialize project
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let assert = cmd
+        .args([
+            "--json", "init", db_str,
+            "--title", "Export Novel",
+            "--author", "B. Author",
+        ])
+        .assert()
+        .success();
+    let init_json: Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let project_id = init_json["id"].as_str().unwrap();
+
+    // 2. Add Track
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let assert = cmd
+        .args([
+            "--json", "track", "add", db_str,
+            "--project", project_id,
+            "--name", "Protagonist Track",
+            "--order", "0",
+        ])
+        .assert()
+        .success();
+    let track_json: Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    let track_id = track_json["id"].as_str().unwrap();
+
+    // 3. Add Scene 1
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args([
+        "--json", "scene", "add", db_str,
+        "--track", track_id,
+        "--title", "Opening Gambits",
+        "--time", "10",
+        "--duration", "50",
+        "--text", "The curtain rises on a dark stage.",
+    ])
+    .assert()
+    .success();
+
+    // 4. Add Scene 2
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args([
+        "--json", "scene", "add", db_str,
+        "--track", track_id,
+        "--title", "Second Movements",
+        "--time", "60",
+        "--duration", "50",
+        "--text", "A distant melody begins to play.",
+    ])
+    .assert()
+    .success();
+
+    // 5. Test JSON export command: cadence export md <path> --project <id> --output <out_path>
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let assert = cmd
+        .args([
+            "--json", "export", "md", db_str,
+            "--project", project_id,
+            "--output", out_str,
+        ])
+        .assert()
+        .success();
+
+    let export_json: Value = serde_json::from_slice(&assert.get_output().stdout).expect("Valid export JSON");
+    assert_eq!(export_json["status"], "ok");
+    assert_eq!(export_json["format"], "markdown");
+    assert_eq!(export_json["project_id"], project_id);
+    assert_eq!(export_json["scene_count"], 2);
+    assert!(export_json["bytes_written"].as_u64().unwrap() > 0);
+
+    // Verify exported file content on disk
+    assert!(out_path.exists());
+    let md_content = std::fs::read_to_string(&out_path).unwrap();
+    assert!(md_content.contains("# Export Novel"));
+    assert!(md_content.contains("Author: B. Author"));
+    assert!(md_content.contains("## Opening Gambits"));
+    assert!(md_content.contains("The curtain rises on a dark stage."));
+    assert!(md_content.contains("* * *"));
+    assert!(md_content.contains("## Second Movements"));
+    assert!(md_content.contains("A distant melody begins to play."));
+
+    // 6. Test human-readable CLI output
+    let out_human_path = dir.path().join("human_export.md");
+    let out_human_str = out_human_path.to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args([
+        "export", "md", db_str,
+        "--project", project_id,
+        "--output", out_human_str,
+    ])
+    .assert()
+    .success()
+    .stdout(predicate::str::contains("Exported 2 scenes to"));
+
+    assert!(out_human_path.exists());
+
+    // 7. Test error when project does not exist
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args([
+        "export", "md", db_str,
+        "--project", "nonexistent-project-uuid",
+        "--output", out_human_str,
+    ])
+    .assert()
+    .failure()
+    .stderr(predicate::str::contains("not found"));
+}
