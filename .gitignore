@@ -3,3 +3,8 @@ Cargo.lock
 **/*.cadence
 **/*.cadence-wal
 **/*.cadence-shm
+node_modules/
+dist/
+src-tauri/gen/
+
+

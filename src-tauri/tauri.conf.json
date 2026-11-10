@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Cadence Canvas",
+  "version": "0.1.0",
+  "identifier": "com.cadence.canvas",
+  "build": {
+    "frontendDist": "../ui/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Cadence Canvas — Estación de Montaje Narrativo",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1024,
+        "minHeight": 700,
+        "theme": "Dark"
+      }
+    ]
+  }
+}

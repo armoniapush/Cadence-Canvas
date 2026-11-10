@@ -31,10 +31,16 @@
 
 | Slice ID | Módulo | Objetivo Causal | Límite LOC | Conventional Commit | Estado / Receipt |
 |---|---|---|---|---|---|
-| **Slice 4.1** | `tauri/bridge` | Shell Tauri v2 en `src-tauri`, comandos IPC conectados a `cadence-core`, y scaffolding React 19 + Vite en `ui/`. | <= 400 LOC | `feat(tauri): shell v2 and ipc command bridge for cadence-core` | ⏳ Ready |
-| **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ⏳ Pending |
+| **Slice 4.1** | `tauri/bridge` | Shell Tauri v2 en `src-tauri`, comandos IPC conectados a `cadence-core`, y scaffolding React 19 + Vite en `ui/`. | <= 400 LOC | `feat(tauri): shell v2 and ipc command bridge for cadence-core` | ✅ Completed |
+| **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ⏳ Ready |
 | **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ⏳ Pending |
 | **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ⏳ Pending |
+
+### Receipt de Ejecución: Slice 4.1 (`tauri/bridge`)
+- **Shell Tauri v2**: `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/build.rs`, `src-tauri/src/main.rs`, `src-tauri/src/lib.rs`.
+- **Puente IPC Rust (13 comandos)**: `open_project`, `list_tracks`, `create_track`, `list_scenes`, `create_scene`, `update_scene_content`, `move_scene`, `assemble_manuscript`, `get_ego_graph`, `compute_tonal_metrics`, `audit_timeline`, `export_markdown`, `export_docx` con mapeo determinista de errores a `String`.
+- **Scaffold Frontend**: React 19 + Vite + TypeScript en `ui/`, cliente typed en `ui/src/api.ts` con fallback para desarrollo en navegador.
+- **Verificación**: `npm run build` genera bundle en 897ms; `cargo check` y `cargo test` pasan al 100% (47 tests: 46 previos + 1 de ciclo de vida IPC).
 
 ---
 
