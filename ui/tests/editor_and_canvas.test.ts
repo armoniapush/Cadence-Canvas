@@ -12,9 +12,13 @@ import {
   CARD_HEIGHT,
   PIXELS_PER_UNIT,
   CARD_BORDER_RADIUS,
+  PORT_RADIUS,
+  PORT_HIT_RADIUS,
   getTrackMuteButtonRect,
   getSceneRect,
+  getScenePortRects,
   computeFitViewport,
+  computeMagneticSnap,
 } from '../src/canvas/renderer.ts';
 import type { Track, Scene, Viewport, TonalHistogram } from '../src/types.ts';
 
@@ -461,5 +465,78 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     assert.ok(css.includes('.btn-primary {'), 'Must define .btn-primary utility');
     assert.ok(css.includes('.btn-accent {'), 'Must define .btn-accent utility');
     assert.ok(css.includes('.btn-ghost {'), 'Must define .btn-ghost utility');
+  });
+
+  test('computeMagneticSnap invariants: origin, head-to-tail, parallel and grid beat snapping', () => {
+    const mockScenes: Scene[] = [
+      {
+        id: 's1',
+        project_id: 'p1',
+        track_id: 'trk-1',
+        title: 'Escena 1',
+        t_start: 0,
+        duration: 100, // ends at 100
+        text: '',
+        word_count: 50,
+        version: 1,
+      },
+      {
+        id: 's2',
+        project_id: 'p1',
+        track_id: 'trk-2',
+        title: 'Escena Paralela',
+        t_start: 200,
+        duration: 80,
+        text: '',
+        word_count: 50,
+        version: 1,
+      },
+    ];
+
+    // 1. Origin snap: raw coordinate near 0 snaps to 0
+    const originSnap = computeMagneticSnap(4, 60, 'trk-1', mockScenes, 'active-drag', 1.0, true);
+    assert.strictEqual(originSnap.isSnapped, true);
+    assert.strictEqual(originSnap.snappedTStart, 0);
+    assert.strictEqual(originSnap.snapType, 'origin');
+
+    // 2. Head-to-tail snap: raw coordinate near preceding scene end (100) snaps to 100 (0 gap)
+    const headToTailSnap = computeMagneticSnap(103, 60, 'trk-1', mockScenes, 'active-drag', 1.0, true);
+    assert.strictEqual(headToTailSnap.isSnapped, true);
+    assert.strictEqual(headToTailSnap.snappedTStart, 100);
+    assert.strictEqual(headToTailSnap.snapType, 'head-to-tail');
+
+    // 3. Parallel start alignment with scene on other track: near 200 snaps to 200
+    const parallelSnap = computeMagneticSnap(197, 60, 'trk-1', mockScenes, 'active-drag', 1.0, true);
+    assert.strictEqual(parallelSnap.isSnapped, true);
+    assert.strictEqual(parallelSnap.snappedTStart, 200);
+    assert.strictEqual(parallelSnap.snapType, 'parallel');
+
+    // 4. Beat Grid snap: when not near scene boundaries, snaps to nearest 10-beat multiple (e.g. 52 -> 50)
+    const gridSnap = computeMagneticSnap(52, 60, 'trk-1', mockScenes, 'active-drag', 1.0, true);
+    assert.strictEqual(gridSnap.isSnapped, true);
+    assert.strictEqual(gridSnap.snappedTStart, 50);
+    assert.strictEqual(gridSnap.snapType, 'grid');
+
+    // 5. Magnet Disabled Invariant: when magnetEnabled is false, returns raw coordinate untouched
+    const disabledSnap = computeMagneticSnap(53, 60, 'trk-1', mockScenes, 'active-drag', 1.0, false);
+    assert.strictEqual(disabledSnap.isSnapped, false);
+    assert.strictEqual(disabledSnap.snappedTStart, 53);
+  });
+
+  test('getScenePortRects calculates accurate In/Out connection port positions', () => {
+    const cardRect = { x: 200, y: 150, w: 160, h: 88 };
+    const ports = getScenePortRects(cardRect);
+
+    // In-Port: centered on left edge
+    assert.strictEqual(ports.inPort.x, 200);
+    assert.strictEqual(ports.inPort.y, 150 + 44);
+
+    // Out-Port: centered on right edge
+    assert.strictEqual(ports.outPort.x, 200 + 160);
+    assert.strictEqual(ports.outPort.y, 150 + 44);
+
+    // Hit radius invariant
+    assert.ok(PORT_RADIUS >= 4);
+    assert.ok(PORT_HIT_RADIUS >= 12);
   });
 });

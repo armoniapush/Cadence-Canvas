@@ -10,10 +10,13 @@ import {
   createScene,
   moveScene,
   deleteScene,
+  createAnchor,
+  updateSceneContent,
 } from './api';
 import { DawCanvas } from './canvas/DawCanvas';
 import { AtomicEditor } from './editor/AtomicEditor';
 import { RadialConstellation } from './constellation/RadialConstellation';
+import { ManuscriptBinder } from './components/ManuscriptBinder';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const PRESET_COLORS = ['#4361ee', '#1f9a73', '#d97706', '#0284c7', '#be123c', '#7c3aed', '#c2410c'];
@@ -184,6 +187,7 @@ export function App() {
   const [isZen, setIsZen] = useState<boolean>(false);
   const [showConstellation, setShowConstellation] = useState<boolean>(false);
   const [isCreateTrackOpen, setIsCreateTrackOpen] = useState<boolean>(false);
+  const [isBinderOpen, setIsBinderOpen] = useState<boolean>(true);
 
   const initProject = async (path: string) => {
     try {
@@ -212,12 +216,16 @@ export function App() {
     initProject(projectPath);
   }, []);
 
-  // Global F11 listener for Zen mode toggle
+  // Global F11 & ⌘B listeners
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F11') {
         e.preventDefault();
         setIsZen((prev) => !prev);
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsBinderOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
@@ -314,6 +322,90 @@ export function App() {
       }
     },
     [projectPath, selectedSceneId]
+  );
+
+  const handleCreateAnchor = useCallback(
+    async (sourceSceneId: string, targetSceneId: string) => {
+      try {
+        const projId = project?.id || 'mock-proj-1';
+        setStatus('Creando vínculo causal entre escenas...');
+        const newAnchor = await createAnchor(
+          projectPath,
+          projId,
+          sourceSceneId,
+          targetSceneId,
+          'causal',
+          1.0
+        );
+        setAnchors((prev) => [...prev, newAnchor]);
+        setStatus('Vínculo causal registrado en SQLite WAL.');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Error creando vínculo causal: ${msg}`);
+      }
+    },
+    [projectPath, project]
+  );
+
+  const handleDuplicateScene = useCallback(
+    async (scene: Scene) => {
+      try {
+        setStatus(`Duplicando escena '${scene.title}'...`);
+        const newTStart = scene.t_start + scene.duration + 10;
+        const newScene = await createScene(
+          projectPath,
+          scene.track_id,
+          `${scene.title} (Copia)`,
+          newTStart,
+          scene.duration,
+          scene.text
+        );
+        setScenes((prev) => [...prev, newScene]);
+        setSelectedSceneId(newScene.id);
+        setStatus(`Escena '${newScene.title}' duplicada con éxito.`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Error duplicando escena: ${msg}`);
+      }
+    },
+    [projectPath]
+  );
+
+  const handleSplitScene = useCallback(
+    async (scene: Scene) => {
+      try {
+        setStatus(`Dividiendo escena '${scene.title}'...`);
+        const halfDuration = Math.max(30, Math.floor(scene.duration / 2));
+        const words = (scene.text || '').split(/\s+/).filter(Boolean);
+        const midPoint = Math.floor(words.length / 2);
+        const text1 = words.slice(0, midPoint).join(' ');
+        const text2 = words.slice(midPoint).join(' ');
+
+        // Update current scene
+        await updateSceneContent(projectPath, scene.id, scene.version, scene.title, text1 || scene.text);
+        await moveScene(projectPath, scene.id, scene.version, scene.track_id, scene.t_start, halfDuration);
+
+        // Create second scene
+        const newTStart = scene.t_start + halfDuration + 5;
+        const secondScene = await createScene(
+          projectPath,
+          scene.track_id,
+          `${scene.title} (Parte 2)`,
+          newTStart,
+          halfDuration,
+          text2 || 'Continuación de la escena...'
+        );
+
+        const updatedScenes = await listScenes(projectPath, project?.id || 'mock-proj-1');
+        setScenes(updatedScenes);
+        setSelectedSceneId(secondScene.id);
+        setStatus(`Escena dividida en dos partes continuas.`);
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Error dividiendo escena: ${msg}`);
+      }
+    },
+    [projectPath, project]
   );
 
   const handleCreateTrack = useCallback(
@@ -521,8 +613,26 @@ export function App() {
 
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Toggle Manuscript Binder Button */}
           <button
-            className="btn btn-accent"
+            className={`btn ${isBinderOpen ? 'btn-accent' : 'btn-ghost'}`}
+            onClick={() => setIsBinderOpen((prev) => !prev)}
+            title="Alternar Binder de Manuscrito (⌘B)"
+            style={{
+              padding: '0 10px',
+              height: '28px',
+              fontSize: '12px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>☰</span> Manuscrito
+          </button>
+
+          <button
+            className="btn btn-ghost"
             onClick={() => setIsCreateTrackOpen(true)}
             style={{
               padding: '0 12px',
@@ -531,7 +641,7 @@ export function App() {
               fontWeight: 600,
             }}
           >
-            <span>+</span> Nuevo Hilo Narrativo
+            <span>+</span> Nuevo Hilo
           </button>
 
           {selectedScene && (
@@ -563,6 +673,17 @@ export function App() {
           minHeight: 0,
         }}
       >
+        {/* Left Stage: Collapsible Manuscript Binder */}
+        {isBinderOpen && !showConstellation && (
+          <ManuscriptBinder
+            scenes={scenes}
+            tracks={tracks}
+            selectedSceneId={selectedSceneId}
+            onSelectScene={handleSelectScene}
+            onClose={() => setIsBinderOpen(false)}
+          />
+        )}
+
         {/* Center Stage: Timeline Canvas or Radial Constellation */}
         <section
           style={{
@@ -598,6 +719,9 @@ export function App() {
                 onDeleteScene={handleDeleteScene}
                 onToggleMuteTrack={handleToggleMuteTrack}
                 onToggleZen={handleToggleZen}
+                onCreateAnchor={handleCreateAnchor}
+                onDuplicateScene={handleDuplicateScene}
+                onSplitScene={handleSplitScene}
               />
             </ErrorBoundary>
           )}

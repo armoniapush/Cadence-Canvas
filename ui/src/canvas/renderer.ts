@@ -10,6 +10,89 @@ export const PIXELS_PER_UNIT = 1.3;
 export const MUTE_BTN_W = 28;
 export const MUTE_BTN_H = 24;
 export const CARD_BORDER_RADIUS = 12;
+export const PORT_RADIUS = 4;
+export const PORT_HOVER_RADIUS = 6;
+export const PORT_HIT_RADIUS = 14;
+
+export interface SnapResult {
+  snappedTStart: number;
+  isSnapped: boolean;
+  snapType?: 'grid' | 'head-to-tail' | 'parallel' | 'origin';
+  guideT?: number;
+}
+
+export function computeMagneticSnap(
+  rawTStart: number,
+  duration: number,
+  targetTrackId: string,
+  scenes: Scene[],
+  activeSceneId: string,
+  zoom: number,
+  magnetEnabled: boolean = true,
+  snapStep: number = 10,
+  snapThresholdPx: number = 14
+): SnapResult {
+  const clamped = Math.max(0, rawTStart);
+  if (!magnetEnabled) {
+    return { snappedTStart: clamped, isSnapped: false };
+  }
+
+  const thresholdUnits = Math.max(2, snapThresholdPx / (PIXELS_PER_UNIT * zoom));
+  const otherScenes = scenes.filter((s) => s.id !== activeSceneId);
+
+  // 1. Origin snap: t = 0
+  if (clamped <= thresholdUnits) {
+    return { snappedTStart: 0, isSnapped: true, snapType: 'origin', guideT: 0 };
+  }
+
+  // 2. Head-to-tail snap on target track (preceding scene's end => rawTStart)
+  for (const other of otherScenes) {
+    if (other.track_id === targetTrackId) {
+      const otherEnd = other.t_start + other.duration;
+      if (Math.abs(clamped - otherEnd) <= thresholdUnits) {
+        return { snappedTStart: otherEnd, isSnapped: true, snapType: 'head-to-tail', guideT: otherEnd };
+      }
+      const neededStart = other.t_start - duration;
+      if (neededStart >= 0 && Math.abs(clamped - neededStart) <= thresholdUnits) {
+        return { snappedTStart: neededStart, isSnapped: true, snapType: 'head-to-tail', guideT: other.t_start };
+      }
+    }
+  }
+
+  // 3. Parallel start alignment with scenes on other tracks
+  for (const other of otherScenes) {
+    if (other.track_id !== targetTrackId) {
+      if (Math.abs(clamped - other.t_start) <= thresholdUnits) {
+        return { snappedTStart: other.t_start, isSnapped: true, snapType: 'parallel', guideT: other.t_start };
+      }
+      const otherEnd = other.t_start + other.duration;
+      if (Math.abs(clamped - otherEnd) <= thresholdUnits) {
+        return { snappedTStart: otherEnd, isSnapped: true, snapType: 'parallel', guideT: otherEnd };
+      }
+    }
+  }
+
+  // 4. Beat Grid Snap (multiples of snapStep, e.g. 10, 20, 30...)
+  const nearestGrid = Math.round(clamped / snapStep) * snapStep;
+  if (Math.abs(clamped - nearestGrid) <= thresholdUnits) {
+    return { snappedTStart: nearestGrid, isSnapped: true, snapType: 'grid', guideT: nearestGrid };
+  }
+
+  return { snappedTStart: clamped, isSnapped: false };
+}
+
+export function getScenePortRects(sceneRect: { x: number; y: number; w: number; h: number }) {
+  return {
+    inPort: {
+      x: sceneRect.x,
+      y: sceneRect.y + sceneRect.h / 2,
+    },
+    outPort: {
+      x: sceneRect.x + sceneRect.w,
+      y: sceneRect.y + sceneRect.h / 2,
+    },
+  };
+}
 
 export function computeFitViewport(
   scenes: Scene[],
@@ -67,6 +150,9 @@ export interface CanvasRenderData {
   dpr: number;
   width: number;
   height: number;
+  magnetGuideT?: number | null;
+  connectingWire?: { fromSceneId: string; fromPort: 'in' | 'out'; toX: number; toY: number } | null;
+  hoveredPort?: { sceneId: string; port: 'in' | 'out' } | null;
 }
 
 export const hexToRgba = (hex: string, a: number): string => {
@@ -90,7 +176,7 @@ export function getSceneRect(s: Scene, tracks: Track[], vp: Viewport, drag?: Dra
 }
 
 export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRenderData): void {
-  const { tracks, scenes, anchors, selectedSceneId, currentTime, dragState, viewport: vp, dpr, width: w, height: h } = data;
+  const { tracks, scenes, anchors, selectedSceneId, dragState, viewport: vp, dpr, width: w, height: h } = data;
   if (w <= 0 || h <= 0) return;
   ctx.save();
   ctx.scale(dpr, dpr);
@@ -357,9 +443,107 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     }
 
     ctx.restore();
+
+    // In-Port (Left Causal Anchor) & Out-Port (Right Causal Output)
+    const inPortX = x;
+    const inPortY = y + scnH / 2;
+    const outPortX = x + scnW;
+    const outPortY = y + scnH / 2;
+
+    const isInHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'in';
+    const isOutHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'out';
+    const isConnecting = Boolean(data.connectingWire);
+
+    // In-Port circle (Input / Causa)
+    ctx.save();
+    ctx.beginPath();
+    const inR = isInHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
+    ctx.arc(inPortX, inPortY, inR, 0, Math.PI * 2);
+    ctx.fillStyle = isInHover ? col : '#13151e';
+    ctx.strokeStyle = isInHover ? '#ffffff' : isSel ? col : 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // Out-Port circle (Output / Efecto)
+    ctx.beginPath();
+    const outR = isOutHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
+    ctx.arc(outPortX, outPortY, outR, 0, Math.PI * 2);
+    ctx.fillStyle = isOutHover ? '#38bdf8' : isSel ? col : '#13151e';
+    ctx.strokeStyle = isOutHover ? '#ffffff' : isSel ? '#38bdf8' : 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
     ctx.restore();
   }
   ctx.restore();
+
+  // Active interactive connecting Bézier cable
+  if (data.connectingWire) {
+    const { fromSceneId, fromPort, toX, toY } = data.connectingWire;
+    const srcScene = scnMap.get(fromSceneId);
+    if (srcScene) {
+      const srcRect = getSceneRect(srcScene, tracks, vp, dragState);
+      const startX = fromPort === 'out' ? srcRect.x + srcRect.w : srcRect.x;
+      const startY = srcRect.y + srcRect.h / 2;
+      const dist = Math.max(30, Math.abs(toX - startX) * 0.45);
+      const c1x = fromPort === 'out' ? startX + dist : startX - dist;
+      const c2x = toX > startX ? toX - dist : toX + dist;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(c1x, startY, c2x, toY, toX, toY);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+
+      // Cable tip indicator
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(toX, toY, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // Magnetic Snap Guideline & Badge
+  if (data.magnetGuideT !== undefined && data.magnetGuideT !== null) {
+    const gx = TRACK_HEADER_WIDTH + vp.panX + data.magnetGuideT * PIXELS_PER_UNIT * vp.zoom;
+    if (gx >= TRACK_HEADER_WIDTH && gx <= w) {
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(gx, RULER_HEIGHT);
+      ctx.lineTo(gx, h);
+      ctx.stroke();
+
+      // Top magnet indicator badge
+      ctx.setLineDash([]);
+      const badgeText = `🧲 ${data.magnetGuideT}u`;
+      ctx.font = '600 10px ui-monospace, monospace';
+      const bW = ctx.measureText(badgeText).width + 12;
+      ctx.fillStyle = '#082f49';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(gx - bW / 2, RULER_HEIGHT + 4, bW, 18, 4);
+      else ctx.rect(gx - bW / 2, RULER_HEIGHT + 4, bW, 18);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#e0f2fe';
+      ctx.textAlign = 'center';
+      ctx.fillText(badgeText, gx, RULER_HEIGHT + 16);
+      ctx.restore();
+    }
+  }
 
   // 5. Pinned Track Headers (Hilos Narrativos)
   ctx.save();
