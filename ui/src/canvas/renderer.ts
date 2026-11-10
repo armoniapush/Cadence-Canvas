@@ -48,7 +48,7 @@ export function getSceneRect(s: Scene, tracks: Track[], vp: Viewport, drag?: Dra
   return {
     x: TRACK_HEADER_WIDTH + vp.panX + tStart * PIXELS_PER_UNIT * vp.zoom,
     y: RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y,
-    w: Math.max(88, s.duration * PIXELS_PER_UNIT * vp.zoom),
+    w: Math.max(120, s.duration * PIXELS_PER_UNIT * vp.zoom),
     h: CARD_HEIGHT,
     idx,
     isD,
@@ -207,16 +207,16 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.clip();
 
     // Title (13px bold)
-    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
-    ctx.fillStyle = isSel ? '#ffffff' : '#f1f5f9';
+    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = isSel ? '#ffffff' : '#f8fafc';
     ctx.fillText(s.title, x + 12, y + 22);
 
-    // Narrative excerpt (first words in gray #94a3b8)
+    // Narrative excerpt (first words in warm-slate #94a3b8)
     const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
     const excerpt = rawText.length > 0
-      ? (rawText.length > 42 ? rawText.slice(0, 42) + '...' : rawText)
-      : '(Sin contenido aún)';
-    ctx.font = '400 11px ui-sans-serif, system-ui, sans-serif';
+      ? (rawText.length > 44 ? rawText.slice(0, 44) + '…' : rawText)
+      : '(Sin contenido redactado aún)';
+    ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(excerpt, x + 12, y + 42);
 
@@ -335,48 +335,65 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const endX = Math.min(w, act120X);
     ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
     ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(99, 102, 241, 0.4)';
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.5)';
     ctx.fillRect(startX, 0, endX - startX, 2);
 
     const labelX = Math.max(act0X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 110 < act120X) {
-      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+    if (labelX + 100 < act120X) {
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#a5b4fc';
-      ctx.fillText('ACTO I · PLANTEAMIENTO', labelX, 17);
+      ctx.fillText('ACTO I · PLANTEAMIENTO', labelX, 16);
     }
   }
 
-  // Act II Band (120 .. 360): ACTO II · CONFRONTACIÓN
-  if (act360X > TRACK_HEADER_WIDTH && act120X < w) {
+  // Act II-A Band (120 .. 240): ACTO II-A · ASCENSO
+  if (act240X > TRACK_HEADER_WIDTH && act120X < w) {
     const startX = Math.max(TRACK_HEADER_WIDTH, act120X);
-    const endX = Math.min(w, act360X);
+    const endX = Math.min(w, act240X);
     ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
     ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
     ctx.fillRect(startX, 0, endX - startX, 2);
 
     const labelX = Math.max(act120X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 120 < act360X) {
-      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillText('ACTO II · CONFRONTACIÓN', labelX, 17);
+    if (labelX + 90 < act240X - 42) {
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillText('ACTO II-A · ASCENSO', labelX, 16);
     }
   }
 
-  // Act III Band (360 .. 480+): ACTO III · CLÍMAX Y RESOLUCIÓN
+  // Act II-B Band (240 .. 360): ACTO II-B · CRISIS
+  if (act360X > TRACK_HEADER_WIDTH && act240X < w) {
+    const startX = Math.max(TRACK_HEADER_WIDTH, act240X);
+    const endX = Math.min(w, act360X);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
+    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.fillRect(startX, 0, endX - startX, 2);
+
+    const labelX = Math.max(act240X + 46, TRACK_HEADER_WIDTH + 10);
+    if (labelX + 80 < act360X) {
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillText('ACTO II-B · CRISIS', labelX, 16);
+    }
+  }
+
+  // Act III Band (360 .. 600+): ACTO III · CLÍMAX Y RESOLUCIÓN
   if (actEndX > TRACK_HEADER_WIDTH && act360X < w) {
     const startX = Math.max(TRACK_HEADER_WIDTH, act360X);
     const endX = Math.min(w, Math.max(actEndX, w));
     ctx.fillStyle = 'rgba(244, 63, 94, 0.07)';
     ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.4)';
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.5)';
     ctx.fillRect(startX, 0, endX - startX, 2);
 
     const labelX = Math.max(act360X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 140 < endX) {
-      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+    if (labelX + 130 < endX) {
+      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.fillStyle = '#fb7185';
-      ctx.fillText('ACTO III · CLÍMAX Y RESOLUCIÓN', labelX, 17);
+      ctx.fillText('ACTO III · CLÍMAX Y RESOLUCIÓN', labelX, 16);
     }
   }
 
