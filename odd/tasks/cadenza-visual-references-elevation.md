@@ -1,16 +1,25 @@
-# Task: Cadenza UI Elevation — 5 Visual Reference Modules
+# Task: Radical Aesthetic Overhaul — Cadenza Studio Grade (Fluxa, Wavely, Mount, Create.Video)
 
 ## Context & Objectives
-Based on the direct visual references (Fluxa, Visual Workflow Canvas, Imagion, Create.Video, Knowledge Graph UI for Dark System, Djordje Vanjek Segmented Bars, Minimalist Writing App):
-1. Canvas Swimlanes & Nodes: Distinct lane framing, horizontal guide tracks, left color notches, socket ports differentiated by causal type, cards with duration clips.
-2. Timeline DAW Sequencer: Add formatted timecodes (`0:00`, `1:00`, `2:00`...) on major ruler ticks.
-3. Orbital Constellation: Fix label collision (00:13) by moving orbit labels to a dedicated non-colliding axis with pill badges, dynamic orbital distances based on weight, and dark chip pill backings for entity names.
-4. Segmented Rhythm HUD: Interactive tooltips on hover for the continuous segmented bar (% Diálogo, Acción, Lore, Monólogo) with standardized CSS tokens.
-5. Zen Mode: Refined centered 70ch reading column with balanced typography and minimalist floating pill.
-
-## 5-Tier Verification Ladder
-1. Unit Tests: `npm test --prefix ui` passing.
-2. Integration Contracts: `cargo test --workspace` passing.
-3. Agentic E2E: Validate in live Chrome DevTools session at `http://localhost:1420/` with screenshots across all 5 modules.
-4. Performance: Zero lag, 60 FPS canvas RAF loop.
-5. Continuous Clean Build: 0 errors in Vite build.
+The user correctly identified that previous changes were incremental fixes that did not elevate the visual aesthetic to the senior craft level of the reference designs (Fluxa, Wavely, Mount, Create.Video, Markus AI).
+This task executes a complete, radical visual redesign of Cadence Canvas (Cadenza):
+1. **Canvas & Swimlanes**:
+   - Deep atmospheric background (`#0c0e14`) with a visible, tactile dot grid.
+   - Structured swimlane tracks with grounded surfaces (`#10131d` / `#131724`), clear borders, left lane accent connectors, and centerline guides.
+   - DAW Track headers on the left with professional channel strip styling (colored accent tab, track name, scene/word count badge, mute/solo toggle button).
+2. **Story Node Cards (Fluxa & Wavely)**:
+   - Structured node cards:
+     - Header bar (height 28px) with scene number badge (`01`, `02`), bold title, and status pill.
+     - Hairline separator.
+     - Excerpt text in warm editorial slate.
+     - Footer with duration pill (`⏱ 10 pal · ~1 min`) and version tag.
+     - Sockets: Distinct In/Out connector sockets with color-coded halos (Input: `#818cf8`, Output: `#38bdf8`).
+     - Smooth double-stroked glowing Bézier cables with animated pulse.
+3. **Timeline Ruler (Create.Video)**:
+   - High-contrast DAW ruler with major timestamp markers (`0:00`, `1:00`, `2:00`...), rhythmic ticks, and chapter indicators.
+4. **Header & Navigation (Mount & Linear)**:
+   - Cohesive executive dark bar: brand mark, subtle ghost `[ ☰ Manuscrito ]` toggle, centered segmented control styled like Mount, and action buttons.
+5. **Manuscript Binder (Scrivener & Linear)**:
+   - Rich interactive scene list cards with index badges, colored track indicators, metadata chips, and smooth hover elevation.
+6. **Editor & Rhythm HUD**:
+   - Polished Mount-style Gary Provost sentence rhythm histogram and continuous segmented voice ribbon.

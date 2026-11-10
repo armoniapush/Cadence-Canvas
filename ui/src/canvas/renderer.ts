@@ -181,8 +181,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.save();
   ctx.scale(dpr, dpr);
 
-  // 1. Deep Obsidian Base Canvas & Story Lanes
-  ctx.fillStyle = '#0a0b0e';
+  // 1. Deep Atmospheric Slate Canvas & Grounded Modular Swimlanes (Fluxa / Imagion style)
+  ctx.fillStyle = '#0a0c12';
   ctx.fillRect(0, 0, w, h);
 
   ctx.save();
@@ -190,35 +190,41 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.rect(0, RULER_HEIGHT, w, h - RULER_HEIGHT);
   ctx.clip();
 
-  // Render lanes with subtle matte graphite backgrounds & swimlanes framing
+  // Render modular swimlane tracks with authentic depth and clear boundaries
   tracks.forEach((trk, i) => {
     const ly = RULER_HEIGHT + vp.panY + i * (TRACK_HEIGHT + TRACK_GAP);
-    ctx.fillStyle = i % 2 === 0 ? '#0d0f15' : '#10131a';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, TRACK_HEIGHT);
+    const laneW = w - TRACK_HEADER_WIDTH;
 
-    // Top border
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, 1);
+    // Track Lane Bed: Solid slate-obsidian with alternating luminance for tangible channel separation
+    ctx.fillStyle = i % 2 === 0 ? '#121520' : '#151926';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, TRACK_HEIGHT);
 
-    // Bottom border
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);
+    // Subtle vertical surface gradient (matte depth)
+    const laneGrad = ctx.createLinearGradient(TRACK_HEADER_WIDTH, ly, TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT);
+    laneGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+    laneGrad.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
+    ctx.fillStyle = laneGrad;
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, TRACK_HEIGHT);
 
-    // Subtle vertical color indicator strip near left edge
+    // Top hairline lane boundary
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, 1);
+
+    // Bottom hairline lane boundary
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, laneW, 1);
+
+    // Lane Left Accent Notch (connecting visually with the track header)
     ctx.save();
-    ctx.beginPath();
-    const indX = TRACK_HEADER_WIDTH + 6;
-    const indY = ly + 16;
-    const indW = 3;
-    const indH = TRACK_HEIGHT - 32;
-    if (ctx.roundRect) ctx.roundRect(indX, indY, indW, indH, 1.5);
-    else ctx.fillRect(indX, indY, indW, indH);
     ctx.fillStyle = trk.color_hex || '#4361ee';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(TRACK_HEADER_WIDTH + 8, ly + 14, 4, TRACK_HEIGHT - 28, 2);
+    else ctx.fillRect(TRACK_HEADER_WIDTH + 8, ly + 14, 4, TRACK_HEIGHT - 28);
     ctx.fill();
     ctx.restore();
 
-    // Faint horizontal centerline track guide
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT / 2, w - TRACK_HEADER_WIDTH, 1);
+    // Subtle horizontal centerline track guide
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT / 2, laneW, 1);
   });
 
   // 2. High-Performance Batched Wavely-Style Dot-Matrix Grid Background
@@ -232,14 +238,14 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
     if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
     const isMajor = t % (step * 4) === 0;
-    ctx.strokeStyle = isMajor ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.018)';
+    ctx.strokeStyle = isMajor ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.025)';
     ctx.beginPath();
     ctx.moveTo(gx, RULER_HEIGHT);
     ctx.lineTo(gx, h);
     ctx.stroke();
   }
 
-  // Batched dot matrix points across the full visible canvas
+  // Batched dot matrix points across the full visible canvas with crisp tactile contrast
   const dotStepY = 26;
   const startY = RULER_HEIGHT + ((((vp.panY % dotStepY) + dotStepY) % dotStepY) || 0);
 
@@ -256,7 +262,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.arc(gx, gy, 1, 0, Math.PI * 2);
     }
   }
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.055)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
   ctx.fill();
 
   // Major dots batch
@@ -272,7 +278,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
     }
   }
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
   ctx.fill();
 
   ctx.restore();
@@ -280,7 +286,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   const trkMap = new Map(tracks.map((t) => [t.id, t]));
   const scnMap = new Map(scenes.map((s) => [s.id, s]));
 
-  // 3. Silky-Smooth Organic Bézier Reading Ribbons (Connecting Causal Scenes)
+  // 3. High-Craft Glowing Bézier Causal Cables with Energy Pulses (Fluxa / Wavely / Markus AI style)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
@@ -290,8 +296,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ? anchors.map((a) => ({ src: scnMap.get(a.source_scene_id), dst: scnMap.get(a.target_scene_id), wt: a.weight || 1 }))
     : [...scenes].sort((a, b) => a.t_start - b.t_start).slice(0, -1).map((s, i) => ({ src: s, dst: scenes[i + 1], wt: 1 }));
 
-  for (const { src, dst, wt } of ribbons) {
-    if (!src || !dst) continue;
+  ribbons.forEach(({ src, dst }, cableIdx) => {
+    if (!src || !dst) return;
     const sR = getSceneRect(src, tracks, vp, dragState);
     const dR = getSceneRect(dst, tracks, vp, dragState);
     const x1 = sR.x + sR.w;
@@ -300,54 +306,65 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const y2 = dR.y + dR.h / 2;
 
     const isConnectedToSel = selectedSceneId && (src.id === selectedSceneId || dst.id === selectedSceneId);
-    const rh = Math.max(14, Math.min(26, 16 * wt));
-    const dist = Math.max(42, Math.abs(x2 - x1) * 0.45);
+    const dist = Math.max(45, Math.abs(x2 - x1) * 0.45);
     const c1x = x1 + dist;
     const c2x = x2 - dist;
 
-    // Organic ribbon path
-    ctx.beginPath();
-    ctx.moveTo(x1, y1 - rh / 2);
-    ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
-    ctx.lineTo(x2, y2 + rh / 2);
-    ctx.bezierCurveTo(c2x, y2 + rh / 2, c1x, y1 + rh / 2, x1, y1 + rh / 2);
-    ctx.closePath();
-
-    const g = ctx.createLinearGradient(x1, y1, x2, y2);
     const colSrc = trkMap.get(src.track_id)?.color_hex || '#6366f1';
     const colDst = trkMap.get(dst.track_id)?.color_hex || '#38bdf8';
-    const alphaBase = isConnectedToSel ? 0.45 : 0.24;
-    const alphaMid = isConnectedToSel ? 0.32 : 0.16;
 
-    g.addColorStop(0, hexToRgba(colSrc, alphaBase));
-    g.addColorStop(0.5, hexToRgba(colSrc, alphaMid));
-    g.addColorStop(1, hexToRgba(colDst, alphaBase));
-    ctx.fillStyle = g;
-    ctx.fill();
-
-    // Crisp edges with clear distinction when selected
+    // 1. Ambient soft glow path
     ctx.save();
-    if (isConnectedToSel) {
-      ctx.strokeStyle = hexToRgba(colSrc, 0.9);
-      ctx.lineWidth = 1.5;
-    } else {
-      ctx.strokeStyle = hexToRgba(colSrc, 0.4);
-      ctx.lineWidth = 1;
-    }
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
+    ctx.strokeStyle = hexToRgba(colSrc, isConnectedToSel ? 0.35 : 0.14);
+    ctx.lineWidth = isConnectedToSel ? 7 : 5;
+    ctx.lineCap = 'round';
     ctx.stroke();
     ctx.restore();
-  }
+
+    // 2. Crisp Core Cable Wire (Gradient from Source to Target track)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
+    const wireGrad = ctx.createLinearGradient(x1, y1, x2, y2);
+    wireGrad.addColorStop(0, colSrc);
+    wireGrad.addColorStop(1, colDst);
+    ctx.strokeStyle = wireGrad;
+    ctx.lineWidth = isConnectedToSel ? 2.5 : 1.85;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+
+    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect
+    const time = performance.now() / 1600;
+    const tPulse = (time + cableIdx * 0.38) % 1;
+    const u = 1 - tPulse;
+    const px = u * u * u * x1 + 3 * u * u * tPulse * c1x + 3 * u * tPulse * tPulse * c2x + tPulse * tPulse * tPulse * x2;
+    const py = u * u * u * y1 + 3 * u * u * tPulse * y1 + 3 * u * tPulse * tPulse * y2 + tPulse * tPulse * tPulse * y2;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px, py, isConnectedToSel ? 3.5 : 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = colSrc;
+    ctx.shadowBlur = 10;
+    ctx.fill();
+    ctx.restore();
+  });
   ctx.restore();
 
-  // 4. Ultra-Senior Literary Story Index Cards (Radius 12px with Specular Sheen)
+  // 4. Ultra-Senior Modular Story Node Cards (Fluxa / AI Creative Canvas / Wavely style)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
   ctx.clip();
 
-  for (const s of scenes) {
+  scenes.forEach((s, sceneIdx) => {
     const { x, y, w: scnW, h: scnH, isD } = getSceneRect(s, tracks, vp, dragState);
-    if (x + scnW < TRACK_HEADER_WIDTH || x > w || y + scnH < RULER_HEIGHT || y > h) continue;
+    if (x + scnW < TRACK_HEADER_WIDTH || x > w || y + scnH < RULER_HEIGHT || y > h) return;
 
     const isSel = s.id === selectedSceneId;
     const track = trkMap.get(isD && dragState ? dragState.previewTrackId : s.track_id);
@@ -359,63 +376,67 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.globalAlpha = 0.35;
     }
 
-    // Tactile Physical Card Lift during active drag
+    // Physical Card Lift Shadow
     ctx.save();
-    if (isD) {
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.72)';
-      ctx.shadowBlur = 22;
-      ctx.shadowOffsetY = 10;
-    }
+    ctx.shadowColor = isD ? 'rgba(0, 0, 0, 0.85)' : isSel ? 'rgba(0, 0, 0, 0.55)' : 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = isD ? 26 : isSel ? 16 : 8;
+    ctx.shadowOffsetY = isD ? 12 : isSel ? 6 : 3;
 
-    // Card background & base fill: deep graphite with subtle elevation
-    ctx.fillStyle = isD ? '#1e2436' : isSel ? '#1a1e2d' : '#13151e';
+    // Card Background Container: deep charcoal-obsidian
+    ctx.fillStyle = isD ? '#1e2436' : isSel ? '#191d2b' : '#141724';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
     else ctx.rect(x, y, scnW, scnH);
     ctx.fill();
     ctx.restore();
 
-    // Subtle vertical surface gradient (matte depth)
-    const cardGrad = ctx.createLinearGradient(x, y, x, y + scnH);
-    cardGrad.addColorStop(0, isD ? 'rgba(255, 255, 255, 0.12)' : isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.035)');
-    cardGrad.addColorStop(1, isD ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.28)');
-    ctx.fillStyle = cardGrad;
+    // 1. Modular Header Bar (Height 28px) with subtle track tint (Fluxa style)
+    const headerH = 28;
+    ctx.save();
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
-    else ctx.rect(x, y, scnW, scnH);
+    if (ctx.roundRect) ctx.roundRect(x, y, scnW, headerH, [CARD_BORDER_RADIUS, CARD_BORDER_RADIUS, 0, 0]);
+    else ctx.rect(x, y, scnW, headerH);
+    ctx.fillStyle = hexToRgba(col, isSel ? 0.22 : 0.12);
     ctx.fill();
 
-    // 1px Specular top highlight line
-    ctx.fillStyle = isD ? 'rgba(255, 255, 255, 0.35)' : isSel ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.07)';
+    // Header bottom hairline separator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(x, y + headerH - 1, scnW, 1);
+    ctx.restore();
+
+    // Top Specular Highlight Line
+    ctx.fillStyle = isD ? 'rgba(255, 255, 255, 0.35)' : isSel ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.09)';
     ctx.fillRect(x + CARD_BORDER_RADIUS, y + 1, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 1);
 
-    // Left track color indicator pill
-    ctx.save();
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x + 5, y + 10, 4, scnH - 20, 2);
-    else ctx.fillRect(x + 5, y + 10, 4, scnH - 20);
-    ctx.fillStyle = col;
-    ctx.fill();
-    ctx.restore();
-
-    // Specular border with tactile lift glow when dragged
+    // Card Outer Border
     ctx.lineWidth = isD ? 1.75 : isSel ? 1.5 : 1;
-    ctx.strokeStyle = isD ? '#60a5fa' : isSel ? '#818cf8' : 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeStyle = isD ? '#60a5fa' : isSel ? col : 'rgba(255, 255, 255, 0.1)';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, CARD_BORDER_RADIUS);
     else ctx.strokeRect(x, y, scnW, scnH);
     ctx.stroke();
 
-    // Card text and details (clipped safely inside card)
+    // Inside Header: Index badge (#01, #02) + Scene Title + Version chip
+    const numStr = `#0${sceneIdx + 1}`;
     ctx.save();
+    ctx.font = '700 9px ui-monospace, monospace';
+    const numW = ctx.measureText(numStr).width + 8;
+    ctx.fillStyle = '#0f121b';
     ctx.beginPath();
-    ctx.rect(x + 10, y + 2, Math.max(10, scnW - 16), scnH - 4);
-    ctx.clip();
+    if (ctx.roundRect) ctx.roundRect(x + 10, y + 6, numW, 16, 4);
+    else ctx.rect(x + 10, y + 6, numW, 16);
+    ctx.fill();
+    ctx.strokeStyle = hexToRgba(col, 0.4);
+    ctx.stroke();
 
-    // Title (13px semi-bold with soft ellipsis if long)
-    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-    ctx.fillStyle = isSel ? '#ffffff' : '#f8fafc';
-    const maxTitleW = Math.max(20, scnW - 32);
+    ctx.fillStyle = isSel ? '#ffffff' : '#94a3b8';
+    ctx.fillText(numStr, x + 14, y + 18);
+
+    // Title (Bold white 12px)
+    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#ffffff';
+    const titleStartX = x + 10 + numW + 8;
+    const maxTitleW = Math.max(20, scnW - numW - 65);
     let displayTitle = s.title;
     if (ctx.measureText(displayTitle).width > maxTitleW) {
       while (displayTitle.length > 3 && ctx.measureText(displayTitle + '…').width > maxTitleW) {
@@ -423,61 +444,66 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       }
       displayTitle += '…';
     }
-    ctx.fillText(displayTitle, x + 16, y + 23);
+    ctx.fillText(displayTitle, titleStartX, y + 18);
 
-    // Narrative excerpt (first words in warm editorial slate)
+    // Version Chip on Right of Header
+    if (scnW >= 150) {
+      const verStr = `v${s.version}`;
+      ctx.font = '600 9px ui-monospace, monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'right';
+      ctx.fillText(verStr, x + scnW - 12, y + 18);
+      ctx.textAlign = 'start';
+    }
+    ctx.restore();
+
+    // Card Body: Narrative Excerpt
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x + 10, y + headerH + 4, Math.max(10, scnW - 20), scnH - headerH - 26);
+    ctx.clip();
+
     const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
     const excerpt = rawText.length > 0
-      ? (rawText.length > 44 ? rawText.slice(0, 44) + '…' : rawText)
+      ? (rawText.length > 46 ? rawText.slice(0, 46) + '…' : rawText)
       : '(Sin contenido redactado aún)';
     ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.fillStyle = '#94a3b8';
-    ctx.fillText(excerpt, x + 16, y + 43);
+    ctx.fillText(excerpt, x + 12, y + headerH + 18);
+    ctx.restore();
 
-    // Bottom badge: [ X palabras · ~Y min ] & v{version}
+    // Card Footer: Duration Pill
     const words = s.word_count || 0;
     const readingMins = Math.max(1, Math.ceil(words / 240));
-    const bY = y + 58;
-    const badgeH = 18;
-    let badgeW = 0;
+    const bY = y + scnH - 22;
 
-    if (scnW >= 105) {
-      const metricStr = scnW >= 170 ? `${words} palabras · ~${readingMins} min` : `${words} pal · ~${readingMins} min`;
+    if (scnW >= 110) {
+      const metricStr = `⏱ ${words} pal · ~${readingMins}m`;
       ctx.font = '500 10px ui-sans-serif, system-ui, sans-serif';
       const textW = ctx.measureText(metricStr).width;
-      badgeW = textW + 14;
+      const bW = textW + 12;
 
-      // Clean pill badge
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x + 16, bY, badgeW, badgeH, 6);
-      else ctx.rect(x + 16, bY, badgeW, badgeH);
+      if (ctx.roundRect) ctx.roundRect(x + 10, bY, bW, 16, 4);
+      else ctx.rect(x + 10, bY, bW, 16);
       ctx.fill();
       ctx.stroke();
 
       ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(metricStr, x + 23, bY + 12);
+      ctx.fillText(metricStr, x + 16, bY + 11);
+      ctx.restore();
     }
 
-    // Version tag on bottom right (drawn only when not colliding with pill badge)
-    if (scnW >= badgeW + 55) {
-      ctx.font = '500 10px ui-monospace, monospace';
-      ctx.fillStyle = '#64748b';
-      const verText = `v${s.version}`;
-      ctx.textAlign = 'right';
-      ctx.fillText(verText, x + scnW - 12, bY + 12);
-      ctx.textAlign = 'start';
-    }
-
+    // Bottom Duration Clip Accent Line (DAW timeline clip style)
+    ctx.save();
+    ctx.fillStyle = hexToRgba(col, 0.65);
+    ctx.fillRect(x + CARD_BORDER_RADIUS, y + scnH - 3, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 2);
     ctx.restore();
 
-    // Card Duration Progress Meter (Fluxa style)
-    ctx.fillStyle = hexToRgba(col, 0.35);
-    ctx.fillRect(x + CARD_BORDER_RADIUS, y + scnH - 3, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 2);
-
-    // In-Port (Left Causal Anchor) & Out-Port (Right Causal Output)
+    // Sockets / Ports (Fluxa & Wavely style)
     const inPortX = x;
     const inPortY = y + scnH / 2;
     const outPortX = x + scnW;
@@ -487,42 +513,44 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const isOutHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'out';
     const isConnecting = Boolean(data.connectingWire);
 
-    // In-Port circle (Input / Causa) with subtle #818cf8 ring
+    // In-Port (Left Causal Socket)
     ctx.save();
+    ctx.beginPath();
     const inR = isInHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
-    ctx.beginPath();
-    ctx.arc(inPortX, inPortY, inR + 2.5, 0, Math.PI * 2);
-    ctx.strokeStyle = isInHover ? 'rgba(129, 140, 248, 0.6)' : 'rgba(129, 140, 248, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.beginPath();
     ctx.arc(inPortX, inPortY, inR, 0, Math.PI * 2);
-    ctx.fillStyle = isInHover ? '#818cf8' : '#13151e';
+    ctx.fillStyle = '#10131d';
     ctx.strokeStyle = isInHover ? '#ffffff' : '#818cf8';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = isInHover ? 2.5 : 1.75;
     ctx.fill();
     ctx.stroke();
 
-    // Out-Port circle (Output / Efecto) with subtle #38bdf8 ring
+    // Core dot inside In-Port
+    ctx.beginPath();
+    ctx.arc(inPortX, inPortY, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#818cf8';
+    ctx.fill();
+    ctx.restore();
+
+    // Out-Port (Right Causal Socket)
+    ctx.save();
+    ctx.beginPath();
     const outR = isOutHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
-    ctx.beginPath();
-    ctx.arc(outPortX, outPortY, outR + 2.5, 0, Math.PI * 2);
-    ctx.strokeStyle = isOutHover ? 'rgba(56, 189, 248, 0.6)' : 'rgba(56, 189, 248, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.beginPath();
     ctx.arc(outPortX, outPortY, outR, 0, Math.PI * 2);
-    ctx.fillStyle = isOutHover ? '#38bdf8' : '#13151e';
+    ctx.fillStyle = '#10131d';
     ctx.strokeStyle = isOutHover ? '#ffffff' : '#38bdf8';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = isOutHover ? 2.5 : 1.75;
     ctx.fill();
     ctx.stroke();
+
+    // Core dot inside Out-Port
+    ctx.beginPath();
+    ctx.arc(outPortX, outPortY, 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fill();
     ctx.restore();
 
     ctx.restore();
-  }
+  });
   ctx.restore();
 
   // Active interactive connecting Bézier cable
@@ -593,43 +621,66 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   tracks.forEach((trk, idx) => {
     const ly = RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
 
-    // Matte graphite background (#0e1017)
-    ctx.fillStyle = '#0e1017';
+    // DAW Channel Strip Background: Deep slate-obsidian (#131622) with subtle top specular
+    ctx.fillStyle = '#131622';
     ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, TRACK_HEIGHT);
 
-    // Subtle bottom border
+    // Subtle bevel top highlight
     ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, 1);
+
+    // Bottom lane border
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
     ctx.fillRect(0, ly + TRACK_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
 
-    // Right border specular
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    // Right border specular dividing header from timeline
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
     ctx.fillRect(TRACK_HEADER_WIDTH - 1, ly, 1, TRACK_HEIGHT);
 
-    // Color pill marker
-    ctx.fillStyle = trk.color_hex;
+    // Left vertical track accent strip (5px wide)
+    ctx.fillStyle = trk.color_hex || '#4361ee';
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(10, ly + 20, 4, TRACK_HEIGHT - 40, 2);
-    else ctx.fillRect(10, ly + 20, 4, TRACK_HEIGHT - 40);
+    if (ctx.roundRect) ctx.roundRect(8, ly + 12, 5, TRACK_HEIGHT - 24, 2.5);
+    else ctx.fillRect(8, ly + 12, 5, TRACK_HEIGHT - 24);
     ctx.fill();
 
-    // Track Name
-    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
-    ctx.fillStyle = trk.is_muted ? '#64748b' : '#f1f5f9';
-    const truncatedName = trk.name.length > 17 ? trk.name.slice(0, 16) + '…' : trk.name;
-    ctx.fillText(truncatedName, 22, ly + 36);
+    // Channel Index Chip (e.g. "CH 01")
+    const chStr = `CH 0${idx + 1}`;
+    ctx.font = '700 9px ui-monospace, monospace';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText(chStr, 22, ly + 25);
 
-    // Dynamic Subtitle: Scenes and Words Count for this Track
+    // Track Name (Bold 13px)
+    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = trk.is_muted ? '#64748b' : '#f8fafc';
+    const truncatedName = trk.name.length > 15 ? trk.name.slice(0, 14) + '…' : trk.name;
+    ctx.fillText(truncatedName, 22, ly + 45);
+
+    // Dynamic Telemetry Pill: Scenes & Total Words
     const trkScenes = scenes.filter((s) => s.track_id === trk.id);
     const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
-    ctx.font = '500 11px ui-sans-serif, system-ui, sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(`${trkScenes.length} esc. · ${trkWords.toLocaleString()} pal.`, 22, ly + 56);
+    const metaStr = `${trkScenes.length} esc · ${trkWords.toLocaleString()} pal`;
+    ctx.font = '500 10px ui-sans-serif, system-ui, sans-serif';
+    const metaW = ctx.measureText(metaStr).width + 12;
 
-    // Visibility toggle button [ 👁 ] / [ 👁‍🗨 ]
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(22, ly + 56, metaW, 16, 4);
+    else ctx.rect(22, ly + 56, metaW, 16);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(metaStr, 28, ly + 68);
+    ctx.restore();
+
+    // Hardware-style Visibility/Mute button [ 👁 ]
     const mBtn = getTrackMuteButtonRect(idx, vp);
     const isM = trk.is_muted;
-    ctx.fillStyle = isM ? 'rgba(245, 158, 11, 0.15)' : 'rgba(255, 255, 255, 0.04)';
-    ctx.strokeStyle = isM ? '#f59e0b' : 'rgba(255, 255, 255, 0.08)';
+    ctx.fillStyle = isM ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255, 255, 255, 0.05)';
+    ctx.strokeStyle = isM ? '#f59e0b' : 'rgba(255, 255, 255, 0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 6);
@@ -638,7 +689,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.stroke();
 
     ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
-    ctx.fillStyle = isM ? '#fbbf24' : '#94a3b8';
+    ctx.fillStyle = isM ? '#fbbf24' : '#cbd5e1';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(isM ? '👁‍🗨' : '👁', mBtn.x + mBtn.w / 2, mBtn.y + mBtn.h / 2);
@@ -699,21 +750,21 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.restore();
 
   // Pinned Top-Left Header: SECUENCIA NARRATIVA
-  ctx.fillStyle = '#0c0e15';
+  ctx.fillStyle = '#10131d';
   ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
   ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
   ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
 
-  // Matte indigo dot + label
-  ctx.fillStyle = '#4361ee';
+  // Matte cyan dot + label
+  ctx.fillStyle = '#38bdf8';
   ctx.beginPath();
-  ctx.arc(20, RULER_HEIGHT / 2, 3, 0, Math.PI * 2);
+  ctx.arc(20, RULER_HEIGHT / 2, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillText('SECUENCIA NARRATIVA', 30, RULER_HEIGHT / 2 + 4);
+  ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillText('SECUENCIA NARRATIVA', 32, RULER_HEIGHT / 2 + 4);
   ctx.restore();
   ctx.restore();
 }

@@ -549,23 +549,42 @@ export function App() {
             {projectPath}
           </span>
 
-          {/* Toggle Manuscript Binder Button (Left side, immediately following projectPath) */}
+          {/* Toggle Manuscript Binder Button (Left side, executive ghost toggle) */}
           <button
-            className={`btn ${isBinderOpen ? 'btn-accent' : 'btn-ghost'}`}
             onClick={() => setIsBinderOpen((prev) => !prev)}
             title="Alternar Binder de Manuscrito (⌘B)"
             style={{
               padding: '0 10px',
               height: '26px',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               marginLeft: '4px',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              backgroundColor: isBinderOpen ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+              border: isBinderOpen ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.05)',
+              color: isBinderOpen ? '#ffffff' : 'var(--text-secondary)',
+              boxShadow: isBinderOpen ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
+              transition: 'all 0.15s ease',
             }}
           >
-            <span>☰</span> Manuscrito
+            <span style={{ fontSize: '12px', color: isBinderOpen ? '#38bdf8' : 'var(--text-muted)' }}>☰</span>
+            <span>Manuscrito</span>
+            <span
+              style={{
+                fontSize: '9px',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-muted)',
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                padding: '1px 4px',
+                borderRadius: '3px',
+              }}
+            >
+              ⌘B
+            </span>
           </button>
 
           {error && (
@@ -588,69 +607,91 @@ export function App() {
           )}
         </div>
 
-        {/* Center: Segmented View Switcher (Linear / Apple Pro style) */}
+        {/* Center: Segmented View Switcher (Mount / Linear style) */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            backgroundColor: '#090b10',
-            padding: '2px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-subtle)',
-            gap: '2px',
+            backgroundColor: '#121520',
+            padding: '3px',
+            borderRadius: '8px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.4)',
+            gap: '3px',
           }}
         >
           <button
             onClick={() => setShowConstellation(false)}
             style={{
-              padding: '4px 12px',
-              borderRadius: '4px',
+              padding: '4px 14px',
+              borderRadius: '6px',
               fontSize: '12px',
               fontWeight: !showConstellation ? 600 : 500,
               color: !showConstellation ? '#ffffff' : 'var(--text-secondary)',
-              backgroundColor: !showConstellation ? '#1a1e2b' : 'transparent',
-              border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
-              boxShadow: !showConstellation ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+              backgroundColor: !showConstellation ? '#1e2436' : 'transparent',
+              border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+              boxShadow: !showConstellation ? '0 2px 6px rgba(0, 0, 0, 0.4)' : 'none',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <span>☵</span> Línea de Tiempo
+            <span style={{ color: !showConstellation ? '#38bdf8' : 'var(--text-muted)' }}>☵</span>
+            <span>Secuenciador</span>
           </button>
 
           <button
             onClick={() => setShowConstellation(true)}
             style={{
-              padding: '4px 12px',
-              borderRadius: '4px',
+              padding: '4px 14px',
+              borderRadius: '6px',
               fontSize: '12px',
               fontWeight: showConstellation ? 600 : 500,
               color: showConstellation ? '#ffffff' : 'var(--text-secondary)',
-              backgroundColor: showConstellation ? '#1a1e2b' : 'transparent',
-              border: showConstellation ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
-              boxShadow: showConstellation ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+              backgroundColor: showConstellation ? '#1e2436' : 'transparent',
+              border: showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+              boxShadow: showConstellation ? '0 2px 6px rgba(0, 0, 0, 0.4)' : 'none',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <span>◈</span> Red de Personajes & Lugares
+            <span style={{ color: showConstellation ? '#38bdf8' : 'var(--text-muted)' }}>◈</span>
+            <span>Red Orbital</span>
           </button>
         </div>
 
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
-            className="btn btn-ghost"
             onClick={() => setIsCreateTrackOpen(true)}
             style={{
               padding: '0 12px',
               height: '28px',
+              borderRadius: '6px',
               fontSize: '12px',
               fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(56, 189, 248, 0.08)',
+              border: '1px solid rgba(56, 189, 248, 0.28)',
+              color: '#38bdf8',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.16)';
+              e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(56, 189, 248, 0.08)';
+              e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.28)';
             }}
           >
             <span>+</span> Nuevo Hilo
