@@ -539,4 +539,44 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     assert.ok(PORT_RADIUS >= 4);
     assert.ok(PORT_HIT_RADIUS >= 12);
   });
+
+  test('Gary Provost sentence cadence descriptors and pacing zones', () => {
+    // Descriptor logic invariant
+    const getCadenceDescriptor = (variance: number) => {
+      if (variance < 3.5) return 'Ritmo uniforme · Frases de longitud similar';
+      if (variance <= 9.0) return 'Ritmo armónico · Cadencia viva y musical';
+      return 'Ritmo sincopado · Rápida alternancia';
+    };
+
+    assert.strictEqual(getCadenceDescriptor(2.1), 'Ritmo uniforme · Frases de longitud similar');
+    assert.strictEqual(getCadenceDescriptor(3.5), 'Ritmo armónico · Cadencia viva y musical');
+    assert.strictEqual(getCadenceDescriptor(5.4), 'Ritmo armónico · Cadencia viva y musical');
+    assert.strictEqual(getCadenceDescriptor(9.0), 'Ritmo armónico · Cadencia viva y musical');
+    assert.strictEqual(getCadenceDescriptor(9.1), 'Ritmo sincopado · Rápida alternancia');
+
+    // Sentence rhythm pacing zones invariant
+    const getPacingZone = (len: number) => {
+      if (len < 10) return { zone: 'snappy', color: '#38bdf8' };
+      if (len <= 25) return { zone: 'flowing', color: '#94a3b8' };
+      return { zone: 'expansive', color: '#f59e0b' };
+    };
+
+    assert.strictEqual(getPacingZone(5).color, '#38bdf8');
+    assert.strictEqual(getPacingZone(9).color, '#38bdf8');
+    assert.strictEqual(getPacingZone(10).color, '#94a3b8');
+    assert.strictEqual(getPacingZone(25).color, '#94a3b8');
+    assert.strictEqual(getPacingZone(26).color, '#f59e0b');
+    assert.strictEqual(getPacingZone(45).color, '#f59e0b');
+  });
+
+  test('dynamic track metadata formatting calculates scenes and total words', () => {
+    const trackScenes: Scene[] = [
+      { id: '1', project_id: 'p', track_id: 'trk-1', title: 'A', t_start: 0, duration: 30, text: '', word_count: 320, version: 1 },
+      { id: '2', project_id: 'p', track_id: 'trk-1', title: 'B', t_start: 40, duration: 40, text: '', word_count: 480, version: 1 },
+    ];
+
+    const trkWords = trackScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
+    const subtitle = `${trackScenes.length} esc. · ${trkWords.toLocaleString()} pal.`;
+    assert.strictEqual(subtitle, '2 esc. · 800 pal.');
+  });
 });

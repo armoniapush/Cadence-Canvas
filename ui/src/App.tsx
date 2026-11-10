@@ -495,31 +495,42 @@ export function App() {
           flexShrink: 0,
         }}
       >
-        {/* Left: Brand Monogram, Title & Project Context */}
+        {/* Left: Brand Monogram, Title, Project Context & Manuscript Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              width: '24px',
-              height: '24px',
-              borderRadius: '5px',
-              backgroundColor: '#161924',
+              width: '26px',
+              height: '26px',
+              borderRadius: '7px',
+              backgroundColor: '#161922',
               border: '1px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '12px',
-              color: '#f8fafc',
-              letterSpacing: '-0.02em',
               userSelect: 'none',
+              flexShrink: 0,
             }}
           >
-            C
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M12.5 5.2C11.6 3.6 9.9 2.5 8 2.5C4.96 2.5 2.5 4.96 2.5 8C2.5 11.04 4.96 13.5 8 13.5C9.9 13.5 11.6 12.4 12.5 10.8"
+                stroke="#f8fafc"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="4" r="1.5" fill="#38bdf8" />
+            </svg>
           </div>
 
-          <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-            Cadence Canvas
-          </span>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', userSelect: 'none' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+              Cadence
+            </span>
+            <span style={{ fontSize: '11px', fontWeight: 500, letterSpacing: '-0.01em', color: 'var(--text-muted)' }}>
+              Canvas
+            </span>
+          </div>
 
           <span style={{ fontSize: '12px', color: 'var(--border-hover)', userSelect: 'none' }}>/</span>
 
@@ -537,6 +548,25 @@ export function App() {
           >
             {projectPath}
           </span>
+
+          {/* Toggle Manuscript Binder Button (Left side, immediately following projectPath) */}
+          <button
+            className={`btn ${isBinderOpen ? 'btn-accent' : 'btn-ghost'}`}
+            onClick={() => setIsBinderOpen((prev) => !prev)}
+            title="Alternar Binder de Manuscrito (⌘B)"
+            style={{
+              padding: '0 10px',
+              height: '26px',
+              fontSize: '12px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginLeft: '4px',
+            }}
+          >
+            <span>☰</span> Manuscrito
+          </button>
 
           {error && (
             <div
@@ -613,24 +643,6 @@ export function App() {
 
         {/* Right: Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Toggle Manuscript Binder Button */}
-          <button
-            className={`btn ${isBinderOpen ? 'btn-accent' : 'btn-ghost'}`}
-            onClick={() => setIsBinderOpen((prev) => !prev)}
-            title="Alternar Binder de Manuscrito (⌘B)"
-            style={{
-              padding: '0 10px',
-              height: '28px',
-              fontSize: '12px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>☰</span> Manuscrito
-          </button>
-
           <button
             className="btn btn-ghost"
             onClick={() => setIsCreateTrackOpen(true)}
@@ -643,22 +655,6 @@ export function App() {
           >
             <span>+</span> Nuevo Hilo
           </button>
-
-          {selectedScene && (
-            <button
-              className="btn btn-ghost"
-              onClick={handleToggleZen}
-              title="Modo Zen inmersivo (F11)"
-              style={{
-                padding: '0 10px',
-                height: '28px',
-                fontSize: '12px',
-                fontWeight: 500,
-              }}
-            >
-              <span>🗖</span> Zen
-            </button>
-          )}
         </div>
       </header>
 
@@ -684,7 +680,7 @@ export function App() {
           />
         )}
 
-        {/* Center Stage: Timeline Canvas or Radial Constellation */}
+        {/* Center Stage: Timeline Canvas and Radial Constellation (Both mounted simultaneously to prevent canvas recreation / black flash) */}
         <section
           style={{
             flex: 1,
@@ -692,21 +688,21 @@ export function App() {
             border: '1px solid var(--border-default)',
             borderRadius: '10px',
             overflow: 'hidden',
-            display: 'flex',
             position: 'relative',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           }}
         >
-          {showConstellation ? (
-            <RadialConstellation
-              projectPath={projectPath}
-              projectId={project?.id || 'mock-proj-1'}
-              scenes={scenes}
-              selectedSceneId={selectedSceneId}
-              onSelectScene={(sceneId) => setSelectedSceneId(sceneId)}
-              onClose={() => setShowConstellation(false)}
-            />
-          ) : (
+          {/* Timeline DAW Canvas View */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              visibility: showConstellation ? 'hidden' : 'visible',
+              opacity: showConstellation ? 0 : 1,
+              pointerEvents: showConstellation ? 'none' : 'auto',
+              transition: 'opacity 0.15s ease, visibility 0.15s ease',
+            }}
+          >
             <ErrorBoundary>
               <DawCanvas
                 tracks={tracks}
@@ -718,13 +714,33 @@ export function App() {
                 onCreateScene={handleCreateScene}
                 onDeleteScene={handleDeleteScene}
                 onToggleMuteTrack={handleToggleMuteTrack}
-                onToggleZen={handleToggleZen}
                 onCreateAnchor={handleCreateAnchor}
                 onDuplicateScene={handleDuplicateScene}
                 onSplitScene={handleSplitScene}
               />
             </ErrorBoundary>
-          )}
+          </div>
+
+          {/* Radial Constellation View */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              visibility: showConstellation ? 'visible' : 'hidden',
+              opacity: showConstellation ? 1 : 0,
+              pointerEvents: showConstellation ? 'auto' : 'none',
+              transition: 'opacity 0.15s ease, visibility 0.15s ease',
+            }}
+          >
+            <RadialConstellation
+              projectPath={projectPath}
+              projectId={project?.id || 'mock-proj-1'}
+              scenes={scenes}
+              selectedSceneId={selectedSceneId}
+              onSelectScene={(sceneId) => setSelectedSceneId(sceneId)}
+              onClose={() => setShowConstellation(false)}
+            />
+          </div>
         </section>
 
         {/* Right Stage: Atomic Editor (Displayed smoothly when a scene is selected) */}

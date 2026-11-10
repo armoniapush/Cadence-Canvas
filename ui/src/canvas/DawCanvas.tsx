@@ -28,7 +28,6 @@ interface DawCanvasProps {
   onCreateScene: (trackId: string, tStart: number) => void;
   onDeleteScene?: (sceneId: string) => void;
   onToggleMuteTrack?: (trackId: string) => void;
-  onToggleZen?: () => void;
   onCreateAnchor?: (sourceSceneId: string, targetSceneId: string) => void;
   onDuplicateScene?: (scene: Scene) => void;
   onSplitScene?: (scene: Scene) => void;
@@ -44,7 +43,6 @@ export function DawCanvas({
   onCreateScene,
   onDeleteScene,
   onToggleMuteTrack,
-  onToggleZen,
   onCreateAnchor,
   onDuplicateScene,
   onSplitScene,
@@ -531,7 +529,7 @@ export function DawCanvas({
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: size.width, height: size.height }} />
 
-      {/* Floating Bottom Dock: Professional Matte Toolbar Dock */}
+      {/* Floating Bottom Dock: Mount-Inspired Matte Precision Toolbar Dock */}
       <div
         style={{
           position: 'absolute',
@@ -541,11 +539,13 @@ export function DawCanvas({
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '4px 10px',
-          backgroundColor: 'var(--bg-dock)',
-          border: '1px solid var(--border-default)',
-          borderRadius: '8px',
-          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+          padding: '4px 8px',
+          backgroundColor: 'rgba(18, 21, 31, 0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '10px',
+          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3)',
           zIndex: 40,
           pointerEvents: 'auto',
           userSelect: 'none',
@@ -554,22 +554,50 @@ export function DawCanvas({
         onPointerUp={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Telemetry Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{scenes.length}</span> escenas
-          <span style={{ color: 'var(--border-default)' }}>·</span>
-          <span>{totalWords.toLocaleString()} pal.</span>
+        {/* Telemetry Badge (Mount-inspired matte pill) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '2px 8px',
+            borderRadius: '6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+            {scenes.length}
+          </span>
+          <span>escenas</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.15)' }}>·</span>
+          <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
+            {totalWords.toLocaleString()}
+          </span>
+          <span>pal.</span>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
 
-        {/* Zoom Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {/* Zoom Controls (Matte segmented group) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            padding: '2px',
+            borderRadius: '6px',
+            border: '1px solid rgba(255, 255, 255, 0.04)',
+          }}
+        >
           <button
             className="btn-icon"
             onClick={handleZoomOut}
             title="Reducir zoom (-)"
-            style={{ width: '22px', height: '22px', fontSize: '13px' }}
+            style={{ width: '20px', height: '20px', fontSize: '12px' }}
           >
             -
           </button>
@@ -580,7 +608,7 @@ export function DawCanvas({
             title="Restablecer zoom al 100%"
             style={{
               padding: '0 6px',
-              height: '22px',
+              height: '20px',
               fontSize: '11px',
               fontFamily: 'var(--font-mono)',
               fontWeight: 500,
@@ -593,13 +621,13 @@ export function DawCanvas({
             className="btn-icon"
             onClick={handleZoomIn}
             title="Aumentar zoom (+)"
-            style={{ width: '22px', height: '22px', fontSize: '13px' }}
+            style={{ width: '20px', height: '20px', fontSize: '12px' }}
           >
             +
           </button>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
 
         {/* View Fit ("Ajustar" to content) button */}
         <button
@@ -607,31 +635,15 @@ export function DawCanvas({
           onClick={handleFitView}
           title="Centrar y encuadrar todas las escenas literarias"
           style={{
-            height: '22px',
+            height: '24px',
             padding: '0 8px',
             fontSize: '11px',
             fontWeight: 500,
+            borderRadius: '6px',
           }}
         >
-          <span>⛶</span> Ajustar
+          <span style={{ fontSize: '12px', opacity: 0.8 }}>⛶</span> Ajustar
         </button>
-
-        {/* Zen Mode Button */}
-        {onToggleZen && (
-          <button
-            className="btn btn-ghost"
-            onClick={onToggleZen}
-            title="Modo Zen inmersivo (F11)"
-            style={{
-              height: '22px',
-              padding: '0 8px',
-              fontSize: '11px',
-              fontWeight: 500,
-            }}
-          >
-            <span>🗖</span> Zen
-          </button>
-        )}
       </div>
 
       {/* Floating Context Menu */}

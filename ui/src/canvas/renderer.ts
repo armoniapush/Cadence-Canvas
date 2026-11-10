@@ -582,10 +582,12 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const truncatedName = trk.name.length > 17 ? trk.name.slice(0, 16) + '…' : trk.name;
     ctx.fillText(truncatedName, 22, ly + 36);
 
-    // Subtitle: Hilo Narrativo
+    // Dynamic Subtitle: Scenes and Words Count for this Track
+    const trkScenes = scenes.filter((s) => s.track_id === trk.id);
+    const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
     ctx.font = '500 11px ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = '#64748b';
-    ctx.fillText('Hilo Narrativo', 22, ly + 56);
+    ctx.fillText(`${trkScenes.length} esc. · ${trkWords.toLocaleString()} pal.`, 22, ly + 56);
 
     // Visibility toggle button [ 👁 ] / [ 👁‍🗨 ]
     const mBtn = getTrackMuteButtonRect(idx, vp);

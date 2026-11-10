@@ -47,8 +47,8 @@ export function ContextMenu({
   }, [onClose]);
 
   // Clamp positioning so the menu doesn't overflow screen boundaries
-  const menuWidth = 220;
-  const menuHeight = 210;
+  const menuWidth = 224;
+  const menuHeight = 220;
   const clampedX = Math.min(x, window.innerWidth - menuWidth - 12);
   const clampedY = Math.min(y, window.innerHeight - menuHeight - 12);
 
@@ -63,11 +63,11 @@ export function ContextMenu({
         left: `${clampedX}px`,
         top: `${clampedY}px`,
         width: `${menuWidth}px`,
-        backgroundColor: '#141722',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '8px',
+        backgroundColor: '#13161c',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        borderRadius: '12px',
         padding: '6px',
-        boxShadow: '0 16px 36px rgba(0, 0, 0, 0.65), 0 2px 6px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 20px 48px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.5)',
         zIndex: 2000,
         display: 'flex',
         flexDirection: 'column',
@@ -80,15 +80,16 @@ export function ContextMenu({
       {/* Header with Scene Title */}
       <div
         style={{
-          padding: '6px 8px 4px 8px',
+          padding: '6px 8px 6px 8px',
           fontSize: '11px',
           fontWeight: 600,
           color: '#94a3b8',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           marginBottom: '4px',
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
+          letterSpacing: '-0.01em',
         }}
       >
         {scene.title}
@@ -102,7 +103,10 @@ export function ContextMenu({
           onClose();
         }}
       >
-        <span>✎ Abrir en Editor</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✎</span>
+          <span>Abrir en Editor</span>
+        </span>
         <span className="kbd-shortcut">↵</span>
       </button>
 
@@ -114,7 +118,10 @@ export function ContextMenu({
           onClose();
         }}
       >
-        <span>⚡ Conectar Causalmente</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>☍</span>
+          <span>Conectar Causalmente</span>
+        </span>
         <span className="kbd-shortcut">⌘L</span>
       </button>
 
@@ -126,7 +133,10 @@ export function ContextMenu({
           onClose();
         }}
       >
-        <span>❐ Duplicar Escena</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>❐</span>
+          <span>Duplicar Escena</span>
+        </span>
         <span className="kbd-shortcut">⌘D</span>
       </button>
 
@@ -138,7 +148,10 @@ export function ContextMenu({
           onClose();
         }}
       >
-        <span>✂ Dividir en Dos</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✂</span>
+          <span>Dividir en Dos</span>
+        </span>
         <span className="kbd-shortcut">⌥⇧S</span>
       </button>
 
@@ -152,7 +165,10 @@ export function ContextMenu({
           onClose();
         }}
       >
-        <span>✕ Eliminar Escena</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✕</span>
+          <span>Eliminar Escena</span>
+        </span>
         <span className="kbd-shortcut">⌫</span>
       </button>
     </div>

@@ -8,13 +8,6 @@ export interface TonalHudProps {
   compact?: boolean;
 }
 
-const CHANNELS = [
-  { key: 'dialogue' as const, label: 'Diálogo', color: '#0284c7' },
-  { key: 'action' as const, label: 'Acción', color: '#c2410c' },
-  { key: 'lore' as const, label: 'Lore', color: '#1f9a73' },
-  { key: 'monologue' as const, label: 'Monólogo', color: '#7c3aed' },
-];
-
 export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCount, compact }) => {
   const m = useMemo(() => {
     return metrics || {
@@ -28,7 +21,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
     };
   }, [metrics, wordCount]);
 
-  // Compute normalized percentages
+  // Compute normalized percentages for the voice ribbon
   const { pDialogue, pAction, pLore, pMonologue } = useMemo(() => {
     const rawD = Math.max(0, m.dialogue ?? 0);
     const rawA = Math.max(0, m.action ?? 0);
@@ -47,89 +40,33 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
 
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 240));
 
-  // Dynamic monotonic gradient stops strictly bounded [0%, 100%]
-  const gradientStops = useMemo(() => {
-    const rawChannels = [
-      { key: 'dialogue', pct: pDialogue, color: '#0284c7' },
-      { key: 'action', pct: pAction, color: '#c2410c' },
-      { key: 'lore', pct: pLore, color: '#1f9a73' },
-      { key: 'monologue', pct: pMonologue, color: '#7c3aed' },
-    ];
-    const active = rawChannels.filter((c) => c.pct > 0);
-    if (active.length === 0) {
-      return [
-        { offset: '0%', color: '#0284c7' },
-        { offset: '100%', color: '#0284c7' },
-      ];
-    }
-    if (active.length === 1) {
-      return [
-        { offset: '0%', color: active[0].color },
-        { offset: '100%', color: active[0].color },
-      ];
-    }
-    const stops: { offset: string; color: string }[] = [];
-    let accum = 0;
-    active.forEach((ch) => {
-      const startPct = accum;
-      const endPct = Math.min(100, accum + ch.pct);
-      accum = endPct;
-      stops.push({ offset: `${startPct.toFixed(1)}%`, color: ch.color });
-      stops.push({ offset: `${endPct.toFixed(1)}%`, color: ch.color });
-    });
-    return stops;
-  }, [pDialogue, pAction, pLore, pMonologue]);
-
-  // Cadence descriptor based on variance
+  // Gary Provost Cadence descriptor without math
   const cadenceInfo = useMemo(() => {
     const v = m.cadence_variance ?? 5.0;
-    if (v < 3.5) return { label: 'Homogénea / Métrica fija', color: '#94a3b8' };
-    if (v <= 9.0) return { label: 'Fluida / Variación armónica', color: '#10b981' };
-    return { label: 'Sincopada / Alta alternancia', color: '#f59e0b' };
+    if (v < 3.5) {
+      return {
+        label: 'Ritmo uniforme · Frases de longitud similar',
+        color: '#94a3b8',
+      };
+    }
+    if (v <= 9.0) {
+      return {
+        label: 'Ritmo armónico · Cadencia viva y musical',
+        color: '#38bdf8',
+      };
+    }
+    return {
+      label: 'Ritmo sincopado · Rápida alternancia',
+      color: '#f59e0b',
+    };
   }, [m.cadence_variance]);
 
-  // Dynamic rhythmic wave SVG path generator (inspired by Mount cardiac & respiratory wave)
-  const waveSvg = useMemo(() => {
-    const lengths = m.sentence_lengths && m.sentence_lengths.length > 0
-      ? m.sentence_lengths
-      : [12, 16, 8, 24, 10, 18, 7, 21, 14];
-
-    const w = 360;
-    const h = 32;
-    const midY = h / 2;
-    const pointsCount = Math.max(8, lengths.length);
-    const stepX = w / (pointsCount - 1);
-
-    const pts: [number, number][] = [];
-    for (let i = 0; i < pointsCount; i++) {
-      const x = i * stepX;
-      const len = lengths[i % lengths.length] || 12;
-      // Amplitude scales with variance & sentence length difference
-      const normalizedLen = Math.min(30, Math.max(4, len));
-      const delta = (normalizedLen - 14) * 0.9;
-      // Alternate peaks for organic cardiac/respiratory pulse
-      const phase = i % 2 === 0 ? 1 : -1;
-      const y = Math.min(h - 3, Math.max(3, midY + phase * delta));
-      pts.push([x, y]);
+  // Real sentence lengths for the Gary Provost sentence rhythm histogram
+  const sentenceLengths = useMemo(() => {
+    if (m.sentence_lengths && m.sentence_lengths.length > 0) {
+      return m.sentence_lengths;
     }
-
-    // Build smooth cubic Bezier path
-    let path = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[Math.max(0, i - 1)];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = pts[Math.min(pts.length - 1, i + 2)];
-
-      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
-      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
-      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
-      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
-
-      path += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
-    }
-
-    return { path, w, h };
+    return [12, 8, 22, 14, 6, 18, 9, 25, 11];
   }, [m.sentence_lengths]);
 
   if (compact) {
@@ -198,7 +135,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
       }}
     >
-      {/* Top Editorial Telemetry */}
+      {/* Top Editorial Telemetry & Gary Provost Cadence Descriptor */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
           <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '12px' }}>{wordCount}</span> palabras
@@ -208,107 +145,84 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           <span style={{ color: 'var(--accent-cyan)', fontWeight: 500 }}>~{readingMinutes} min lectura</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px' }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cadenceInfo.color }} />
           <span style={{ color: cadenceInfo.color, fontWeight: 500 }}>
-            {cadenceInfo.label} (σ {m.cadence_variance?.toFixed(1) ?? '5.0'})
+            {cadenceInfo.label}
           </span>
         </div>
       </div>
 
-      {/* Rhythmic Respiration / Cardiac Waveform (Mount style) */}
+      {/* Gary Provost Sentence Rhythm Histogram (Replaces fake audio sine wave) */}
       <div
         style={{
-          position: 'relative',
-          height: '32px',
-          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
           backgroundColor: 'rgba(8, 9, 12, 0.55)',
           borderRadius: '8px',
           border: '1px solid rgba(255, 255, 255, 0.04)',
-          overflow: 'hidden',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+          padding: '8px 10px',
         }}
       >
-        <svg
-          viewBox={`0 0 ${waveSvg.w} ${waveSvg.h}`}
-          preserveAspectRatio="none"
-          style={{ width: '100%', height: '100%', overflow: 'visible' }}
-        >
-          <defs>
-            <linearGradient id="spectralWaveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              {gradientStops.map((stop, idx) => (
-                <stop
-                  key={`wave-stop-${idx}`}
-                  offset={stop.offset}
-                  stopColor={stop.color}
-                  stopOpacity="0.85"
-                />
-              ))}
-            </linearGradient>
-            <filter id="waveGlow" x="-10%" y="-10%" width="120%" height="120%">
-              <feGaussianBlur stdDeviation="1.5" result="blur" />
-              <feComposite in="SourceGraphic" in2="blur" operator="over" />
-            </filter>
-          </defs>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px' }}>
+          <span style={{ color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.02em' }}>
+            Ritmo de Frases (Gary Provost)
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '9px', color: 'var(--text-muted)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#38bdf8' }} /> &lt;10 breve
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#94a3b8' }} /> 10–25 fluida
+            </span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#f59e0b' }} /> &gt;25 expansiva
+            </span>
+          </div>
+        </div>
 
-          {/* Center baseline reference */}
-          <line
-            x1="0"
-            y1={waveSvg.h / 2}
-            x2={waveSvg.w}
-            y2={waveSvg.h / 2}
-            stroke="rgba(255, 255, 255, 0.06)"
-            strokeDasharray="3 3"
-            strokeWidth="0.8"
-          />
-
-          {/* Background subtle glow wave */}
-          <path
-            d={waveSvg.path}
-            fill="none"
-            stroke="url(#spectralWaveGradient)"
-            strokeWidth="3.5"
-            strokeOpacity="0.25"
-            strokeLinecap="round"
-          />
-
-          {/* Sharp foreground rhythm wave */}
-          <path
-            d={waveSvg.path}
-            fill="none"
-            stroke="url(#spectralWaveGradient)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            filter="url(#waveGlow)"
-          />
-        </svg>
-
-        {/* Overlay Label for Waveform */}
-        <span
+        <div
           style={{
-            position: 'absolute',
-            right: '8px',
-            bottom: '3px',
-            fontSize: '9px',
-            fontFamily: 'var(--font-mono)',
-            color: 'rgba(255, 255, 255, 0.3)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em',
-            pointerEvents: 'none',
+            display: 'flex',
+            alignItems: 'flex-end',
+            gap: '3px',
+            height: '32px',
+            width: '100%',
+            padding: '2px 0',
           }}
         >
-          Onda Espectral de Respiración
-        </span>
+          {sentenceLengths.map((len, idx) => {
+            const color = len < 10 ? '#38bdf8' : len <= 25 ? '#94a3b8' : '#f59e0b';
+            const maxLen = Math.max(30, ...sentenceLengths);
+            const heightPercent = Math.max(12, Math.min(100, Math.round((len / maxLen) * 100)));
+            return (
+              <div
+                key={`sentence-bar-${idx}`}
+                title={`Frase ${idx + 1}: ${len} palabras (${len < 10 ? 'Breve' : len <= 25 ? 'Fluida' : 'Expansiva'})`}
+                style={{
+                  flex: 1,
+                  maxWidth: '14px',
+                  minWidth: '4px',
+                  height: `${heightPercent}%`,
+                  backgroundColor: color,
+                  borderRadius: '2px 2px 0 0',
+                  opacity: 0.85,
+                  transition: 'height 0.25s ease, opacity 0.15s ease',
+                  cursor: 'default',
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
 
-      {/* Unified Horizontal Chromatic Spectral Wave / Rhythm Bar */}
+      {/* Continuous Chromatic Voice Ribbon with Clean Typography Legend */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
         <div
           style={{
             display: 'flex',
-            height: '7px',
+            height: '6px',
             width: '100%',
             borderRadius: '9999px',
             overflow: 'hidden',
@@ -351,49 +265,45 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           />
         </div>
 
-        {/* Micro-Pill Spectral Legend */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '2px' }}>
-          {CHANNELS.map(({ key, label, color }) => {
-            const pct =
-              key === 'dialogue'
-                ? pDialogue
-                : key === 'action'
-                ? pAction
-                : key === 'lore'
-                ? pLore
-                : pMonologue;
-
-            return (
-              <div
-                key={key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '4px 8px',
-                  backgroundColor: 'rgba(8, 9, 12, 0.45)',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.04)',
-                  fontSize: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: color,
-                    }}
-                  />
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{label}</span>
-                </div>
-                <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                  {pct}%
-                </span>
-              </div>
-            );
-          })}
+        {/* Clean Typographic Legend */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            padding: '2px 2px 0 2px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#0284c7', fontSize: '9px' }}>●</span>
+            <span>Diálogo</span>
+            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              {pDialogue}%
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#c2410c', fontSize: '9px' }}>●</span>
+            <span>Acción</span>
+            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              {pAction}%
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#1f9a73', fontSize: '9px' }}>●</span>
+            <span>Lore</span>
+            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              {pLore}%
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ color: '#7c3aed', fontSize: '9px' }}>●</span>
+            <span>Monólogo</span>
+            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+              {pMonologue}%
+            </span>
+          </div>
         </div>
       </div>
     </div>
