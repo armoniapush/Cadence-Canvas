@@ -55,8 +55,8 @@ export function DawCanvas({
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [size, setSize] = useState({ width: 800, height: 600, dpr: 1 });
 
-  // Magnetic snapping & interactive causal ports
-  const [magnetEnabled, setMagnetEnabled] = useState(true);
+  // Headless magnetic snapping (active by default; hold Alt or Shift for free placement)
+  const magnetEnabled = true;
   const [magnetGuideT, setMagnetGuideT] = useState<number | null>(null);
   const [connectingWire, setConnectingWire] = useState<{
     fromSceneId: string;
@@ -560,26 +560,6 @@ export function DawCanvas({
           <span style={{ color: 'var(--border-default)' }}>·</span>
           <span>{totalWords.toLocaleString()} pal.</span>
         </div>
-
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
-
-        {/* Magnet Snapping Toggle */}
-        <button
-          className={`btn ${magnetEnabled ? 'btn-accent' : 'btn-ghost'}`}
-          onClick={() => setMagnetEnabled((prev) => !prev)}
-          title="Alternar Imán Magnético (ajuste ordenado a compases y límites de escena; Shift temporal)"
-          style={{
-            height: '22px',
-            padding: '0 8px',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-          }}
-        >
-          <span>🧲</span>
-          <span>{magnetEnabled ? 'Imán Activo' : 'Libre'}</span>
-        </button>
 
         <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
 

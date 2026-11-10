@@ -204,14 +204,23 @@ export function ManuscriptBinder({
                     borderRadius: '6px',
                     backgroundColor: isSel ? '#1a1e2d' : 'rgba(255, 255, 255, 0.02)',
                     border: isSel ? '1px solid #4361ee' : '1px solid rgba(255, 255, 255, 0.04)',
+                    boxShadow: isSel ? '0 2px 8px rgba(67, 97, 238, 0.15)' : 'none',
                     cursor: 'pointer',
-                    transition: 'all 0.12s ease',
+                    transition: 'all 0.16s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                   onMouseEnter={(e) => {
-                    if (!isSel) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.transform = 'translateX(3px)';
+                    if (!isSel) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSel) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    if (!isSel) {
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.04)';
+                    }
                   }}
                 >
                   {/* Index badge */}
@@ -328,6 +337,15 @@ export function ManuscriptBinder({
                           backgroundColor: isSel ? '#1a1e2d' : 'transparent',
                           border: isSel ? '1px solid #4361ee' : '1px solid transparent',
                           cursor: 'pointer',
+                          transition: 'all 0.16s cubic-bezier(0.16, 1, 0.3, 1)',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateX(3px)';
+                          if (!isSel) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateX(0)';
+                          if (!isSel) e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                       >
                         <span

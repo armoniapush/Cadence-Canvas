@@ -339,17 +339,26 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.globalAlpha = 0.35;
     }
 
+    // Tactile Physical Card Lift during active drag
+    ctx.save();
+    if (isD) {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.72)';
+      ctx.shadowBlur = 22;
+      ctx.shadowOffsetY = 10;
+    }
+
     // Card background & base fill: deep graphite with subtle elevation
-    ctx.fillStyle = isD ? '#1e1c15' : isSel ? '#1a1e2d' : '#13151e';
+    ctx.fillStyle = isD ? '#1e2436' : isSel ? '#1a1e2d' : '#13151e';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
     else ctx.rect(x, y, scnW, scnH);
     ctx.fill();
+    ctx.restore();
 
     // Subtle vertical surface gradient (matte depth)
     const cardGrad = ctx.createLinearGradient(x, y, x, y + scnH);
-    cardGrad.addColorStop(0, isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.035)');
-    cardGrad.addColorStop(1, 'rgba(0, 0, 0, 0.28)');
+    cardGrad.addColorStop(0, isD ? 'rgba(255, 255, 255, 0.12)' : isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.035)');
+    cardGrad.addColorStop(1, isD ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.28)');
     ctx.fillStyle = cardGrad;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
@@ -357,7 +366,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fill();
 
     // 1px Specular top highlight line
-    ctx.fillStyle = isSel ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.07)';
+    ctx.fillStyle = isD ? 'rgba(255, 255, 255, 0.35)' : isSel ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.07)';
     ctx.fillRect(x + CARD_BORDER_RADIUS, y + 1, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 1);
 
     // Left track color indicator pill
@@ -369,9 +378,9 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fill();
     ctx.restore();
 
-    // Specular border
-    ctx.lineWidth = isSel || isD ? 1.5 : 1;
-    ctx.strokeStyle = isD ? '#f59e0b' : isSel ? '#818cf8' : 'rgba(255, 255, 255, 0.08)';
+    // Specular border with tactile lift glow when dragged
+    ctx.lineWidth = isD ? 1.75 : isSel ? 1.5 : 1;
+    ctx.strokeStyle = isD ? '#60a5fa' : isSel ? '#818cf8' : 'rgba(255, 255, 255, 0.08)';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, CARD_BORDER_RADIUS);
     else ctx.strokeRect(x, y, scnW, scnH);
@@ -493,54 +502,48 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       const c2x = toX > startX ? toX - dist : toX + dist;
 
       ctx.save();
+      // Flowing electric pulse micro-animation along causal cable
+      const dashOffset = -(performance.now() / 35) % 10;
+      ctx.lineDashOffset = dashOffset;
+      ctx.setLineDash([5, 5]);
+
+      // Subtle ambient glow
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.bezierCurveTo(c1x, startY, c2x, toY, toX, toY);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([4, 4]);
       ctx.stroke();
 
-      // Cable tip indicator
+      // Sharp core wire
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.75;
+      ctx.stroke();
+
+      // Magnetic cable tip with glowing halo
       ctx.setLineDash([]);
-      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = 'rgba(56, 189, 248, 0.85)';
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.arc(toX, toY, 4, 0, Math.PI * 2);
+      ctx.arc(toX, toY, 3.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
   }
 
-  // Magnetic Snap Guideline & Badge
+  // Headless Magnetic Alignment Laser Guideline (Discreet, zero interface clutter)
   if (data.magnetGuideT !== undefined && data.magnetGuideT !== null) {
     const gx = TRACK_HEADER_WIDTH + vp.panX + data.magnetGuideT * PIXELS_PER_UNIT * vp.zoom;
     if (gx >= TRACK_HEADER_WIDTH && gx <= w) {
       ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([3, 3]);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 3]);
       ctx.beginPath();
       ctx.moveTo(gx, RULER_HEIGHT);
       ctx.lineTo(gx, h);
       ctx.stroke();
-
-      // Top magnet indicator badge
-      ctx.setLineDash([]);
-      const badgeText = `🧲 ${data.magnetGuideT}u`;
-      ctx.font = '600 10px ui-monospace, monospace';
-      const bW = ctx.measureText(badgeText).width + 12;
-      ctx.fillStyle = '#082f49';
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(gx - bW / 2, RULER_HEIGHT + 4, bW, 18, 4);
-      else ctx.rect(gx - bW / 2, RULER_HEIGHT + 4, bW, 18);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#e0f2fe';
-      ctx.textAlign = 'center';
-      ctx.fillText(badgeText, gx, RULER_HEIGHT + 16);
       ctx.restore();
     }
   }
