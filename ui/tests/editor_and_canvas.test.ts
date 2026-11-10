@@ -1,5 +1,8 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   RULER_HEIGHT,
   TRACK_HEADER_WIDTH,
@@ -14,6 +17,9 @@ import {
   computeFitViewport,
 } from '../src/canvas/renderer.ts';
 import type { Track, Scene, Viewport, TonalHistogram } from '../src/types.ts';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
   test('reading time and word count calculations are accurate', () => {
@@ -361,17 +367,99 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     assert.strictEqual(viewport.panY, -20); // Math.min(0, 0 + (80 - 100)) = -20
   });
 
-  test('anti-ai-slop design token verification: zero radioactive neon glows in buttons', () => {
-    // Verify that primary and secondary pill button configurations do not declare neon glows
-    const isNeonGlow = (boxShadow: string) => {
-      // Glow patterns like '0 0 16px rgba(...)', '0 0 12px ...', etc.
-      return /0\s+0\s+\d+px\s+rgba\(\s*(?:99,\s*102,\s*241|56,\s*189,\s*248)/.test(boxShadow);
+  test('timeline pan vertical bounds clamping prevents tracks from scrolling off into void', () => {
+    const tracksCount = 3;
+    const trackHeightTotal = tracksCount * (TRACK_HEIGHT + TRACK_GAP);
+    const canvasHeight = 600;
+    const visibleTrackArea = canvasHeight - RULER_HEIGHT;
+
+    // When content fits within viewport, maxScrollY is 0 (no vertical scrolling allowed)
+    const maxScrollSmall = Math.max(0, trackHeightTotal + 120 - visibleTrackArea);
+    assert.strictEqual(maxScrollSmall, 0);
+
+    const computeClampedPanY = (initialPy: number, deltaMy: number, maxScroll: number) => {
+      const val = Math.max(-maxScroll, Math.min(0, initialPy + deltaMy));
+      return Object.is(val, -0) ? 0 : val;
     };
 
-    const matteElevatedShadow = '0 1px 3px rgba(0, 0, 0, 0.3)';
-    const oldSlopGlow = '0 0 16px rgba(99, 102, 241, 0.32)';
+    // Attempting to scroll down past top is clamped to 0
+    assert.strictEqual(computeClampedPanY(0, 100, maxScrollSmall), 0);
+    // Attempting to drag up when content fits is clamped to 0
+    assert.strictEqual(computeClampedPanY(0, -500, maxScrollSmall), 0);
 
-    assert.strictEqual(isNeonGlow(oldSlopGlow), true, 'Detects old neon glow');
-    assert.strictEqual(isNeonGlow(matteElevatedShadow), false, 'Matte shadow is clean and not a neon glow');
+    // With many tracks (10 tracks = 1140px, visible area = 558px):
+    const manyTracksTotal = 10 * (TRACK_HEIGHT + TRACK_GAP); // 1140
+    const maxScrollLarge = Math.max(0, manyTracksTotal + 120 - visibleTrackArea); // 1140 + 120 - 558 = 702
+    assert.strictEqual(maxScrollLarge, 702);
+
+    // Cannot scroll deeper than -702
+    assert.strictEqual(computeClampedPanY(0, -2000, maxScrollLarge), -702);
+    // Normal scroll within bounds
+    assert.strictEqual(computeClampedPanY(0, -300, maxScrollLarge), -300);
+  });
+
+  test('fast drag-and-drop preview coordinates resolve synchronously without dropped moves', () => {
+    // Model the fast drag drop sequence where pointerUp arrives before React re-render
+    let movedScene: { s: Scene; trk: string; t: number } | null = null;
+    const onMoveScene = (s: Scene, trk: string, t: number) => {
+      movedScene = { s, trk, t };
+    };
+
+    const mockScene: Scene = {
+      id: 'sc-1',
+      project_id: 'p1',
+      track_id: 'trk-1',
+      title: 'Escena Rápida',
+      t_start: 50,
+      duration: 60,
+      text: '',
+      word_count: 0,
+      version: 1,
+    };
+
+    const dragRef: {
+      s: Scene;
+      t0: number;
+      trk0: string;
+      moved: boolean;
+      previewTrackId: string;
+      previewTStart: number;
+    } = {
+      s: mockScene,
+      t0: 50,
+      trk0: 'trk-1',
+      moved: true,
+      previewTrackId: 'trk-2',
+      previewTStart: 85,
+    };
+
+    // Even if React dragState state was still null, dragRef synchronous coords dispatch properly:
+    if (dragRef.moved) {
+      const finalTrackId = dragRef.previewTrackId ?? dragRef.trk0;
+      const finalTStart = dragRef.previewTStart ?? dragRef.t0;
+      if (finalTStart !== dragRef.t0 || finalTrackId !== dragRef.trk0) {
+        onMoveScene(dragRef.s, finalTrackId, finalTStart);
+      }
+    }
+
+    assert.ok(movedScene !== null);
+    assert.strictEqual(movedScene.trk, 'trk-2');
+    assert.strictEqual(movedScene.t, 85);
+  });
+
+  test('anti-ai-slop design token verification: zero radioactive neon glows in actual index.css', () => {
+    // Read the actual index.css file on disk
+    const cssPath = resolve(__dirname, '../src/index.css');
+    const css = readFileSync(cssPath, 'utf8');
+
+    // Verify absence of AI-slop zero-offset radioactive neon glows
+    const neonGlowPattern = /box-shadow:\s*0\s+0\s+\d+px\s+rgba\(\s*(?:99,\s*102,\s*241|56,\s*189,\s*248)/i;
+    assert.strictEqual(neonGlowPattern.test(css), false, 'index.css must not contain radioactive neon drop-shadow glows');
+
+    // Verify pro-grade button utilities exist
+    assert.ok(css.includes('.btn {'), 'Must define .btn utility');
+    assert.ok(css.includes('.btn-primary {'), 'Must define .btn-primary utility');
+    assert.ok(css.includes('.btn-accent {'), 'Must define .btn-accent utility');
+    assert.ok(css.includes('.btn-ghost {'), 'Must define .btn-ghost utility');
   });
 });

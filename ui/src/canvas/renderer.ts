@@ -91,6 +91,7 @@ export function getSceneRect(s: Scene, tracks: Track[], vp: Viewport, drag?: Dra
 
 export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRenderData): void {
   const { tracks, scenes, anchors, selectedSceneId, currentTime, dragState, viewport: vp, dpr, width: w, height: h } = data;
+  if (w <= 0 || h <= 0) return;
   ctx.save();
   ctx.scale(dpr, dpr);
 
@@ -290,15 +291,6 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     else ctx.strokeRect(x, y, scnW, scnH);
     ctx.stroke();
 
-    // Selection glow
-    if (isSel) {
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.35)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x - 1.5, y - 1.5, scnW + 3, scnH + 3, CARD_BORDER_RADIUS + 1);
-      ctx.stroke();
-    }
-
     // Card text and details (clipped safely inside card)
     ctx.save();
     ctx.beginPath();
@@ -480,7 +472,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
 
   // Matte indigo dot + label
-  ctx.fillStyle = '#6366f1';
+  ctx.fillStyle = '#4361ee';
   ctx.beginPath();
   ctx.arc(20, RULER_HEIGHT / 2, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -492,14 +484,14 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   // Playhead / Cursor (Current Time Marker)
   const sx = TRACK_HEADER_WIDTH + vp.panX + currentTime * PIXELS_PER_UNIT * vp.zoom;
   if (sx >= TRACK_HEADER_WIDTH && sx <= w) {
-    ctx.strokeStyle = '#6366f1';
+    ctx.strokeStyle = '#4361ee';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(sx, 0);
     ctx.lineTo(sx, h);
     ctx.stroke();
 
-    ctx.fillStyle = '#6366f1';
+    ctx.fillStyle = '#4361ee';
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(sx - 5, 2, 10, 16, 3);
     else ctx.fillRect(sx - 5, 2, 10, 16);
@@ -540,7 +532,11 @@ export class DawCanvasRenderer {
   }
 
   public render() {
-    const ctx = this.canvas.getContext('2d', { alpha: false });
-    if (ctx) renderDawCanvas(ctx, this.getState());
+    try {
+      const ctx = this.canvas.getContext('2d', { alpha: false });
+      if (ctx) renderDawCanvas(ctx, this.getState());
+    } catch (err) {
+      console.error('[DawCanvasRenderer] Frame render error:', err);
+    }
   }
 }

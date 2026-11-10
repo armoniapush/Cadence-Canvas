@@ -178,12 +178,13 @@ export function RadialConstellation({
           </select>
 
           <button
-            className="pill-btn"
+            className="btn"
             onClick={() => setShowAudit((p) => !p)}
             style={{
-              padding: '4px 12px',
-              border: anachronisms.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
-              backgroundColor: anachronisms.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+              height: '24px',
+              padding: '0 10px',
+              border: anachronisms.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(31, 154, 115, 0.3)',
+              backgroundColor: anachronisms.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(31, 154, 115, 0.1)',
               color: anachronisms.length > 0 ? '#f87171' : '#34d399',
               fontSize: '11px',
               fontWeight: 600,
@@ -194,10 +195,11 @@ export function RadialConstellation({
 
           {onClose && (
             <button
-              className="pill-btn"
+              className="btn btn-ghost"
               onClick={onClose}
               style={{
-                padding: '4px 12px',
+                height: '24px',
+                padding: '0 10px',
                 fontSize: '11px',
               }}
             >
@@ -373,8 +375,8 @@ export function RadialConstellation({
             )}
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="pill-btn" onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ padding: '3px 8px', fontSize: '10px' }}>◄ -10s</button>
-            <button className="pill-btn" onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ padding: '3px 8px', fontSize: '10px' }}>+10s ►</button>
+            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px' }}>◄ -10s</button>
+            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px' }}>+10s ►</button>
           </div>
         </div>
         <input type="range" min={tMin} max={tMax} value={tStory} step={5} onChange={(e) => setTStory(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer', height: '4px', backgroundColor: 'var(--bg-rack)', borderRadius: '9999px' }} />

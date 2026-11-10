@@ -14,8 +14,9 @@ import {
 import { DawCanvas } from './canvas/DawCanvas';
 import { AtomicEditor } from './editor/AtomicEditor';
 import { RadialConstellation } from './constellation/RadialConstellation';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
-const PRESET_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#06b6d4', '#f43f5e', '#a855f7', '#38bdf8'];
+const PRESET_COLORS = ['#4361ee', '#1f9a73', '#d97706', '#0284c7', '#be123c', '#7c3aed', '#c2410c'];
 
 function CreateTrackModal({
   isOpen,
@@ -57,15 +58,15 @@ function CreateTrackModal({
       <div
         style={{
           width: '380px',
-          backgroundColor: 'var(--bg-glass-elevated)',
-          border: '1px solid var(--border-specular)',
-          borderRadius: '16px',
-          padding: '22px',
-          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.65)',
+          backgroundColor: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '10px',
+          padding: '20px',
+          boxShadow: '0 20px 48px rgba(0, 0, 0, 0.6)',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          animation: 'modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+          animation: 'modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -80,19 +81,14 @@ function CreateTrackModal({
                 border: '1px solid rgba(255, 255, 255, 0.2)',
               }}
             />
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
               Crear Nuevo Hilo Narrativo
             </h2>
           </div>
           <button
+            className="btn-icon"
             onClick={onClose}
-            style={{
-              color: 'var(--text-muted)',
-              fontSize: '16px',
-              cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '4px',
-            }}
+            style={{ width: '22px', height: '22px', fontSize: '13px' }}
           >
             ✕
           </button>
@@ -110,10 +106,10 @@ function CreateTrackModal({
               onChange={(e) => setName(e.target.value)}
               placeholder="ej. POV Antagonista, Subtrama de Misterio..."
               style={{
-                padding: '10px 12px',
-                backgroundColor: '#0a0d14',
-                border: '1px solid var(--border-specular)',
-                borderRadius: '8px',
+                padding: '8px 12px',
+                backgroundColor: 'var(--bg-canvas)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '6px',
                 color: 'var(--text-primary)',
                 fontSize: '13px',
                 outline: 'none',
@@ -132,16 +128,16 @@ function CreateTrackModal({
                   type="button"
                   onClick={() => setColor(hex)}
                   style={{
-                    width: '24px',
-                    height: '24px',
+                    width: '22px',
+                    height: '22px',
                     borderRadius: '50%',
                     backgroundColor: hex,
                     border: color === hex ? '2px solid #ffffff' : '2px solid transparent',
-                    boxShadow: color === hex ? '0 2px 4px rgba(0, 0, 0, 0.4)' : 'none',
+                    boxShadow: color === hex ? '0 1px 3px rgba(0, 0, 0, 0.4)' : 'none',
                     cursor: 'pointer',
                     padding: 0,
                     transition: 'transform 0.15s ease',
-                    transform: color === hex ? 'scale(1.12)' : 'scale(1)',
+                    transform: color === hex ? 'scale(1.15)' : 'scale(1)',
                   }}
                 />
               ))}
@@ -151,31 +147,18 @@ function CreateTrackModal({
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
             <button
               type="button"
+              className="btn btn-ghost"
               onClick={onClose}
-              style={{
-                padding: '6px 14px',
-                backgroundColor: 'transparent',
-                color: 'var(--text-secondary)',
-                border: '1px solid var(--border-specular)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
             >
               Cancelar
             </button>
             <button
               type="submit"
+              className="btn btn-accent"
               disabled={!name.trim()}
               style={{
-                padding: '6px 16px',
-                backgroundColor: name.trim() ? '#4f46e5' : 'rgba(255, 255, 255, 0.05)',
-                color: name.trim() ? '#ffffff' : 'var(--text-muted)',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 600,
+                opacity: name.trim() ? 1 : 0.45,
                 cursor: name.trim() ? 'pointer' : 'not-allowed',
-                boxShadow: name.trim() ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
               }}
             >
               Crear Hilo Narrativo
@@ -188,7 +171,7 @@ function CreateTrackModal({
 }
 
 export function App() {
-  const [projectPath, setProjectPath] = useState<string>('project.cadence');
+  const [projectPath] = useState<string>('project.cadence');
   const [project, setProject] = useState<Project | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [scenes, setScenes] = useState<Scene[]>([]);
@@ -406,195 +389,168 @@ export function App() {
         overflow: 'hidden',
       }}
     >
-      {/* Floating Pill Navbar (Mount / Markus AI Inspired) */}
-      <div style={{ padding: '12px 18px 0 18px', zIndex: 100 }}>
-        <header
+      {/* Grounded Professional Header Bar (Zero AI Slop) */}
+      <header
+        style={{
+          height: '44px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          backgroundColor: 'var(--bg-header)',
+          borderBottom: '1px solid var(--border-default)',
+          zIndex: 100,
+          flexShrink: 0,
+        }}
+      >
+        {/* Left: Brand Monogram, Title & Project Context */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '5px',
+              backgroundColor: '#161924',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: '12px',
+              color: '#f8fafc',
+              letterSpacing: '-0.02em',
+              userSelect: 'none',
+            }}
+          >
+            C
+          </div>
+
+          <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+            Cadence Canvas
+          </span>
+
+          <span style={{ fontSize: '12px', color: 'var(--border-hover)', userSelect: 'none' }}>/</span>
+
+          <span
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              fontFamily: 'var(--font-mono)',
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+              border: '1px solid var(--border-subtle)',
+            }}
+            title={`Proyecto: ${projectPath}`}
+          >
+            {projectPath}
+          </span>
+
+          {error && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '2px 8px',
+                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                borderRadius: '4px',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                fontSize: '11px',
+                color: '#fca5a5',
+              }}
+            >
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+              <span>{error}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Center: Segmented View Switcher (Linear / Apple Pro style) */}
+        <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '7px 18px',
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid var(--border-specular)',
-            borderRadius: '9999px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+            backgroundColor: '#090b10',
+            padding: '2px',
+            borderRadius: '6px',
+            border: '1px solid var(--border-subtle)',
+            gap: '2px',
           }}
         >
-          {/* Left: Brand Monogram & Application Title */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '26px',
-                height: '26px',
-                borderRadius: '7px',
-                backgroundColor: '#171922',
-                border: '1px solid rgba(255, 255, 255, 0.10)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 600,
-                fontSize: '13px',
-                color: '#f8fafc',
-                letterSpacing: '-0.02em',
-                userSelect: 'none',
-              }}
-            >
-              C
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
-                Cadence Canvas
-              </span>
-
-              {error && (
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '2px 8px',
-                    backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    fontSize: '11px',
-                    color: '#fca5a5',
-                  }}
-                >
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
-                  <span>{error}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Center: Segmented View Switcher Pill (Mount / Markus AI) */}
-          <div
+          <button
+            onClick={() => setShowConstellation(false)}
             style={{
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: !showConstellation ? 600 : 500,
+              color: !showConstellation ? '#ffffff' : 'var(--text-secondary)',
+              backgroundColor: !showConstellation ? '#1a1e2b' : 'transparent',
+              border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
+              boxShadow: !showConstellation ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.35)',
-              padding: '3px',
-              borderRadius: '9999px',
-              border: '1px solid rgba(255, 255, 255, 0.05)',
+              gap: '6px',
             }}
           >
+            <span>☵</span> Línea de Tiempo
+          </button>
+
+          <button
+            onClick={() => setShowConstellation(true)}
+            style={{
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: showConstellation ? 600 : 500,
+              color: showConstellation ? '#ffffff' : 'var(--text-secondary)',
+              backgroundColor: showConstellation ? '#1a1e2b' : 'transparent',
+              border: showConstellation ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid transparent',
+              boxShadow: showConstellation ? '0 1px 2px rgba(0, 0, 0, 0.3)' : 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>◈</span> Red de Personajes & Lugares
+          </button>
+        </div>
+
+        {/* Right: Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            className="btn btn-accent"
+            onClick={() => setIsCreateTrackOpen(true)}
+            style={{
+              padding: '0 12px',
+              height: '28px',
+              fontSize: '12px',
+              fontWeight: 600,
+            }}
+          >
+            <span>+</span> Nuevo Hilo Narrativo
+          </button>
+
+          {selectedScene && (
             <button
-              onClick={() => setShowConstellation(false)}
+              className="btn btn-ghost"
+              onClick={handleToggleZen}
+              title="Modo Zen inmersivo (F11)"
               style={{
-                padding: '4px 14px',
-                borderRadius: '9999px',
+                padding: '0 10px',
+                height: '28px',
                 fontSize: '12px',
-                fontWeight: !showConstellation ? 600 : 500,
-                color: !showConstellation ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: !showConstellation ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                boxShadow: !showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
+                fontWeight: 500,
               }}
             >
-              <span>☵</span> Línea de Tiempo
+              <span>🗖</span> Zen
             </button>
-
-            <button
-              onClick={() => setShowConstellation(true)}
-              style={{
-                padding: '4px 14px',
-                borderRadius: '9999px',
-                fontSize: '12px',
-                fontWeight: showConstellation ? 600 : 500,
-                color: showConstellation ? '#ffffff' : 'var(--text-secondary)',
-                backgroundColor: showConstellation ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-                border: showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                boxShadow: showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <span>◈</span> Red de Personajes & Lugares
-            </button>
-          </div>
-
-          {/* Right: Actions, File Reconnection & Zen Mode */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              className="pill-btn pill-btn-primary"
-              onClick={() => setIsCreateTrackOpen(true)}
-              style={{
-                padding: '5px 14px',
-                fontSize: '11px',
-                fontWeight: 600,
-              }}
-            >
-              <span>+</span> Nuevo Hilo Narrativo
-            </button>
-
-            {selectedScene && (
-              <button
-                className="pill-btn pill-btn-cyan"
-                onClick={handleToggleZen}
-                title="Modo Zen inmersivo (F11)"
-                style={{
-                  padding: '5px 12px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                }}
-              >
-                <span>🗖</span> Zen
-              </button>
-            )}
-
-            {/* Compact project file pill */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '2px 4px 2px 10px',
-                backgroundColor: 'rgba(0, 0, 0, 0.35)',
-                border: '1px solid var(--border-specular)',
-                borderRadius: '9999px',
-              }}
-            >
-              <input
-                type="text"
-                value={projectPath}
-                onChange={(e) => setProjectPath(e.target.value)}
-                title="Ruta de base de datos SQLite WAL"
-                style={{
-                  padding: '3px 0',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontFamily: 'var(--font-mono)',
-                  width: '130px',
-                  outline: 'none',
-                }}
-              />
-              <button
-                className="pill-btn"
-                onClick={() => initProject(projectPath)}
-                title="Reconectar base de datos SQLite"
-                style={{
-                  padding: '3px 9px',
-                  fontSize: '10px',
-                  fontWeight: 500,
-                }}
-              >
-                Reconectar
-              </button>
-            </div>
-          </div>
-        </header>
-      </div>
+          )}
+        </div>
+      </header>
 
       {/* Main Workspace Body */}
       <main
@@ -602,7 +558,7 @@ export function App() {
           flex: 1,
           display: 'flex',
           gap: '12px',
-          padding: '12px 18px 16px 18px',
+          padding: '12px 16px 14px 16px',
           overflow: 'hidden',
           minHeight: 0,
         }}
@@ -612,12 +568,12 @@ export function App() {
           style={{
             flex: 1,
             backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-specular)',
-            borderRadius: '14px',
+            border: '1px solid var(--border-default)',
+            borderRadius: '10px',
             overflow: 'hidden',
             display: 'flex',
             position: 'relative',
-            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           }}
         >
           {showConstellation ? (
@@ -630,18 +586,20 @@ export function App() {
               onClose={() => setShowConstellation(false)}
             />
           ) : (
-            <DawCanvas
-              tracks={tracks}
-              scenes={scenes}
-              anchors={anchors}
-              selectedSceneId={selectedSceneId}
-              onSelectScene={handleSelectScene}
-              onMoveScene={handleMoveScene}
-              onCreateScene={handleCreateScene}
-              onDeleteScene={handleDeleteScene}
-              onToggleMuteTrack={handleToggleMuteTrack}
-              onToggleZen={handleToggleZen}
-            />
+            <ErrorBoundary>
+              <DawCanvas
+                tracks={tracks}
+                scenes={scenes}
+                anchors={anchors}
+                selectedSceneId={selectedSceneId}
+                onSelectScene={handleSelectScene}
+                onMoveScene={handleMoveScene}
+                onCreateScene={handleCreateScene}
+                onDeleteScene={handleDeleteScene}
+                onToggleMuteTrack={handleToggleMuteTrack}
+                onToggleZen={handleToggleZen}
+              />
+            </ErrorBoundary>
           )}
         </section>
 

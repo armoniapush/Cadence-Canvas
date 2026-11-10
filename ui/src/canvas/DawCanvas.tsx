@@ -70,15 +70,51 @@ export function DawCanvas({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedSceneId, onDeleteScene]);
 
-  const dragRef = useRef<{ mx: number; my: number; s: Scene; t0: number; trk0: string; moved: boolean } | null>(null);
-  const panRef = useRef<{ mx: number; my: number; px: number; py: number; verticalOnly?: boolean } | null>(null);
+  // Synchronous drag tracking to prevent race conditions during rapid pointer interactions
+  const dragRef = useRef<{
+    mx: number;
+    my: number;
+    s: Scene;
+    t0: number;
+    trk0: string;
+    moved: boolean;
+    previewTrackId: string;
+    previewTStart: number;
+  } | null>(null);
+
+  const panRef = useRef<{
+    mx: number;
+    my: number;
+    px: number;
+    py: number;
+    verticalOnly?: boolean;
+  } | null>(null);
+
   const stateRef = useRef<CanvasRenderData>({
-    tracks, scenes, anchors, selectedSceneId, currentTime: 0, dragState, viewport, dpr: 1, width: 800, height: 600,
+    tracks,
+    scenes,
+    anchors,
+    selectedSceneId,
+    currentTime: 0,
+    dragState,
+    viewport,
+    dpr: 1,
+    width: 800,
+    height: 600,
   });
 
+  // Always keep stateRef strictly synchronous with the latest component render state
   stateRef.current = {
-    tracks, scenes, anchors, selectedSceneId, currentTime: 0, dragState, viewport,
-    dpr: size.dpr, width: size.width, height: size.height,
+    tracks,
+    scenes,
+    anchors,
+    selectedSceneId,
+    currentTime: 0,
+    dragState,
+    viewport,
+    dpr: size.dpr,
+    width: size.width,
+    height: size.height,
   };
 
   useEffect(() => {
@@ -103,6 +139,22 @@ export function DawCanvas({
     const renderer = new DawCanvasRenderer(canvasRef.current, () => stateRef.current);
     renderer.start();
     return () => renderer.stop();
+  }, []);
+
+  const capturePointerDefensively = useCallback((pointerId: number) => {
+    try {
+      if (containerRef.current?.setPointerCapture) {
+        containerRef.current.setPointerCapture(pointerId);
+      }
+    } catch {}
+  }, []);
+
+  const releasePointerCaptureDefensively = useCallback((pointerId: number) => {
+    try {
+      if (containerRef.current?.hasPointerCapture?.(pointerId)) {
+        containerRef.current.releasePointerCapture(pointerId);
+      }
+    } catch {}
   }, []);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -140,7 +192,7 @@ export function DawCanvas({
       // Pinned track header dragging: vertical scrolling only, never horizontal or scene drag
       if (e.button === 0 || e.button === 1) {
         panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: true };
-        try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+        capturePointerDefensively(e.pointerId);
       }
       return;
     }
@@ -159,14 +211,23 @@ export function DawCanvas({
 
     if (hitScene && e.button === 0) {
       onSelectScene(hitScene);
-      dragRef.current = { mx, my, s: hitScene, t0: hitScene.t_start, trk0: hitScene.track_id, moved: false };
-      try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+      dragRef.current = {
+        mx,
+        my,
+        s: hitScene,
+        t0: hitScene.t_start,
+        trk0: hitScene.track_id,
+        moved: false,
+        previewTrackId: hitScene.track_id,
+        previewTStart: hitScene.t_start,
+      };
+      capturePointerDefensively(e.pointerId);
     } else if (e.button === 0 || e.button === 1) {
       onSelectScene(null);
       panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: false };
-      try { (e.target as HTMLElement).setPointerCapture(e.pointerId); } catch {}
+      capturePointerDefensively(e.pointerId);
     }
-  }, [scenes, tracks, viewport, onSelectScene, onToggleMuteTrack]);
+  }, [scenes, tracks, viewport, onSelectScene, onToggleMuteTrack, capturePointerDefensively]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -180,16 +241,25 @@ export function DawCanvas({
       const dt = Math.round(dx / (PIXELS_PER_UNIT * viewport.zoom));
       const relY = my - RULER_HEIGHT - viewport.panY;
       const idx = Math.max(0, Math.min(tracks.length - 1, Math.floor(relY / (TRACK_HEIGHT + TRACK_GAP))));
+      const nextTrackId = tracks[idx]?.id || currentDrag.trk0;
+      const nextTStart = Math.max(0, currentDrag.t0 + dt);
+      currentDrag.previewTrackId = nextTrackId;
+      currentDrag.previewTStart = nextTStart;
       setDragState({
         sceneId: currentDrag.s.id,
-        previewTrackId: tracks[idx]?.id || currentDrag.trk0,
-        previewTStart: Math.max(0, currentDrag.t0 + dt),
+        previewTrackId: nextTrackId,
+        previewTStart: nextTStart,
       });
     } else if (panRef.current) {
+      // Synchronously capture pan coordinates to prevent null-dereference race conditions
       const { px, py, mx: startMx, my: startMy, verticalOnly } = panRef.current;
       const isVert = Boolean(verticalOnly);
       const targetPanX = isVert ? null : px + (mx - startMx);
-      const targetPanY = Math.min(0, py + (my - startMy));
+
+      // Defensively clamp panY so tracks are never dragged into an unreachable void
+      const maxScrollY = Math.max(0, tracks.length * (TRACK_HEIGHT + TRACK_GAP) + 120 - (rect.height - RULER_HEIGHT));
+      const targetPanY = Math.max(-maxScrollY, Math.min(0, py + (my - startMy)));
+
       setViewport((prev) => ({
         ...prev,
         panX: targetPanX !== null ? targetPanX : prev.panX,
@@ -201,20 +271,21 @@ export function DawCanvas({
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (dragRef.current) {
       const currentDrag = dragRef.current;
-      if (currentDrag.moved && dragState) {
-        if (dragState.previewTStart !== currentDrag.t0 || dragState.previewTrackId !== currentDrag.trk0) {
-          onMoveScene(currentDrag.s, dragState.previewTrackId, dragState.previewTStart);
+      if (currentDrag.moved) {
+        const finalTrackId = currentDrag.previewTrackId ?? currentDrag.trk0;
+        const finalTStart = currentDrag.previewTStart ?? currentDrag.t0;
+        if (finalTStart !== currentDrag.t0 || finalTrackId !== currentDrag.trk0) {
+          onMoveScene(currentDrag.s, finalTrackId, finalTStart);
         }
       }
       dragRef.current = null;
       setDragState(null);
-      try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
     }
     if (panRef.current) {
       panRef.current = null;
-      try { (e.target as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
     }
-  }, [dragState, onMoveScene]);
+    releasePointerCaptureDefensively(e.pointerId);
+  }, [onMoveScene, releasePointerCaptureDefensively]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -253,7 +324,7 @@ export function DawCanvas({
     }));
   }, []);
 
-  // True Content Fit View ("Ajustar")
+  // Content Fit View ("Ajustar")
   const handleFitView = useCallback(() => {
     const fitted = computeFitViewport(scenes, size.width);
     setViewport(fitted);
@@ -272,6 +343,7 @@ export function DawCanvas({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
+      onLostPointerCapture={handlePointerUp}
       onDoubleClick={handleDoubleClick}
       style={{
         position: 'relative',
@@ -285,7 +357,7 @@ export function DawCanvas({
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: size.width, height: size.height }} />
 
-      {/* Floating Bottom Dock: Zoom Controls, View-Fit & Zen Mode */}
+      {/* Floating Bottom Dock: Professional Matte Toolbar Dock */}
       <div
         style={{
           position: 'absolute',
@@ -295,13 +367,11 @@ export function DawCanvas({
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '5px 12px',
-          backgroundColor: 'var(--bg-glass-elevated)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid var(--border-specular)',
-          borderRadius: '9999px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45)',
+          padding: '4px 10px',
+          backgroundColor: 'var(--bg-dock)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '8px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
           zIndex: 40,
           pointerEvents: 'auto',
           userSelect: 'none',
@@ -309,31 +379,32 @@ export function DawCanvas({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Telemetry Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>
           <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{scenes.length}</span> escenas
-          <span style={{ color: 'var(--border-hover)' }}>·</span>
+          <span style={{ color: 'var(--border-default)' }}>·</span>
           <span>{totalWords.toLocaleString()} pal.</span>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-specular)' }} />
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
 
         {/* Zoom Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
-            className="pill-icon-btn"
+            className="btn-icon"
             onClick={handleZoomOut}
             title="Reducir zoom (-)"
-            style={{ fontSize: '14px' }}
+            style={{ width: '22px', height: '22px', fontSize: '13px' }}
           >
             -
           </button>
 
           <button
-            className="pill-btn"
+            className="btn btn-ghost"
             onClick={handleResetZoom}
             title="Restablecer zoom al 100%"
             style={{
-              padding: '2px 8px',
+              padding: '0 6px',
+              height: '22px',
               fontSize: '11px',
               fontFamily: 'var(--font-mono)',
               fontWeight: 500,
@@ -343,24 +414,25 @@ export function DawCanvas({
           </button>
 
           <button
-            className="pill-icon-btn"
+            className="btn-icon"
             onClick={handleZoomIn}
             title="Aumentar zoom (+)"
-            style={{ fontSize: '14px' }}
+            style={{ width: '22px', height: '22px', fontSize: '13px' }}
           >
             +
           </button>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-specular)' }} />
+        <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)' }} />
 
         {/* View Fit ("Ajustar" to content) button */}
         <button
-          className="pill-btn"
+          className="btn btn-ghost"
           onClick={handleFitView}
           title="Centrar y encuadrar todas las escenas literarias"
           style={{
-            padding: '3px 10px',
+            height: '22px',
+            padding: '0 8px',
             fontSize: '11px',
             fontWeight: 500,
           }}
@@ -371,11 +443,12 @@ export function DawCanvas({
         {/* Zen Mode Button */}
         {onToggleZen && (
           <button
-            className="pill-btn pill-btn-cyan"
+            className="btn btn-ghost"
             onClick={onToggleZen}
             title="Modo Zen inmersivo (F11)"
             style={{
-              padding: '3px 10px',
+              height: '22px',
+              padding: '0 8px',
               fontSize: '11px',
               fontWeight: 500,
             }}

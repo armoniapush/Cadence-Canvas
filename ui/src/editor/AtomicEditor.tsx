@@ -167,15 +167,14 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         >
           <TonalHud metrics={metrics} wordCount={wordCount} charCount={charCount} compact />
           <button
-            className="pill-btn"
+            className="btn"
             onClick={onToggleZen}
             style={{
-              padding: '6px 14px',
-              backgroundColor: 'var(--bg-glass-elevated)',
-              backdropFilter: 'blur(12px)',
-              WebkitBackdropFilter: 'blur(12px)',
+              padding: '0 12px',
+              height: '30px',
+              backgroundColor: 'var(--bg-elevated)',
               fontSize: '11px',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
             }}
           >
             Salir Zen (F11 / Esc)
@@ -239,7 +238,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               lineHeight: 1.85,
               outline: 'none',
               resize: 'none',
-              caretColor: 'var(--accent-cyan)',
+              caretColor: 'var(--text-primary)',
               fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif',
             }}
           />
@@ -313,19 +312,13 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
 
           {/* Zen Toggle Button */}
           <button
+            className="btn btn-ghost"
             onClick={onToggleZen}
             title="Modo Zen inmersivo (F11)"
             style={{
-              padding: '4px 9px',
-              backgroundColor: 'rgba(56, 189, 248, 0.08)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              borderRadius: '6px',
-              color: 'var(--accent-cyan)',
+              padding: '0 8px',
+              height: '24px',
               fontSize: '11px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
             }}
           >
             <span>🗖</span> Zen

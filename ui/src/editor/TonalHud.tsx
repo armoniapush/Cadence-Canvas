@@ -9,10 +9,10 @@ export interface TonalHudProps {
 }
 
 const CHANNELS = [
-  { key: 'dialogue' as const, label: 'Diálogo', color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)' },
-  { key: 'action' as const, label: 'Acción', color: '#f97316', glow: 'rgba(249, 115, 22, 0.4)' },
-  { key: 'lore' as const, label: 'Lore', color: '#10b981', glow: 'rgba(16, 185, 129, 0.4)' },
-  { key: 'monologue' as const, label: 'Monólogo', color: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)' },
+  { key: 'dialogue' as const, label: 'Diálogo', color: '#0284c7' },
+  { key: 'action' as const, label: 'Acción', color: '#c2410c' },
+  { key: 'lore' as const, label: 'Lore', color: '#1f9a73' },
+  { key: 'monologue' as const, label: 'Monólogo', color: '#7c3aed' },
 ];
 
 export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCount, compact }) => {
@@ -50,16 +50,16 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
   // Dynamic monotonic gradient stops strictly bounded [0%, 100%]
   const gradientStops = useMemo(() => {
     const rawChannels = [
-      { key: 'dialogue', pct: pDialogue, color: '#38bdf8' },
-      { key: 'action', pct: pAction, color: '#f97316' },
-      { key: 'lore', pct: pLore, color: '#10b981' },
-      { key: 'monologue', pct: pMonologue, color: '#a855f7' },
+      { key: 'dialogue', pct: pDialogue, color: '#0284c7' },
+      { key: 'action', pct: pAction, color: '#c2410c' },
+      { key: 'lore', pct: pLore, color: '#1f9a73' },
+      { key: 'monologue', pct: pMonologue, color: '#7c3aed' },
     ];
     const active = rawChannels.filter((c) => c.pct > 0);
     if (active.length === 0) {
       return [
-        { offset: '0%', color: '#38bdf8' },
-        { offset: '100%', color: '#38bdf8' },
+        { offset: '0%', color: '#0284c7' },
+        { offset: '100%', color: '#0284c7' },
       ];
     }
     if (active.length === 1) {
@@ -169,17 +169,17 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           }}
           title={`Diálogo: ${pDialogue}% | Acción: ${pAction}% | Lore: ${pLore}% | Monólogo: ${pMonologue}%`}
         >
-          <div style={{ width: `${pDialogue}%`, backgroundColor: '#38bdf8', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pAction}%`, backgroundColor: '#f97316', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pLore}%`, backgroundColor: '#10b981', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pMonologue}%`, backgroundColor: '#a855f7', transition: 'width 0.3s ease' }} />
+          <div style={{ width: `${pDialogue}%`, backgroundColor: '#0284c7', transition: 'width 0.3s ease' }} />
+          <div style={{ width: `${pAction}%`, backgroundColor: '#c2410c', transition: 'width 0.3s ease' }} />
+          <div style={{ width: `${pLore}%`, backgroundColor: '#1f9a73', transition: 'width 0.3s ease' }} />
+          <div style={{ width: `${pMonologue}%`, backgroundColor: '#7c3aed', transition: 'width 0.3s ease' }} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px' }}>
-          <span style={{ color: '#38bdf8', fontWeight: 600 }}>{pDialogue}%</span>
-          <span style={{ color: '#f97316', fontWeight: 600 }}>{pAction}%</span>
-          <span style={{ color: '#10b981', fontWeight: 600 }}>{pLore}%</span>
-          <span style={{ color: '#a855f7', fontWeight: 600 }}>{pMonologue}%</span>
+          <span style={{ color: '#0284c7', fontWeight: 600 }}>{pDialogue}%</span>
+          <span style={{ color: '#c2410c', fontWeight: 600 }}>{pAction}%</span>
+          <span style={{ color: '#1f9a73', fontWeight: 600 }}>{pLore}%</span>
+          <span style={{ color: '#7c3aed', fontWeight: 600 }}>{pMonologue}%</span>
         </div>
       </div>
     );
@@ -320,7 +320,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           <div
             style={{
               width: `${pDialogue}%`,
-              backgroundColor: '#38bdf8',
+              backgroundColor: '#0284c7',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Diálogo: ${pDialogue}%`}
@@ -328,7 +328,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           <div
             style={{
               width: `${pAction}%`,
-              backgroundColor: '#f97316',
+              backgroundColor: '#c2410c',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Acción: ${pAction}%`}
@@ -336,7 +336,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           <div
             style={{
               width: `${pLore}%`,
-              backgroundColor: '#10b981',
+              backgroundColor: '#1f9a73',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Lore: ${pLore}%`}
@@ -344,7 +344,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           <div
             style={{
               width: `${pMonologue}%`,
-              backgroundColor: '#a855f7',
+              backgroundColor: '#7c3aed',
               transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             title={`Monólogo: ${pMonologue}%`}
