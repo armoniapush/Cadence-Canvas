@@ -1,6 +1,7 @@
 pub mod domain;
 pub mod error;
 pub mod export;
+pub mod metrics;
 pub mod storage;
 pub mod sweep;
 pub mod world;
@@ -13,6 +14,9 @@ pub use error::CadenceError;
 pub use export::{
     export_docx, export_docx_to_file, export_markdown, export_markdown_to_file, DocxExportOptions,
     MarkdownExportOptions,
+};
+pub use metrics::{
+    compute_project_cadence, compute_scene_histogram, compute_tonal_histogram, TonalHistogram,
 };
 pub use storage::Database;
 pub use sweep::{

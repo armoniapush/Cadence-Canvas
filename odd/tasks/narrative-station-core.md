@@ -199,4 +199,4 @@ CREATE INDEX IF NOT EXISTS idx_mentions_entity ON scene_entity_mentions(entity_i
 | **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` | ✅ Delivered (3/3 tests ok, 183 LOC) |
 | **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` | ✅ Delivered (5/5 tests ok, 241 LOC) |
 | **Slice 3.2** | `world_graph` | Subgrafo 1-hop de escena y auditor de anacronismos temporales. | <= 340 LOC | `feat(world): 1-hop ego-graph extraction and temporal validator` | ✅ Delivered (3/3 tests ok, 236 LOC) |
-| **Slice 3.3** | `metrics` | Pipeline de histograma tonal en 1 pasada (< 0.5ms) sobre buffer de texto. | <= 280 LOC | `feat(metrics): single-pass 4-channel tonal histogram engine` |
+| **Slice 3.3** | `metrics` | Pipeline de histograma tonal en 1 pasada (< 0.5ms) sobre buffer de texto. | <= 280 LOC | `feat(metrics): single-pass 4-channel tonal histogram engine` | ✅ Delivered (6/6 tests ok, 172 LOC) |
