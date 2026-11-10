@@ -353,3 +353,69 @@ fn test_cli_export_md() {
     .failure()
     .stderr(predicate::str::contains("not found"));
 }
+
+#[test]
+fn test_cli_export_docx() {
+    let dir = tempdir().unwrap();
+    let db_path = dir.path().join("cli_export_docx.cadence");
+    let db_str = db_path.to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let init_res = cmd
+        .args([
+            "--json", "init", db_str,
+            "--title", "Docx CLI Test",
+            "--author", "Test Author",
+        ])
+        .assert()
+        .success();
+    let init_json: Value = serde_json::from_slice(&init_res.get_output().stdout).unwrap();
+    let project_id = init_json["id"].as_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let track_res = cmd
+        .args([
+            "--json", "track", "add", db_str,
+            "--project", project_id,
+            "--name", "Track 1",
+        ])
+        .assert()
+        .success();
+    let track_json: Value = serde_json::from_slice(&track_res.get_output().stdout).unwrap();
+    let track_id = track_json["id"].as_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args([
+        "--json", "scene", "add", db_str,
+        "--track", track_id,
+        "--title", "Scene 1",
+        "--time", "0",
+        "--duration", "50",
+        "--text", "Docx exported content here.",
+    ])
+    .assert()
+    .success();
+
+    let out_docx = dir.path().join("cli_out.docx");
+    let out_str = out_docx.to_str().unwrap();
+
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let assert = cmd
+        .args([
+            "--json", "export", "docx", db_str,
+            "--project", project_id,
+            "--output", out_str,
+        ])
+        .assert()
+        .success();
+
+    let export_json: Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(export_json["status"], "ok");
+    assert_eq!(export_json["format"], "docx");
+    assert_eq!(export_json["scene_count"], 1);
+    assert!(export_json["bytes_written"].as_u64().unwrap() > 0);
+
+    assert!(out_docx.exists());
+    let bytes = std::fs::read(&out_docx).unwrap();
+    assert_eq!(&bytes[0..4], b"PK\x03\x04");
+}

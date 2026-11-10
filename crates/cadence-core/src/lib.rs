@@ -9,7 +9,10 @@ pub use domain::{
     DEFAULT_TRACK_COLOR,
 };
 pub use error::CadenceError;
-pub use export::{export_markdown, export_markdown_to_file, MarkdownExportOptions};
+pub use export::{
+    export_docx, export_docx_to_file, export_markdown, export_markdown_to_file, DocxExportOptions,
+    MarkdownExportOptions,
+};
 pub use storage::Database;
 pub use sweep::{
     assemble_project, assemble_scenes, assemble_scenes_with_ranks, AssembledScene, SceneSweepKey,

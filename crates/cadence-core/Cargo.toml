@@ -10,6 +10,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 chrono = { version = "0.4", features = ["serde"] }
+docx-rs = "0.4"
 
 [dev-dependencies]
 tempfile = "3.13"
+assert_cmd = "2.0"
+predicates = "3.1"

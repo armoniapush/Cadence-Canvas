@@ -1,8 +1,8 @@
 use std::path::PathBuf;
 use clap::{Parser, Subcommand};
 use cadence_core::{
-    assemble_project, export_markdown_to_file, CadenceError, Database, MarkdownExportOptions,
-    Project, Scene, Track, DEFAULT_TRACK_COLOR,
+    assemble_project, export_docx_to_file, export_markdown_to_file, CadenceError, Database,
+    DocxExportOptions, MarkdownExportOptions, Project, Scene, Track, DEFAULT_TRACK_COLOR,
 };
 
 const EX_CONFLICT: i32 = 75;
@@ -63,6 +63,24 @@ enum ExportCommands {
         no_title: bool,
         #[arg(long)]
         metadata: bool,
+    },
+    /// Export manuscript to standard DOCX
+    Docx {
+        path: PathBuf,
+        #[arg(long)]
+        project: String,
+        #[arg(short, long)]
+        output: PathBuf,
+        #[arg(long)]
+        no_title: bool,
+        #[arg(long)]
+        metadata: bool,
+        #[arg(long, default_value = "#")]
+        scene_separator: String,
+        #[arg(long, default_value = "Courier New")]
+        font_family: String,
+        #[arg(long, default_value_t = 24)]
+        font_size: usize,
     },
 }
 
@@ -302,6 +320,52 @@ fn run(cli: &Cli) -> Result<(), CadenceError> {
                             "status": "ok",
                             "project_id": proj.id,
                             "format": "markdown",
+                            "output": output.display().to_string(),
+                            "scene_count": scenes.len(),
+                            "word_count": total_words,
+                            "bytes_written": bytes_written,
+                        })
+                    );
+                } else {
+                    println!(
+                        "Exported {} scenes to {} (project: '{}')",
+                        scenes.len(),
+                        output.display(),
+                        proj.title
+                    );
+                }
+            }
+            ExportCommands::Docx {
+                path,
+                project,
+                output,
+                no_title,
+                metadata,
+                scene_separator,
+                font_family,
+                font_size,
+            } => {
+                let db = Database::open(path)?;
+                let proj = Project::get_by_id(db.conn(), project)?;
+                let scenes = assemble_project(db.conn(), project)?;
+                let options = DocxExportOptions {
+                    include_title: !*no_title,
+                    include_metadata: *metadata,
+                    scene_separator: scene_separator.clone(),
+                    font_family: font_family.clone(),
+                    font_size: *font_size,
+                };
+                export_docx_to_file(output, &proj, &scenes, &options)?;
+
+                if cli.json {
+                    let total_words: i64 = scenes.iter().map(|s| s.scene.word_count).sum();
+                    let bytes_written = std::fs::metadata(output).map(|m| m.len()).unwrap_or(0);
+                    println!(
+                        "{}",
+                        serde_json::json!({
+                            "status": "ok",
+                            "project_id": proj.id,
+                            "format": "docx",
                             "output": output.display().to_string(),
                             "scene_count": scenes.len(),
                             "word_count": total_words,

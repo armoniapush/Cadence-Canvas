@@ -179,7 +179,7 @@ CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_en
 | **Slice 2.1** | `sweep_line` | Algoritmo Sweep-Line puro 2D con tupla total de desempate y golden hash test. | <= 310 LOC | `feat(sweep): 2d sweep-line assembly engine with total tie-breaking` | ✅ Delivered (`249dd42`, 5/5 tests ok, 95 LOC) |
 | **Slice 2.2** | `anchors` | DAG de lectura, validación acíclica Kahn y ordenación topológica. | <= 330 LOC | `feat(anchors): reading anchors dag with cycle detection` | ✅ Delivered (6/6 tests ok, 225 LOC) |
 | **Slice 2.3** | `export/md` | Exporter Markdown puro con write-to-temp atómico y tests byte-exact. | <= 260 LOC | `feat(export): deterministic markdown manuscript generator` | ✅ Delivered (3/3 tests ok, 135 LOC) |
-| **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` |
+| **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` | ✅ Delivered (3/3 tests ok, 183 LOC) |
 | **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` |
 | **Slice 3.2** | `world_graph` | Subgrafo 1-hop de escena y auditor de anacronismos temporales. | <= 340 LOC | `feat(world): 1-hop ego-graph extraction and temporal validator` |
 | **Slice 3.3** | `metrics` | Pipeline de histograma tonal en 1 pasada (< 0.5ms) sobre buffer de texto. | <= 280 LOC | `feat(metrics): single-pass 4-channel tonal histogram engine` |
