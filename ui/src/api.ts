@@ -3,6 +3,7 @@ import type {
   Project,
   Track,
   Scene,
+  ReadingAnchor,
   AssembledScene,
   EgoGraph,
   TonalHistogram,
@@ -58,7 +59,55 @@ const mockState = {
       created_at: Date.now(),
       updated_at: Date.now(),
     },
+    {
+      id: 'mock-scene-2',
+      track_id: 'mock-track-2',
+      t_start: 140,
+      duration: 150,
+      z_index: 0,
+      title: 'Infiltración en el Búnker',
+      text: 'El equipo secundario intercepta la señal de transmisión enemiga.',
+      word_count: 10,
+      char_count: 63,
+      version: 1,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+    {
+      id: 'mock-scene-3',
+      track_id: 'mock-track-1',
+      t_start: 310,
+      duration: 130,
+      z_index: 0,
+      title: 'Convergencia Causal',
+      text: 'Ambos hilos se unen en el núcleo de la estación narrativa.',
+      word_count: 10,
+      char_count: 57,
+      version: 1,
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
   ] as Scene[],
+  anchors: [
+    {
+      id: 'mock-anchor-1',
+      project_id: 'mock-proj-1',
+      source_scene_id: 'mock-scene-1',
+      target_scene_id: 'mock-scene-2',
+      anchor_type: 'causal',
+      weight: 1.0,
+      created_at: Date.now(),
+    },
+    {
+      id: 'mock-anchor-2',
+      project_id: 'mock-proj-1',
+      source_scene_id: 'mock-scene-2',
+      target_scene_id: 'mock-scene-3',
+      anchor_type: 'chronological',
+      weight: 1.0,
+      created_at: Date.now(),
+    },
+  ] as ReadingAnchor[],
 };
 
 export async function openProject(path: string): Promise<Project> {
@@ -194,6 +243,44 @@ export async function moveScene(
   target.version += 1;
   target.updated_at = Date.now();
   return { ...target };
+}
+
+export async function listAnchors(path: string, projectId: string): Promise<ReadingAnchor[]> {
+  if (isTauri()) {
+    return invoke<ReadingAnchor[]>('list_anchors', { path, projectId });
+  }
+  return mockState.anchors.filter((a) => a.project_id === projectId || true);
+}
+
+export async function createAnchor(
+  path: string,
+  projectId: string,
+  sourceSceneId: string,
+  targetSceneId: string,
+  anchorType: string,
+  weight: number,
+): Promise<ReadingAnchor> {
+  if (isTauri()) {
+    return invoke<ReadingAnchor>('create_anchor', {
+      path,
+      projectId,
+      sourceSceneId,
+      targetSceneId,
+      anchorType,
+      weight,
+    });
+  }
+  const newAnchor: ReadingAnchor = {
+    id: `anchor-${Date.now()}`,
+    project_id: projectId,
+    source_scene_id: sourceSceneId,
+    target_scene_id: targetSceneId,
+    anchor_type: anchorType,
+    weight,
+    created_at: Date.now(),
+  };
+  mockState.anchors.push(newAnchor);
+  return newAnchor;
 }
 
 export async function assembleManuscript(

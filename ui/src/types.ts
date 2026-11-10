@@ -32,6 +32,16 @@ export interface Scene {
   updated_at: number;
 }
 
+export interface ReadingAnchor {
+  id: string;
+  project_id: string;
+  source_scene_id: string;
+  target_scene_id: string;
+  anchor_type: string;
+  weight: number;
+  created_at: number;
+}
+
 export interface AssembledScene {
   scene: Scene;
   track: Track;

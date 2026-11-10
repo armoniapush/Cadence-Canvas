@@ -1,7 +1,8 @@
 use cadence_core::{
     assemble_project, audit_temporal_causality, compute_tonal_histogram, export_docx_to_file,
     export_markdown_to_file, extract_entity_ego_graph, AnachronismIssue, AssembledScene, Database,
-    DocxExportOptions, EgoGraph, MarkdownExportOptions, Project, Scene, TonalHistogram, Track,
+    DocxExportOptions, EgoGraph, MarkdownExportOptions, Project, ReadingAnchor, Scene,
+    TonalHistogram, Track,
 };
 
 #[tauri::command]
@@ -77,6 +78,33 @@ pub fn move_scene(
     let db = Database::open(&path).map_err(|e| e.to_string())?;
     Scene::move_coordinates(db.conn(), &id, version, &track_id, t_start, duration)
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_anchors(path: String, project_id: String) -> Result<Vec<ReadingAnchor>, String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    ReadingAnchor::list_by_project(db.conn(), &project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn create_anchor(
+    path: String,
+    project_id: String,
+    source_scene_id: String,
+    target_scene_id: String,
+    anchor_type: String,
+    weight: f64,
+) -> Result<ReadingAnchor, String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    ReadingAnchor::create(
+        db.conn(),
+        &project_id,
+        &source_scene_id,
+        &target_scene_id,
+        &anchor_type,
+        weight,
+    )
+    .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -203,10 +231,35 @@ mod tests {
         assert_eq!(moved.t_start, 10);
         assert_eq!(moved.duration, 150);
 
+        // 5b. create_anchor & list_anchors
+        let scene2 = create_scene(
+            db_path.clone(),
+            track.id.clone(),
+            "Second Scene".to_string(),
+            200,
+            100,
+            "Scene 2 text.".to_string(),
+        )
+        .expect("create_scene 2");
+        let anchor = create_anchor(
+            db_path.clone(),
+            project.id.clone(),
+            moved.id.clone(),
+            scene2.id.clone(),
+            "causal".to_string(),
+            1.0,
+        )
+        .expect("create_anchor");
+        assert_eq!(anchor.anchor_type, "causal");
+        let anchors = list_anchors(db_path.clone(), project.id.clone()).expect("list_anchors");
+        assert_eq!(anchors.len(), 1);
+        assert_eq!(anchors[0].id, anchor.id);
+
         // 6. assemble_manuscript
         let assembled = assemble_manuscript(db_path.clone(), project.id.clone()).expect("assemble_manuscript");
-        assert_eq!(assembled.len(), 1);
+        assert_eq!(assembled.len(), 2);
         assert_eq!(assembled[0].sequence_index, 0);
+        assert_eq!(assembled[1].sequence_index, 1);
 
         // 7. compute_tonal_metrics
         let metrics = compute_tonal_metrics("“Where are we?” asked the commander. He ran towards the console!".to_string())

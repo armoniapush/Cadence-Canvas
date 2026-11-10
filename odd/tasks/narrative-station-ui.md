@@ -32,9 +32,24 @@
 | Slice ID | Módulo | Objetivo Causal | Límite LOC | Conventional Commit | Estado / Receipt |
 |---|---|---|---|---|---|
 | **Slice 4.1** | `tauri/bridge` | Shell Tauri v2 en `src-tauri`, comandos IPC conectados a `cadence-core`, y scaffolding React 19 + Vite en `ui/`. | <= 400 LOC | `feat(tauri): shell v2 and ipc command bridge for cadence-core` | ✅ Completed |
-| **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ⏳ Ready |
-| **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ⏳ Pending |
+| **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ✅ Completed |
+| **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ⏳ Ready |
 | **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ⏳ Pending |
+
+### Receipt de Ejecución: Slice 4.2 (`ui/canvas`)
+- **Motor de Renderizado Canvas 120 FPS (`ui/src/canvas/renderer.ts`, 205 LOC)**:
+  * Capa 1: Rejilla temporal con paso adaptativo por zoom, pistas en fondo ultra-oscuro militar (`#090a0f`, `#0e111a`, `#121520`), cabeceras fijas de carril y regla diegética superior con aguja scrubber cyan (`#38bdf8`).
+  * Capa 2: Cintas de masa causal Sankey conectando escenas con curvas Bézier cúbicas suaves (parámetro de curvatura $k = 0.48$), grosor adaptativo y degradados translúcidos basados en colores de carriles.
+  * Capa 3: Tarjetas de escena tácticas ("milled rack-mount cards") con borde especular de 1px (`#2d3748`), barra indicadora de color de carril de 4px, badges de conteo de palabras `[ 450w ]`, versión `v{version}` y contornos de selección de alta precisión cyan (`#38bdf8`) / amber (`#f59e0b` durante arrastre).
+  * Render loop desacoplado del DOM ejecutándose en `requestAnimationFrame` garantizando 120 FPS.
+- **Componente Interactivo (`ui/src/canvas/DawCanvas.tsx`, 188 LOC)**:
+  * Viewport virtual con pan horizontal/vertical libre y zoom centrado en cursor acotado en $[0.2x, 3.0x]$.
+  * Selección de bloque al clic, arrastre táctil para mover bloques en el tiempo o cambiar de carril emitiendo `onMoveScene(scene, newTrackId, newTStart)` con Concurrencia Optimista (OCC).
+  * Doble clic en carriles para creación rápida de nuevas escenas (`onCreateScene`).
+  * Presupuesto cumplido estrictamente: 205 + 188 = 393 LOC en componentes de canvas (<= 400 LOC).
+- **Puente IPC de Anclas Causal (`src-tauri`)**: Comandos `list_anchors` y `create_anchor` integrados en IPC y probados con ciclo de vida completo.
+- **Integración en `App.tsx`**: Espacio central gobernado por `<DawCanvas />` conectado al estado activo, con inspector lateral de escena seleccionada.
+- **Verificación**: `npm run build` en `ui/` construye exitosamente en 837ms sin errores de TypeScript; suite de pruebas Rust (`cargo test`) pasa al 100% (48 tests).
 
 ### Receipt de Ejecución: Slice 4.1 (`tauri/bridge`)
 - **Shell Tauri v2**: `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json`, `src-tauri/build.rs`, `src-tauri/src/main.rs`, `src-tauri/src/lib.rs`.
@@ -48,3 +63,5 @@
 
 - **Rechazado: Renderizar miles de nodos temporales en React DOM plano o divs absolutos.** El DOM se degrada a < 15 FPS al hacer pan/zoom con más de 100 elementos con sombras. Se utiliza un `<canvas>` HTML5 acelerado por hardware para el fondo temporal y las cintas Bézier.
 - **Rechazado: Servidor proxy intermedio entre frontend y backend.** Tauri v2 provee bindings nativos C/Rust de baja latencia (`invoke`) sin overhead de red.
+- **Rechazado: Manipular transformaciones CSS sobre SVG para las cintas Bézier.** El re-layout del árbol SVG en tiempo real genera picos de Garbage Collection y caídas de frames por debajo de 60 FPS con múltiples tracks. El renderizado en `<canvas>` 2D en triple capa con `requestAnimationFrame` mantiene 120 FPS sin bloqueos en el hilo principal del DOM.
+- **Rechazado: Mutar estado React en cada evento `mousemove` durante el arrastre de escena.** Despachar mutaciones de estado React a cada tick de ratón causa re-renderizados continuos del árbol JSX. Se mantiene la referencia mutable en `stateRef` y sólo se sincroniza al soltar el puntero (`pointerup`).

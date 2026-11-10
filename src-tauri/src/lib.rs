@@ -11,6 +11,8 @@ pub fn run() {
             commands::create_scene,
             commands::update_scene_content,
             commands::move_scene,
+            commands::list_anchors,
+            commands::create_anchor,
             commands::assemble_manuscript,
             commands::get_ego_graph,
             commands::compute_tonal_metrics,
