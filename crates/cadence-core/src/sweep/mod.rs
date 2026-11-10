@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
-use crate::domain::{Project, Scene, Track};
+use crate::domain::{compute_topological_ranks, Project, ReadingAnchor, Scene, Track};
 use crate::error::CadenceError;
 
 /// Strict 6-tuple total ordering key for the 2D Sweep-Line assembly engine:
@@ -42,12 +42,17 @@ pub struct AssembledScene {
     pub sequence_index: usize,
 }
 
-/// Assembles an in-memory collection of scenes and tracks deterministically.
+/// Assembles an in-memory collection of scenes and tracks deterministically with topological anchor ranks.
 ///
 /// Filters out any scenes that belong to muted tracks (`track.is_muted == true`).
+/// Resolves `anchor_topo` from `ranks` (defaults to 0 if unanchored).
 /// Orders the remaining scenes strictly according to `SceneSweepKey`.
 /// Assigns consecutive `sequence_index: 0..N`.
-pub fn assemble_scenes(scenes: Vec<Scene>, tracks: &[Track]) -> Vec<AssembledScene> {
+pub fn assemble_scenes_with_ranks(
+    scenes: Vec<Scene>,
+    tracks: &[Track],
+    ranks: &HashMap<String, i64>,
+) -> Vec<AssembledScene> {
     let track_map: HashMap<String, &Track> = tracks
         .iter()
         .map(|t| (t.id.clone(), t))
@@ -59,7 +64,8 @@ pub fn assemble_scenes(scenes: Vec<Scene>, tracks: &[Track]) -> Vec<AssembledSce
             if track.is_muted {
                 continue;
             }
-            let key = SceneSweepKey::from_scene_and_track(&scene, track, 0);
+            let anchor_topo = ranks.get(&scene.id).copied().unwrap_or(0);
+            let key = SceneSweepKey::from_scene_and_track(&scene, track, anchor_topo);
             candidates.push((key, scene, (*track).clone()));
         }
     }
@@ -77,12 +83,18 @@ pub fn assemble_scenes(scenes: Vec<Scene>, tracks: &[Track]) -> Vec<AssembledSce
         .collect()
 }
 
+/// Assembles an in-memory collection of scenes and tracks deterministically (unanchored / default topo 0).
+pub fn assemble_scenes(scenes: Vec<Scene>, tracks: &[Track]) -> Vec<AssembledScene> {
+    assemble_scenes_with_ranks(scenes, tracks, &HashMap::new())
+}
+
 /// Assembles all active scenes of a project from a SQLite database connection.
 ///
 /// Invariant:
 /// - Verifies project existence (returns `CadenceError::NotFound` if invalid).
-/// - Retrieves all tracks and scenes for `project_id`.
+/// - Retrieves all tracks, scenes, and reading anchors for `project_id`.
 /// - Mechanically excludes scenes residing on muted tracks.
+/// - Computes deterministic topological ranks for reading anchors.
 /// - Performs deterministic 2D sweep-line assembly with total tie-breaking.
 pub fn assemble_project(
     conn: &Connection,
@@ -91,5 +103,7 @@ pub fn assemble_project(
     Project::get_by_id(conn, project_id)?;
     let tracks = Track::list_by_project(conn, project_id)?;
     let scenes = Scene::list_by_project(conn, project_id)?;
-    Ok(assemble_scenes(scenes, &tracks))
+    let anchors = ReadingAnchor::list_by_project(conn, project_id)?;
+    let ranks = compute_topological_ranks(&anchors);
+    Ok(assemble_scenes_with_ranks(scenes, &tracks, &ranks))
 }

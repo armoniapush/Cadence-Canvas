@@ -177,7 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_en
 | **Slice 1.3** | `domain/scene` | CRUD de `Scene` con OCC (`version`), contadores de palabras y retry helper. | <= 350 LOC | `feat(domain): scene operations with optimistic version locking` | ✅ Delivered (`c819a6e`, 11/11 tests ok, 282 LOC) |
 | **Slice 1.4** | `cli` | Scaffolding de `cadence` CLI (`init`, `track`, `scene`) con soporte `--json`. | <= 380 LOC | `feat(cli): bimodal cli scaffolding for project, tracks and scenes` | ✅ Delivered (`be0d776`, 3/3 tests ok, 271 LOC) |
 | **Slice 2.1** | `sweep_line` | Algoritmo Sweep-Line puro 2D con tupla total de desempate y golden hash test. | <= 310 LOC | `feat(sweep): 2d sweep-line assembly engine with total tie-breaking` | ✅ Delivered (`249dd42`, 5/5 tests ok, 95 LOC) |
-| **Slice 2.2** | `anchors` | DAG de lectura, validación acíclica Kahn y ordenación topológica. | <= 330 LOC | `feat(anchors): reading anchors dag with cycle detection` |
+| **Slice 2.2** | `anchors` | DAG de lectura, validación acíclica Kahn y ordenación topológica. | <= 330 LOC | `feat(anchors): reading anchors dag with cycle detection` | ✅ Delivered (6/6 tests ok, 225 LOC) |
 | **Slice 2.3** | `export/md` | Exporter Markdown puro con write-to-temp atómico y tests byte-exact. | <= 260 LOC | `feat(export): deterministic markdown manuscript generator` |
 | **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` |
 | **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` |

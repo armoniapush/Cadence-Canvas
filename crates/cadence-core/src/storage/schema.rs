@@ -46,13 +46,16 @@ CREATE TABLE IF NOT EXISTS scenes (
 
 CREATE TABLE IF NOT EXISTS reading_anchors (
     id TEXT PRIMARY KEY NOT NULL,
-    from_scene_id TEXT NOT NULL,
-    to_scene_id TEXT NOT NULL,
-    anchor_type TEXT NOT NULL DEFAULT 'precedes',
+    project_id TEXT NOT NULL,
+    source_scene_id TEXT NOT NULL,
+    target_scene_id TEXT NOT NULL,
+    anchor_type TEXT NOT NULL DEFAULT 'chronological',
+    weight REAL NOT NULL DEFAULT 1.0,
     created_at INTEGER NOT NULL,
-    FOREIGN KEY(from_scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
-    FOREIGN KEY(to_scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
-    UNIQUE(from_scene_id, to_scene_id)
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY(source_scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+    FOREIGN KEY(target_scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+    UNIQUE(source_scene_id, target_scene_id)
 );
 
 CREATE TABLE IF NOT EXISTS entities (
@@ -83,4 +86,5 @@ CREATE INDEX IF NOT EXISTS idx_scenes_track_time ON scenes(track_id, t_start, du
 CREATE INDEX IF NOT EXISTS idx_tracks_project_order ON tracks(project_id, track_order);
 CREATE INDEX IF NOT EXISTS idx_entities_project_kind ON entities(project_id, kind);
 CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_entity_id);
+CREATE INDEX IF NOT EXISTS idx_anchors_project ON reading_anchors(project_id);
 "#;
