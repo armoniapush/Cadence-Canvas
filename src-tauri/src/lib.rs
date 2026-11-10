@@ -14,6 +14,7 @@ pub fn run() {
             commands::list_anchors,
             commands::create_anchor,
             commands::assemble_manuscript,
+            commands::list_entities,
             commands::get_ego_graph,
             commands::compute_tonal_metrics,
             commands::audit_timeline,

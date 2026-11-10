@@ -1,8 +1,8 @@
 use cadence_core::{
     assemble_project, audit_temporal_causality, compute_tonal_histogram, export_docx_to_file,
     export_markdown_to_file, extract_entity_ego_graph, AnachronismIssue, AssembledScene, Database,
-    DocxExportOptions, EgoGraph, MarkdownExportOptions, Project, ReadingAnchor, Scene,
-    TonalHistogram, Track,
+    DocxExportOptions, EgoGraph, LoreEntity, MarkdownExportOptions, Project,
+    ReadingAnchor, Scene, TonalHistogram, Track,
 };
 
 #[tauri::command]
@@ -111,6 +111,12 @@ pub fn create_anchor(
 pub fn assemble_manuscript(path: String, project_id: String) -> Result<Vec<AssembledScene>, String> {
     let db = Database::open(&path).map_err(|e| e.to_string())?;
     assemble_project(db.conn(), &project_id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn list_entities(path: String, project_id: String) -> Result<Vec<LoreEntity>, String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    LoreEntity::list_by_project(db.conn(), &project_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -267,7 +273,16 @@ mod tests {
         assert!(metrics.total_words > 0);
         assert!(metrics.dialogue > 0.0);
 
-        // 8. audit_timeline
+        // 8. audit_timeline & entities
+        let db = Database::open(&db_path).expect("open db for entity creation");
+        let entity = LoreEntity::create(db.conn(), &project.id, cadence_core::EntityType::Character, "Valeria", &["Val"], None).expect("create entity");
+        let entities = list_entities(db_path.clone(), project.id.clone()).expect("list_entities");
+        assert_eq!(entities.len(), 1);
+        assert_eq!(entities[0].id, entity.id);
+
+        let ego = get_ego_graph(db_path.clone(), project.id.clone(), entity.id.clone()).expect("get_ego_graph");
+        assert_eq!(ego.center.id, entity.id);
+
         let issues = audit_timeline(db_path.clone(), project.id.clone()).expect("audit_timeline");
         assert!(issues.is_empty());
 

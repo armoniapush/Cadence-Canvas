@@ -48,12 +48,26 @@ export interface AssembledScene {
   sequence_index: number;
 }
 
+export interface LoreEntity {
+  id: string;
+  project_id: string;
+  entity_type: string;
+  name: string;
+  aliases: string[];
+  color_hex: string;
+  meta_json: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface GraphNode {
   id: string;
   name: string;
   entity_type: string;
   color_hex: string;
   mention_count: number;
+  born_at?: number | null;
+  died_at?: number | null;
 }
 
 export interface GraphEdge {

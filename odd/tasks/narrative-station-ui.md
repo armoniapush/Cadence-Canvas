@@ -34,7 +34,20 @@
 | **Slice 4.1** | `tauri/bridge` | Shell Tauri v2 en `src-tauri`, comandos IPC conectados a `cadence-core`, y scaffolding React 19 + Vite en `ui/`. | <= 400 LOC | `feat(tauri): shell v2 and ipc command bridge for cadence-core` | ✅ Completed |
 | **Slice 4.2** | `ui/canvas` | Motor de Canvas DAW (3 capas: rejilla diegética, cintas Sankey Bézier k=0.48 y tarjetas de escena tácticas). | <= 400 LOC | `feat(ui-canvas): 120fps daw narrative canvas with sankey ribbons` | ✅ Completed |
 | **Slice 4.3** | `ui/editor` | Editor Atómico con Tiptap, HUD métrico cuadricanal en tiempo real y Modo Zen con atajo `F11`. | <= 400 LOC | `feat(ui-editor): atomic editor with real-time hud and zen mode` | ✅ Completed |
-| **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ⏳ Ready |
+| **Slice 4.4** | `ui/constellation`| Constelación radial de entidades con scrubber temporal $T_{story}$ y auditor de anacronismos. | <= 400 LOC | `feat(ui-constellation): radial ego-graph with temporal scrubber` | ✅ Completed |
+
+### Receipt de Ejecución: Slice 4.4 (`ui/constellation`)
+- **Constelación Radial Ego-Graph (`ui/src/constellation/RadialConstellation.tsx`, 265 LOC)**:
+  * Diagrama orbital táctico con anillos concéntricos de rango (`Órbita I: 100`, `Órbita II: 170`, `Órbita III: 240`) y retículas de mira telescópica en fondo militar (`#090a0f`).
+  * Nodo Ego Central con anillo de enfoque pulsante, doble borde especular, badge de conteo de menciones y conmutador dinámico de centro mediante selector o clic en vecinos.
+  * Nodos vecinos 1-hop distribuidos equidistantes sobre la órbita radial con enlaces de co-ocurrencia con grosor (`strokeWidth`) y opacidad adaptativos según el peso de la relación (`edge.weight`).
+  * Tipología cromática 90/10 OKLCH: `@` Personajes en violeta/azul (`#818cf8`), `#` Lugares en cian/esmeralda (`#2dd4bf`), `!` Objetos en ámbar (`#fbbf24`).
+  * Scrubber Temporal Diegético ($T_{story}$): barra interactiva inferior conectada al tiempo diegético que atenúa dinámicamente (`opacity: 0.28`, borde discontinuo y badge causal) las entidades fuera de su rango de existencia (`born_at` o `died_at`). Sincronizado bidireccionalmente con la escena activa del Canvas DAW.
+  * Panel táctico desplegable de Auditoría de Anacronismos Causales: consume `api.auditTimeline()`, identifica violaciones temporales (`PRE-BIRTH` y `POST-MORTEM`) y ofrece salto directo e instantáneo a la escena infractora.
+  * Presupuesto cumplido estrictamente: 265 LOC en componentes de constelación (<= 400 LOC).
+- **Puente IPC de Entidades (`src-tauri`)**: Comando IPC `list_entities` registrado en Tauri y probado en suite de pruebas de ciclo de vida.
+- **Integración en `App.tsx`**: Botón de alternancia táctico en cabecera `◈ Constelación Causal / Vista Radar` permitiendo conmutar fluidamente entre el Canvas DAW a 120 FPS y la constelación orbital manteniendo la sincronización de escena y el editor atómico en vivo.
+- **Verificación**: `npm run build` en `ui/` construye exitosamente en 833ms sin errores de TypeScript; suite de pruebas Rust (`cargo test`) pasa al 100% (48 tests).
 
 ### Receipt de Ejecución: Slice 4.3 (`ui/editor`)
 - **HUD Métrico Leica / ARRI (`ui/src/editor/TonalHud.tsx`, 122 LOC)**:
@@ -84,3 +97,5 @@
 - **Rechazado: Mutar estado React en cada evento `mousemove` durante el arrastre de escena.** Despachar mutaciones de estado React a cada tick de ratón causa re-renderizados continuos del árbol JSX. Se mantiene la referencia mutable en `stateRef` y sólo se sincroniza al soltar el puntero (`pointerup`).
 - **Rechazado: Borrar o pisar el buffer local del usuario cuando el backend devuelve `StaleMutationConflict` (OCC).** Los cambios no guardados se preservan intactos en la memoria del editor y se ofrece acción explícita de "Rebasar / Forzar" o "Descartar", previniendo cualquier pérdida accidental de texto narrativo.
 - **Rechazado: Re-calcular métricas tonales completas en cada pulsación de tecla síncronamente.** Se implementó una cola debounceada (200ms para métricas y 600ms para guardado automático WAL) garantizando una superficie de escritura suave y libre de stuttering a 120 FPS.
+- **Rechazado: Renderizar la constelación orbital mediante simulación de fuerzas D3-force con tick dinámico continuo.** Una simulación basada en físicas continuas sobrecarga la CPU/GPU innecesariamente y causa oscilaciones erráticas al cambiar de entidad. Una proyección orbital fija con radios concéntricos proporcionales al peso y ángulos equidistantes ofrece estabilidad visual militar inmediata, lectura táctica precisa y consumo nulo de ciclos inactivos.
+- **Rechazado: Ocultar o eliminar completamente del gráfico los nodos fuera de su rango temporal diegético.** Remover los nodos produce saltos bruscos en el layout orbital al mover el scrubber temporal. Se optó por una atenuación visual gradual (`opacity: 0.28`, borde punteado y badge `[No nacido / Fallecido]`), manteniendo la topología del grafo estable mientras se expone con claridad la anacronía.

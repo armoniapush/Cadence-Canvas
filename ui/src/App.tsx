@@ -10,6 +10,7 @@ import {
 } from './api';
 import { DawCanvas } from './canvas/DawCanvas';
 import { AtomicEditor } from './editor/AtomicEditor';
+import { RadialConstellation } from './constellation/RadialConstellation';
 
 export function App() {
   const [projectPath, setProjectPath] = useState<string>('project.cadence');
@@ -21,6 +22,7 @@ export function App() {
   const [status, setStatus] = useState<string>('Inicializando Estación Narrativa...');
   const [error, setError] = useState<string | null>(null);
   const [isZen, setIsZen] = useState<boolean>(false);
+  const [showConstellation, setShowConstellation] = useState<boolean>(false);
 
   const initProject = async (path: string) => {
     try {
@@ -198,6 +200,29 @@ export function App() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={() => setShowConstellation((prev) => !prev)}
+            style={{
+              padding: '4px 12px',
+              backgroundColor: showConstellation
+                ? 'rgba(56, 189, 248, 0.25)'
+                : 'rgba(56, 189, 248, 0.1)',
+              color: 'var(--accent-cyan)',
+              border: showConstellation
+                ? '1px solid var(--accent-cyan)'
+                : '1px solid rgba(56, 189, 248, 0.3)',
+              borderRadius: '4px',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            {showConstellation ? '☵ Vista Canvas DAW' : '◈ Constelación Causal / Vista Radar'}
+          </button>
+
           {selectedScene && (
             <button
               onClick={handleToggleZen}
@@ -349,10 +374,11 @@ export function App() {
             <div>• Doble clic: Crear nueva escena</div>
             <div>• F11: Activar Modo Zen</div>
             <div>• Ctrl+S: Guardar escena</div>
+            <div>• ◈ Radar / Constelación Causal</div>
           </div>
         </section>
 
-        {/* Center Stage: Hardware-Accelerated 120 FPS DAW Canvas */}
+        {/* Center Stage: Hardware-Accelerated 120 FPS DAW Canvas or Radial Constellation Radar */}
         <section
           style={{
             flex: 1,
@@ -364,15 +390,26 @@ export function App() {
             position: 'relative',
           }}
         >
-          <DawCanvas
-            tracks={tracks}
-            scenes={scenes}
-            anchors={anchors}
-            selectedSceneId={selectedSceneId}
-            onSelectScene={handleSelectScene}
-            onMoveScene={handleMoveScene}
-            onCreateScene={handleCreateScene}
-          />
+          {showConstellation ? (
+            <RadialConstellation
+              projectPath={projectPath}
+              projectId={project?.id || 'mock-proj-1'}
+              scenes={scenes}
+              selectedSceneId={selectedSceneId}
+              onSelectScene={(sceneId) => setSelectedSceneId(sceneId)}
+              onClose={() => setShowConstellation(false)}
+            />
+          ) : (
+            <DawCanvas
+              tracks={tracks}
+              scenes={scenes}
+              anchors={anchors}
+              selectedSceneId={selectedSceneId}
+              onSelectScene={handleSelectScene}
+              onMoveScene={handleMoveScene}
+              onCreateScene={handleCreateScene}
+            />
+          )}
         </section>
 
         {/* Right Stage: Atomic Editor with Leica/ARRI Tonal HUD */}

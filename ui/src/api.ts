@@ -8,6 +8,7 @@ import type {
   EgoGraph,
   TonalHistogram,
   AnachronismIssue,
+  LoreEntity,
 } from './types';
 
 const isTauri = (): boolean => {
@@ -108,6 +109,83 @@ const mockState = {
       created_at: Date.now(),
     },
   ] as ReadingAnchor[],
+  entities: [
+    {
+      id: 'entity-valeria',
+      project_id: 'mock-proj-1',
+      entity_type: 'character',
+      name: 'Valeria',
+      aliases: ['Val'],
+      color_hex: '#818cf8',
+      meta_json: JSON.stringify({ born_at: 0, died_at: 280 }),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+    {
+      id: 'entity-kael',
+      project_id: 'mock-proj-1',
+      entity_type: 'character',
+      name: 'Kael',
+      aliases: ['Comandante'],
+      color_hex: '#60a5fa',
+      meta_json: JSON.stringify({ born_at: 80 }),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+    {
+      id: 'entity-bunker',
+      project_id: 'mock-proj-1',
+      entity_type: 'location',
+      name: 'Búnker Cero',
+      aliases: ['Búnker'],
+      color_hex: '#2dd4bf',
+      meta_json: JSON.stringify({ born_at: 0 }),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+    {
+      id: 'entity-estacion',
+      project_id: 'mock-proj-1',
+      entity_type: 'location',
+      name: 'Estación Órbita',
+      aliases: ['Órbita'],
+      color_hex: '#38bdf8',
+      meta_json: JSON.stringify({ born_at: 130 }),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+    {
+      id: 'entity-consola',
+      project_id: 'mock-proj-1',
+      entity_type: 'item',
+      name: 'Consola Cuántica',
+      aliases: ['Consola'],
+      color_hex: '#fbbf24',
+      meta_json: JSON.stringify({ born_at: 40, died_at: 260 }),
+      created_at: Date.now(),
+      updated_at: Date.now(),
+    },
+  ] as LoreEntity[],
+  anachronisms: [
+    {
+      scene_id: 'mock-scene-3',
+      scene_title: 'Convergencia Causal',
+      scene_time: 310,
+      entity_id: 'entity-valeria',
+      entity_name: 'Valeria',
+      issue_type: 'post_mortem_mention',
+      message: "Entity 'Valeria' is mentioned in scene 'Convergencia Causal' at time 310, after demise/death at 280",
+    },
+    {
+      scene_id: 'mock-scene-1',
+      scene_title: 'Apertura Táctica',
+      scene_time: 0,
+      entity_id: 'entity-estacion',
+      entity_name: 'Estación Órbita',
+      issue_type: 'pre_birth_mention',
+      message: "Entity 'Estación Órbita' is mentioned in scene 'Apertura Táctica' at time 0, before birth/origin at 130",
+    },
+  ] as AnachronismIssue[],
 };
 
 export async function openProject(path: string): Promise<Project> {
@@ -302,6 +380,13 @@ export async function assembleManuscript(
   }));
 }
 
+export async function listEntities(path: string, projectId: string): Promise<LoreEntity[]> {
+  if (isTauri()) {
+    return invoke<LoreEntity[]>('list_entities', { path, projectId });
+  }
+  return mockState.entities.filter((e) => e.project_id === projectId || true);
+}
+
 export async function getEgoGraph(
   path: string,
   projectId: string,
@@ -310,16 +395,50 @@ export async function getEgoGraph(
   if (isTauri()) {
     return invoke<EgoGraph>('get_ego_graph', { path, projectId, entityId });
   }
+  const allEntities = mockState.entities;
+  const centerEntity = allEntities.find((e) => e.id === entityId) || allEntities[0];
+  let centerMeta: { born_at?: number; died_at?: number } = {};
+  try {
+    centerMeta = JSON.parse(centerEntity.meta_json);
+  } catch {}
+
+  const neighbors = allEntities
+    .filter((e) => e.id !== centerEntity.id)
+    .map((e) => {
+      let meta: { born_at?: number; died_at?: number } = {};
+      try {
+        meta = JSON.parse(e.meta_json);
+      } catch {}
+      return {
+        id: e.id,
+        name: e.name,
+        entity_type: e.entity_type,
+        color_hex: e.color_hex,
+        mention_count: 3,
+        born_at: meta.born_at ?? null,
+        died_at: meta.died_at ?? null,
+      };
+    });
+
+  const edges = neighbors.map((n, i) => ({
+    source_id: centerEntity.id,
+    target_id: n.id,
+    weight: Math.max(1, 4 - i * 0.8),
+    relation_type: 'co_occurrence',
+  }));
+
   return {
     center: {
-      id: entityId,
-      name: 'Entidad Central Mock',
-      entity_type: 'character',
-      color_hex: '#f59e0b',
-      mention_count: 5,
+      id: centerEntity.id,
+      name: centerEntity.name,
+      entity_type: centerEntity.entity_type,
+      color_hex: centerEntity.color_hex,
+      mention_count: 8,
+      born_at: centerMeta.born_at ?? null,
+      died_at: centerMeta.died_at ?? null,
     },
-    neighbors: [],
-    edges: [],
+    neighbors,
+    edges,
   };
 }
 
@@ -365,7 +484,7 @@ export async function auditTimeline(
   if (isTauri()) {
     return invoke<AnachronismIssue[]>('audit_timeline', { path, projectId });
   }
-  return [];
+  return mockState.anachronisms;
 }
 
 export async function exportMarkdown(
