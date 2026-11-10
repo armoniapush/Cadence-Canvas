@@ -98,11 +98,13 @@ CREATE TABLE IF NOT EXISTS reading_anchors (
 CREATE TABLE IF NOT EXISTS entities (
     id TEXT PRIMARY KEY NOT NULL,
     project_id TEXT NOT NULL,
-    kind TEXT NOT NULL, -- 'character', 'location', 'item', 'faction'
+    entity_type TEXT NOT NULL, -- 'character', 'location', 'item'
     name TEXT NOT NULL,
     aliases_json TEXT NOT NULL DEFAULT '[]',
-    description TEXT NOT NULL DEFAULT '',
+    color_hex TEXT NOT NULL DEFAULT '#6366f1',
+    meta_json TEXT NOT NULL DEFAULT '{}',
     created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
@@ -118,11 +120,26 @@ CREATE TABLE IF NOT EXISTS relations (
     FOREIGN KEY(revealed_at_scene_id) REFERENCES scenes(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS scene_entity_mentions (
+    id TEXT PRIMARY KEY NOT NULL,
+    scene_id TEXT NOT NULL,
+    entity_id TEXT,
+    matched_text TEXT NOT NULL,
+    prefix TEXT NOT NULL,
+    start_offset INTEGER NOT NULL,
+    end_offset INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+    FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE SET NULL
+);
+
 -- Índices de Alta Concurrencia y Búsqueda Espacial
 CREATE INDEX IF NOT EXISTS idx_scenes_track_time ON scenes(track_id, t_start, duration);
 CREATE INDEX IF NOT EXISTS idx_tracks_project_order ON tracks(project_id, track_order);
-CREATE INDEX IF NOT EXISTS idx_entities_project_kind ON entities(project_id, kind);
+CREATE INDEX IF NOT EXISTS idx_entities_project_type ON entities(project_id, entity_type);
 CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_entity_id);
+CREATE INDEX IF NOT EXISTS idx_mentions_scene ON scene_entity_mentions(scene_id);
+CREATE INDEX IF NOT EXISTS idx_mentions_entity ON scene_entity_mentions(entity_id);
 ```
 
 ---
@@ -180,6 +197,6 @@ CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_en
 | **Slice 2.2** | `anchors` | DAG de lectura, validación acíclica Kahn y ordenación topológica. | <= 330 LOC | `feat(anchors): reading anchors dag with cycle detection` | ✅ Delivered (6/6 tests ok, 225 LOC) |
 | **Slice 2.3** | `export/md` | Exporter Markdown puro con write-to-temp atómico y tests byte-exact. | <= 260 LOC | `feat(export): deterministic markdown manuscript generator` | ✅ Delivered (3/3 tests ok, 135 LOC) |
 | **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` | ✅ Delivered (3/3 tests ok, 183 LOC) |
-| **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` |
+| **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` | ✅ Delivered (5/5 tests ok, 241 LOC) |
 | **Slice 3.2** | `world_graph` | Subgrafo 1-hop de escena y auditor de anacronismos temporales. | <= 340 LOC | `feat(world): 1-hop ego-graph extraction and temporal validator` |
 | **Slice 3.3** | `metrics` | Pipeline de histograma tonal en 1 pasada (< 0.5ms) sobre buffer de texto. | <= 280 LOC | `feat(metrics): single-pass 4-channel tonal histogram engine` |

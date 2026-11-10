@@ -3,6 +3,7 @@ pub mod error;
 pub mod export;
 pub mod storage;
 pub mod sweep;
+pub mod world;
 
 pub use domain::{
     compute_topological_ranks, retry_on_conflict, Project, ReadingAnchor, Scene, Track,
@@ -16,6 +17,10 @@ pub use export::{
 pub use storage::Database;
 pub use sweep::{
     assemble_project, assemble_scenes, assemble_scenes_with_ranks, AssembledScene, SceneSweepKey,
+};
+pub use world::{
+    scan_all_candidates, scan_known_mentions, scan_untracked_candidates, sync_scene_mentions,
+    CandidateMention, EntityType, LoreEntity, MentionScanner, MentionSpan,
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

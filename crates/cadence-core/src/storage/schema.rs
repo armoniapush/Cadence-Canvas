@@ -61,11 +61,13 @@ CREATE TABLE IF NOT EXISTS reading_anchors (
 CREATE TABLE IF NOT EXISTS entities (
     id TEXT PRIMARY KEY NOT NULL,
     project_id TEXT NOT NULL,
-    kind TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
     name TEXT NOT NULL,
     aliases_json TEXT NOT NULL DEFAULT '[]',
-    description TEXT NOT NULL DEFAULT '',
+    color_hex TEXT NOT NULL DEFAULT '#6366f1',
+    meta_json TEXT NOT NULL DEFAULT '{}',
     created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
@@ -81,10 +83,25 @@ CREATE TABLE IF NOT EXISTS relations (
     FOREIGN KEY(revealed_at_scene_id) REFERENCES scenes(id) ON DELETE SET NULL
 );
 
+CREATE TABLE IF NOT EXISTS scene_entity_mentions (
+    id TEXT PRIMARY KEY NOT NULL,
+    scene_id TEXT NOT NULL,
+    entity_id TEXT,
+    matched_text TEXT NOT NULL,
+    prefix TEXT NOT NULL,
+    start_offset INTEGER NOT NULL,
+    end_offset INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY(scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+    FOREIGN KEY(entity_id) REFERENCES entities(id) ON DELETE SET NULL
+);
+
 -- Indices for high concurrency and spatial sweep-line lookups
 CREATE INDEX IF NOT EXISTS idx_scenes_track_time ON scenes(track_id, t_start, duration);
 CREATE INDEX IF NOT EXISTS idx_tracks_project_order ON tracks(project_id, track_order);
-CREATE INDEX IF NOT EXISTS idx_entities_project_kind ON entities(project_id, kind);
+CREATE INDEX IF NOT EXISTS idx_entities_project_type ON entities(project_id, entity_type);
 CREATE INDEX IF NOT EXISTS idx_relations_pair ON relations(from_entity_id, to_entity_id);
 CREATE INDEX IF NOT EXISTS idx_anchors_project ON reading_anchors(project_id);
+CREATE INDEX IF NOT EXISTS idx_mentions_scene ON scene_entity_mentions(scene_id);
+CREATE INDEX IF NOT EXISTS idx_mentions_entity ON scene_entity_mentions(entity_id);
 "#;
