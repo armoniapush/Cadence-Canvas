@@ -111,41 +111,115 @@ export function RadialConstellation({
   const maxWeight = Math.max(...edges.map((e) => e.weight), 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', backgroundColor: '#090a0f', color: '#e2e8f0', fontFamily: 'monospace', overflow: 'hidden', position: 'relative' }}>
-      {/* Tactical Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid #1e293b', backgroundColor: '#0e111a', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 700 }}>◈ RED DE PERSONAJES & LUGARES</span>
-          <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)' }}>VISTA ORBITAL</span>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        height: '100%',
+        backgroundColor: 'var(--bg-canvas)',
+        color: 'var(--text-main)',
+        fontFamily: 'var(--font-sans)',
+        overflow: 'hidden',
+        position: 'relative',
+      }}
+    >
+      {/* Editorial Toolbar Header */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 18px',
+          borderBottom: '1px solid var(--border-specular)',
+          backgroundColor: 'var(--bg-surface)',
+          zIndex: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: 'var(--accent-cyan)', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            ◈ RED DE PERSONAJES & LUGARES
+          </span>
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '2px 8px',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(56, 189, 248, 0.12)',
+              color: 'var(--accent-cyan)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              fontWeight: 500,
+            }}
+          >
+            VISTA ORBITAL
+          </span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: '#94a3b8' }}>Centro Ego:</span>
-          <select value={selectedEntityId || ''} onChange={(e) => setSelectedEntityId(e.target.value)} style={{ backgroundColor: '#121520', color: '#f8fafc', border: '1px solid #334155', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', maxWidth: '180px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Centro Ego:</span>
+          <select
+            value={selectedEntityId || ''}
+            onChange={(e) => setSelectedEntityId(e.target.value)}
+            style={{
+              backgroundColor: 'var(--bg-rack)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-specular)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              maxWidth: '200px',
+              outline: 'none',
+            }}
+          >
             {entities.map((ent) => {
               const { prefix } = getEntityStyle(ent.entity_type);
               return <option key={ent.id} value={ent.id}>{prefix} {ent.name}</option>;
             })}
           </select>
-          <button onClick={() => setShowAudit((p) => !p)} style={{ padding: '3px 8px', borderRadius: '4px', border: anachronisms.length > 0 ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(16,185,129,0.4)', backgroundColor: anachronisms.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.12)', color: anachronisms.length > 0 ? '#f87171' : '#34d399', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+
+          <button
+            className="pill-btn"
+            onClick={() => setShowAudit((p) => !p)}
+            style={{
+              padding: '4px 12px',
+              border: anachronisms.length > 0 ? '1px solid rgba(239, 68, 68, 0.4)' : '1px solid rgba(16, 185, 129, 0.3)',
+              backgroundColor: anachronisms.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.1)',
+              color: anachronisms.length > 0 ? '#f87171' : '#34d399',
+              fontSize: '11px',
+              fontWeight: 600,
+            }}
+          >
             ⚠ Auditoría ({anachronisms.length})
           </button>
-          {onClose && <button onClick={onClose} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #334155', backgroundColor: '#1e293b', color: '#cbd5e1', fontSize: '11px', cursor: 'pointer' }}>✕ Línea de Tiempo</button>}
+
+          {onClose && (
+            <button
+              className="pill-btn"
+              onClick={onClose}
+              style={{
+                padding: '4px 12px',
+                fontSize: '11px',
+              }}
+            >
+              ✕ Cerrar
+            </button>
+          )}
         </div>
       </div>
 
       {/* Main Radar Screen + Collapsible Audit Drawer */}
       <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
         <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg viewBox="-300 -300 600 600" style={{ width: '100%', height: '100%', maxHeight: 'calc(100vh - 165px)' }}>
+          <svg viewBox="-300 -300 600 600" style={{ width: '100%', height: '100%', maxHeight: 'calc(100vh - 170px)' }}>
             {/* Orbital Rings & Crosshairs */}
-            <circle cx="0" cy="0" r="240" fill="none" stroke="#1e293b" strokeWidth="1" />
-            <circle cx="0" cy="0" r="170" fill="none" stroke="rgba(56,189,248,0.15)" strokeWidth="1" strokeDasharray="4 4" />
-            <circle cx="0" cy="0" r="100" fill="none" stroke="rgba(56,189,248,0.2)" strokeWidth="1" />
-            <line x1="-280" y1="0" x2="280" y2="0" stroke="rgba(56,189,248,0.1)" strokeWidth="1" />
-            <line x1="0" y1="-280" x2="0" y2="280" stroke="rgba(56,189,248,0.1)" strokeWidth="1" />
-            <text x="5" y="-105" fill="#475569" fontSize="8">ÓRBITA I (100)</text>
-            <text x="5" y="-175" fill="#475569" fontSize="8">ÓRBITA II (170)</text>
-            <text x="5" y="-245" fill="#475569" fontSize="8">ÓRBITA III (240)</text>
+            <circle cx="0" cy="0" r="240" fill="none" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" />
+            <circle cx="0" cy="0" r="170" fill="none" stroke="rgba(56, 189, 248, 0.12)" strokeWidth="1" strokeDasharray="4 4" />
+            <circle cx="0" cy="0" r="100" fill="none" stroke="rgba(56, 189, 248, 0.16)" strokeWidth="1" />
+            <line x1="-280" y1="0" x2="280" y2="0" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
+            <line x1="0" y1="-280" x2="0" y2="280" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
+            <text x="5" y="-105" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA I (100)</text>
+            <text x="5" y="-175" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA II (170)</text>
+            <text x="5" y="-245" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA III (240)</text>
 
             {/* Co-occurrence Edges */}
             {neighbors.map((neighbor, idx) => {
@@ -160,7 +234,7 @@ export function RadialConstellation({
               return (
                 <g key={`edge-${neighbor.id}`}>
                   <line x1="0" y1="0" x2={nx} y2={ny} stroke={isHov ? '#38bdf8' : neighbor.color_hex || '#818cf8'} strokeWidth={Math.max(1.5, Math.min(5, weight * 1.5))} strokeOpacity={opacity} strokeDasharray={ls.isAttenuated ? '3 3' : undefined} />
-                  <text x={nx * 0.55} y={ny * 0.55 - 4} fill={ls.isAttenuated ? '#64748b' : '#38bdf8'} fontSize="9" fontWeight="700" textAnchor="middle" opacity={ls.isAttenuated ? 0.3 : 0.9}>
+                  <text x={nx * 0.55} y={ny * 0.55 - 4} fill={ls.isAttenuated ? '#64748b' : '#38bdf8'} fontSize="9" fontWeight="700" textAnchor="middle" opacity={ls.isAttenuated ? 0.3 : 0.9} fontFamily="var(--font-mono)">
                     w:{weight.toFixed(1)}
                   </text>
                 </g>
@@ -194,9 +268,9 @@ export function RadialConstellation({
                   <circle cx="0" cy="0" r="40" fill="none" stroke={style.color} strokeWidth="1.5" strokeDasharray="4 4" opacity="0.8" />
                   <circle cx="0" cy="0" r="30" fill="#0f172a" stroke={style.color} strokeWidth="2.5" />
                   <text textAnchor="middle" dy="5" fill={style.color} fontSize="14" fontWeight="700">{style.prefix}</text>
-                  <text textAnchor="middle" y="-46" fill="#38bdf8" fontSize="9" letterSpacing="0.05em" fontWeight="700">[ EGO CENTRAL ]</text>
+                  <text textAnchor="middle" y="-46" fill="#38bdf8" fontSize="9" letterSpacing="0.05em" fontWeight="700" fontFamily="var(--font-mono)">[ EGO CENTRAL ]</text>
                   <text textAnchor="middle" y="54" fill="#ffffff" fontSize="12" fontWeight="700">{centerNode.name}</text>
-                  <text textAnchor="middle" y="68" fill="#94a3b8" fontSize="9">[ {centerNode.mention_count} menciones ]</text>
+                  <text textAnchor="middle" y="68" fill="#94a3b8" fontSize="9" fontFamily="var(--font-mono)">[ {centerNode.mention_count} menciones ]</text>
                   {ls.isAttenuated && <text textAnchor="middle" y="80" fill="#f87171" fontSize="9" fontWeight="600">⚠ {ls.reason}</text>}
                 </g>
               );
@@ -204,31 +278,68 @@ export function RadialConstellation({
           </svg>
         </div>
 
-        {/* Collapsible Tactical Anachronisms Audit Panel */}
+        {/* Collapsible Anachronisms Audit Panel */}
         {showAudit && (
-          <div style={{ width: '310px', backgroundColor: '#0c0e17', borderLeft: '1px solid #1e293b', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', zIndex: 20 }}>
+          <div
+            style={{
+              width: '320px',
+              backgroundColor: 'var(--bg-surface)',
+              borderLeft: '1px solid var(--border-specular)',
+              padding: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              overflowY: 'auto',
+              zIndex: 20,
+              boxShadow: '-4px 0 20px rgba(0, 0, 0, 0.4)',
+            }}
+          >
             <div style={{ fontSize: '11px', fontWeight: 700, color: anachronisms.length > 0 ? '#f87171' : '#34d399', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>AUDITORÍA TEMPORAL CAUSAL</span>
               <span style={{ fontSize: '10px' }}>({anachronisms.length} alertas)</span>
             </div>
             {anachronisms.length === 0 ? (
-              <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4, backgroundColor: '#121520', padding: '8px', borderRadius: '4px', border: '1px solid #1e293b' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5, backgroundColor: 'rgba(16, 185, 129, 0.08)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                 ✓ Cero violaciones causales detectadas. Línea diegética coherente con fechas born_at y died_at.
               </div>
             ) : (
               anachronisms.map((issue, idx) => {
                 const isPost = issue.issue_type === 'post_mortem_mention';
                 return (
-                  <div key={`issue-${idx}`} style={{ backgroundColor: '#131722', border: isPost ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(245,158,11,0.4)', borderRadius: '4px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <div
+                    key={`issue-${idx}`}
+                    style={{
+                      backgroundColor: 'var(--bg-rack)',
+                      border: isPost ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '8px',
+                      padding: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px',
+                    }}
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 4px', borderRadius: '3px', backgroundColor: isPost ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)', color: isPost ? '#fca5a5' : '#fde047' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 5px', borderRadius: '4px', backgroundColor: isPost ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: isPost ? '#fca5a5' : '#fde047' }}>
                         {isPost ? 'POST-MORTEM' : 'PRE-BIRTH'}
                       </span>
-                      <span style={{ fontSize: '10px', color: '#38bdf8' }}>T: {issue.scene_time}s</span>
+                      <span style={{ fontSize: '10px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>T: {issue.scene_time}s</span>
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#f8fafc' }}>{issue.entity_name} en &quot;{issue.scene_title}&quot;</div>
-                    <div style={{ fontSize: '10px', color: '#94a3b8', lineHeight: 1.3 }}>{issue.message}</div>
-                    <button onClick={() => handleJumpToIssue(issue)} style={{ marginTop: '2px', padding: '3px 6px', backgroundColor: '#1e293b', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)', borderRadius: '3px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{issue.entity_name} en &quot;{issue.scene_title}&quot;</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.message}</div>
+                    <button
+                      onClick={() => handleJumpToIssue(issue)}
+                      style={{
+                        marginTop: '3px',
+                        padding: '4px 8px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.1)',
+                        color: 'var(--accent-cyan)',
+                        border: '1px solid rgba(56, 189, 248, 0.25)',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
                       ➜ Saltar a Escena Infractora
                     </button>
                   </div>
@@ -240,23 +351,33 @@ export function RadialConstellation({
       </div>
 
       {/* Bottom Diegetic Temporal Scrubber ($T_story$) */}
-      <div style={{ borderTop: '1px solid #1e293b', backgroundColor: '#0c0e17', padding: '8px 16px', display: 'flex', flexDirection: 'column', gap: '5px', zIndex: 10 }}>
+      <div
+        style={{
+          borderTop: '1px solid var(--border-specular)',
+          backgroundColor: 'var(--bg-surface)',
+          padding: '10px 18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
+          zIndex: 10,
+        }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>$T_story$ DIEGÉTICO:</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: '#f8fafc', padding: '1px 6px', backgroundColor: '#161d2d', borderRadius: '3px', border: '1px solid #334155' }}>{tStory}s</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-cyan)' }}>TIEMPO DIEGÉTICO:</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', padding: '2px 8px', backgroundColor: 'var(--bg-rack)', borderRadius: '4px', border: '1px solid var(--border-specular)', fontFamily: 'var(--font-mono)' }}>{tStory}s</span>
             {activeSceneAtCursor && (
-              <span onClick={() => onSelectScene(activeSceneAtCursor.id)} style={{ fontSize: '11px', color: '#94a3b8', cursor: 'pointer', textDecoration: 'underline' }}>
+              <span onClick={() => onSelectScene(activeSceneAtCursor.id)} style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}>
                 Escena activa: &quot;{activeSceneAtCursor.title}&quot; [T: {activeSceneAtCursor.t_start} - {activeSceneAtCursor.t_start + activeSceneAtCursor.duration}s]
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ padding: '2px 6px', backgroundColor: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>◄ -10s</button>
-            <button onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ padding: '2px 6px', backgroundColor: '#1e293b', color: '#cbd5e1', border: '1px solid #334155', borderRadius: '3px', fontSize: '10px', cursor: 'pointer' }}>+10s ►</button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button className="pill-btn" onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ padding: '3px 8px', fontSize: '10px' }}>◄ -10s</button>
+            <button className="pill-btn" onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ padding: '3px 8px', fontSize: '10px' }}>+10s ►</button>
           </div>
         </div>
-        <input type="range" min={tMin} max={tMax} value={tStory} step={5} onChange={(e) => setTStory(Number(e.target.value))} style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer', height: '5px', backgroundColor: '#1e293b', borderRadius: '3px' }} />
+        <input type="range" min={tMin} max={tMax} value={tStory} step={5} onChange={(e) => setTStory(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer', height: '4px', backgroundColor: 'var(--bg-rack)', borderRadius: '9999px' }} />
       </div>
     </div>
   );

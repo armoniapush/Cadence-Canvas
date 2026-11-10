@@ -40,28 +40,146 @@ function CreateTrackModal({
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
-      <div style={{ width: '360px', backgroundColor: '#11141f', border: '1px solid #242b3d', borderRadius: '8px', padding: '18px', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)', display: 'flex', flexDirection: 'column', gap: '14px' }} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          width: '380px',
+          backgroundColor: 'var(--bg-glass-elevated)',
+          border: '1px solid var(--border-specular)',
+          borderRadius: '16px',
+          padding: '22px',
+          boxShadow: '0 24px 64px rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          animation: 'modalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#f1f5f9' }}>Crear Nuevo Hilo Narrativo</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer', padding: '2px 6px' }}>✕</button>
-        </div>
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Nombre del hilo narrativo</label>
-            <input type="text" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ej. POV Antagonista, Subtrama de Misterio..." style={{ padding: '8px 10px', backgroundColor: '#0a0d14', border: '1px solid #242b3d', borderRadius: '4px', color: '#f1f5f9', fontSize: '13px', outline: 'none' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`,
+              }}
+            />
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+              Crear Nuevo Hilo Narrativo
+            </h2>
           </div>
+          <button
+            onClick={onClose}
+            style={{
+              color: 'var(--text-muted)',
+              fontSize: '16px',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              borderRadius: '4px',
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Color distintivo</label>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Nombre del hilo narrativo
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="ej. POV Antagonista, Subtrama de Misterio..."
+              style={{
+                padding: '10px 12px',
+                backgroundColor: '#0a0d14',
+                border: '1px solid var(--border-specular)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              Color distintivo
+            </label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               {PRESET_COLORS.map((hex) => (
-                <button key={hex} type="button" onClick={() => setColor(hex)} style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: hex, border: color === hex ? '2px solid #ffffff' : '2px solid transparent', boxShadow: color === hex ? `0 0 8px ${hex}` : 'none', cursor: 'pointer', padding: 0 }} />
+                <button
+                  key={hex}
+                  type="button"
+                  onClick={() => setColor(hex)}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    backgroundColor: hex,
+                    border: color === hex ? '2px solid #ffffff' : '2px solid transparent',
+                    boxShadow: color === hex ? `0 0 12px ${hex}` : 'none',
+                    cursor: 'pointer',
+                    padding: 0,
+                    transition: 'transform 0.15s ease',
+                    transform: color === hex ? 'scale(1.15)' : 'scale(1)',
+                  }}
+                />
               ))}
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
-            <button type="button" onClick={onClose} style={{ padding: '5px 12px', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid #242b3d', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Cancelar</button>
-            <button type="submit" disabled={!name.trim()} style={{ padding: '5px 14px', backgroundColor: name.trim() ? '#6366f1' : '#2e354b', color: name.trim() ? '#ffffff' : '#64748b', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Crear Hilo Narrativo</button>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                padding: '6px 14px',
+                backgroundColor: 'transparent',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--border-specular)',
+                borderRadius: '8px',
+                fontSize: '12px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim()}
+              style={{
+                padding: '6px 16px',
+                backgroundColor: name.trim() ? '#6366f1' : 'rgba(255, 255, 255, 0.05)',
+                color: name.trim() ? '#ffffff' : 'var(--text-muted)',
+                borderRadius: '8px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: name.trim() ? 'pointer' : 'not-allowed',
+                boxShadow: name.trim() ? '0 4px 14px rgba(99, 102, 241, 0.4)' : 'none',
+              }}
+            >
+              Crear Hilo Narrativo
+            </button>
           </div>
         </form>
       </div>
@@ -126,8 +244,18 @@ export function App() {
   }, []);
 
   const handleToggleZen = useCallback(() => {
+    if (!selectedSceneId && scenes.length > 0) {
+      setSelectedSceneId(scenes[0].id);
+      setIsZen(true);
+      setStatus(`Modo Zen inmersivo activado para '${scenes[0].title}'. Presiona Esc o F11 para salir.`);
+      return;
+    }
+    if (!selectedSceneId && scenes.length === 0) {
+      setStatus('Crea al menos una escena literaria para entrar en Modo Zen.');
+      return;
+    }
     setIsZen((prev) => !prev);
-  }, []);
+  }, [selectedSceneId, scenes]);
 
   const handleSceneUpdated = useCallback((updated: Scene) => {
     setScenes((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -272,151 +400,229 @@ export function App() {
         flexDirection: 'column',
         height: '100vh',
         width: '100vw',
-        backgroundColor: 'var(--bg-station)',
+        backgroundColor: 'var(--bg-canvas)',
+        overflow: 'hidden',
       }}
     >
-      {/* Top Header */}
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 20px',
-          backgroundColor: 'var(--bg-surface)',
-          borderBottom: '1px solid var(--border-specular)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '9px',
-              height: '9px',
-              borderRadius: '50%',
-              backgroundColor: error ? '#ef4444' : '#10b981',
-              boxShadow: error ? '0 0 8px #ef4444' : '0 0 8px #10b981',
-            }}
-          />
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '14px',
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-            }}
-          >
-            Cadence Canvas
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '8px', fontSize: '12px' }}>
-              — Estación Narrativa
-            </span>
-          </h1>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => setIsCreateTrackOpen(true)}
-            style={{
-              padding: '4px 12px',
-              backgroundColor: 'rgba(99, 102, 241, 0.2)',
-              color: '#a5b4fc',
-              border: '1px solid rgba(99, 102, 241, 0.4)',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            + Nuevo Hilo Narrativo
-          </button>
-
-          <button
-            onClick={() => setShowConstellation((prev) => !prev)}
-            style={{
-              padding: '4px 12px',
-              backgroundColor: showConstellation
-                ? 'rgba(56, 189, 248, 0.25)'
-                : 'rgba(56, 189, 248, 0.1)',
-              color: 'var(--accent-cyan)',
-              border: showConstellation
-                ? '1px solid var(--accent-cyan)'
-                : '1px solid rgba(56, 189, 248, 0.3)',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            {showConstellation ? '☵ Línea de Tiempo' : '◈ Red de Personajes & Lugares'}
-          </button>
-
-          {selectedScene && (
-            <button
-              onClick={handleToggleZen}
+      {/* Floating Pill Navbar (Mount / Markus AI Inspired) */}
+      <div style={{ padding: '12px 18px 0 18px', zIndex: 100 }}>
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '7px 18px',
+            backgroundColor: 'var(--bg-glass)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid var(--border-specular)',
+            borderRadius: '9999px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+          }}
+        >
+          {/* Left: Brand Monogram & WAL Status Pill */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
               style={{
-                padding: '4px 10px',
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: 'var(--accent-cyan)',
-                border: '1px solid rgba(56, 189, 248, 0.3)',
-                borderRadius: '4px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
+                width: '26px',
+                height: '26px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, #6366f1 0%, #38bdf8 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 12px rgba(99, 102, 241, 0.45)',
+                fontWeight: 700,
+                fontSize: '13px',
+                color: '#ffffff',
               }}
             >
-              ⛶ Modo Zen (F11)
-            </button>
-          )}
+              C
+            </div>
 
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Archivo:</span>
-          <input
-            type="text"
-            value={projectPath}
-            onChange={(e) => setProjectPath(e.target.value)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, letterSpacing: '-0.01em', color: 'var(--text-primary)' }}>
+                Cadence Canvas
+              </span>
+
+              {/* Status Pill */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '2px 8px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  borderRadius: '9999px',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  fontSize: '11px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: error ? '#ef4444' : '#10b981',
+                    boxShadow: error ? '0 0 8px #ef4444' : '0 0 8px #10b981',
+                    animation: 'cadencePulse 2.5s infinite ease-in-out',
+                  }}
+                />
+                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                  {error ? 'Error IPC' : 'WAL Activo'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Center: Segmented View Switcher Pill (Mount / Markus AI) */}
+          <div
             style={{
-              padding: '4px 8px',
-              backgroundColor: 'var(--bg-rack)',
-              border: '1px solid var(--border-specular)',
-              borderRadius: '4px',
-              color: 'var(--text-main)',
-              fontSize: '12px',
-              width: '180px',
-            }}
-          />
-          <button
-            onClick={() => initProject(projectPath)}
-            style={{
-              padding: '4px 12px',
-              backgroundColor: 'var(--border-specular)',
-              color: 'var(--text-main)',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '12px',
-              fontWeight: 500,
-              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.35)',
+              padding: '3px',
+              borderRadius: '9999px',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
             }}
           >
-            Reconectar
-          </button>
-        </div>
-      </header>
+            <button
+              onClick={() => setShowConstellation(false)}
+              style={{
+                padding: '4px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: !showConstellation ? 600 : 500,
+                color: !showConstellation ? '#ffffff' : 'var(--text-secondary)',
+                backgroundColor: !showConstellation ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
+                boxShadow: !showConstellation ? '0 2px 8px rgba(0, 0, 0, 0.3)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>☵</span> Línea de Tiempo
+            </button>
 
-      {/* Main Workspace Body (Timeline Canvas spans full width when editor closed) */}
-      <main style={{ flex: 1, display: 'flex', gap: '12px', padding: '12px', overflow: 'hidden' }}>
-        {/* Center Stage: Hardware-Accelerated Story Timeline or Radial Constellation */}
+            <button
+              onClick={() => setShowConstellation(true)}
+              style={{
+                padding: '4px 14px',
+                borderRadius: '9999px',
+                fontSize: '12px',
+                fontWeight: showConstellation ? 600 : 500,
+                color: showConstellation ? '#ffffff' : 'var(--text-secondary)',
+                backgroundColor: showConstellation ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+                border: showConstellation ? '1px solid rgba(56, 189, 248, 0.35)' : '1px solid transparent',
+                boxShadow: showConstellation ? '0 2px 10px rgba(56, 189, 248, 0.25)' : 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>◈</span> Red de Personajes & Lugares
+            </button>
+          </div>
+
+          {/* Right: Actions, File Reconnection & Zen Mode */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              className="pill-btn pill-btn-primary"
+              onClick={() => setIsCreateTrackOpen(true)}
+              style={{
+                padding: '5px 14px',
+                fontSize: '11px',
+                fontWeight: 600,
+              }}
+            >
+              <span>+</span> Nuevo Hilo Narrativo
+            </button>
+
+            {selectedScene && (
+              <button
+                className="pill-btn pill-btn-cyan"
+                onClick={handleToggleZen}
+                title="Modo Zen inmersivo (F11)"
+                style={{
+                  padding: '5px 12px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}
+              >
+                <span>🗖</span> Zen
+              </button>
+            )}
+
+            {/* Compact project file pill */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '2px 4px 2px 10px',
+                backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                border: '1px solid var(--border-specular)',
+                borderRadius: '9999px',
+              }}
+            >
+              <input
+                type="text"
+                value={projectPath}
+                onChange={(e) => setProjectPath(e.target.value)}
+                title="Ruta de base de datos SQLite WAL"
+                style={{
+                  padding: '3px 0',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  width: '130px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                className="pill-btn"
+                onClick={() => initProject(projectPath)}
+                title="Reconectar base de datos SQLite"
+                style={{
+                  padding: '3px 9px',
+                  fontSize: '10px',
+                  fontWeight: 500,
+                }}
+              >
+                Reconectar
+              </button>
+            </div>
+          </div>
+        </header>
+      </div>
+
+      {/* Main Workspace Body */}
+      <main
+        style={{
+          flex: 1,
+          display: 'flex',
+          gap: '12px',
+          padding: '12px 18px',
+          overflow: 'hidden',
+          minHeight: 0,
+        }}
+      >
+        {/* Center Stage: Timeline Canvas or Radial Constellation */}
         <section
           style={{
             flex: 1,
             backgroundColor: 'var(--bg-surface)',
             border: '1px solid var(--border-specular)',
-            borderRadius: '6px',
+            borderRadius: '14px',
             overflow: 'hidden',
             display: 'flex',
             position: 'relative',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
           }}
         >
           {showConstellation ? (
@@ -439,11 +645,12 @@ export function App() {
               onCreateScene={handleCreateScene}
               onDeleteScene={handleDeleteScene}
               onToggleMuteTrack={handleToggleMuteTrack}
+              onToggleZen={handleToggleZen}
             />
           )}
         </section>
 
-        {/* Right Stage: Atomic Editor (Displayed only when a scene is selected) */}
+        {/* Right Stage: Atomic Editor (Displayed smoothly when a scene is selected) */}
         {selectedScene && (
           <aside
             style={{
@@ -466,46 +673,45 @@ export function App() {
         )}
       </main>
 
-      {/* Bottom Status Bar: Compact Telemetry & WAL Heartbeat */}
+      {/* Bottom Status Bar: Ultra-Minimalist Telemetry & WAL Heartbeat */}
       <footer
         style={{
-          height: '26px',
-          backgroundColor: 'var(--bg-surface)',
-          borderTop: '1px solid var(--border-specular)',
+          height: '24px',
+          backgroundColor: 'transparent',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 14px',
+          padding: '0 22px 4px 22px',
           fontSize: '11px',
           color: 'var(--text-muted)',
           userSelect: 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span
               style={{
-                width: '7px',
-                height: '7px',
+                width: '6px',
+                height: '6px',
                 borderRadius: '50%',
                 backgroundColor: error ? '#ef4444' : '#10b981',
                 boxShadow: error ? '0 0 6px #ef4444' : '0 0 6px #10b981',
               }}
             />
-            <span style={{ color: error ? '#f87171' : '#cbd5e1', fontWeight: 500 }}>
-              {projectPath} (SQLite WAL)
+            <span style={{ color: error ? '#f87171' : 'var(--text-secondary)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
+              {projectPath}
             </span>
           </div>
-          <span style={{ color: 'var(--border-specular)' }}>|</span>
+          <span style={{ color: 'var(--border-specular)' }}>·</span>
           <span>
             {tracks.length} hilos narrativos · {scenes.length} escenas
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span
             style={{
-              color: error ? '#fca5a5' : '#94a3b8',
+              color: error ? '#fca5a5' : 'var(--text-secondary)',
               maxWidth: '600px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
