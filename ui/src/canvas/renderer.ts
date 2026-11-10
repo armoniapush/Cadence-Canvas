@@ -76,7 +76,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);
   });
 
-  // Vertical Grid
+  // Vertical Grid across lanes (subtle rhythmic guidelines)
   const step = vp.zoom > 1.4 ? 25 : vp.zoom > 0.7 ? 50 : vp.zoom > 0.35 ? 100 : 250;
   const stT = Math.max(0, Math.floor(-vp.panX / (PIXELS_PER_UNIT * vp.zoom * step)) * step);
   const endT = Math.ceil((w - TRACK_HEADER_WIDTH - vp.panX) / (PIXELS_PER_UNIT * vp.zoom * step)) * step;
@@ -84,38 +84,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   for (let t = stT; t <= endT; t += step) {
     const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
     if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
-    ctx.strokeStyle = t % (step * 4) === 0 ? '#1f2538' : '#131622';
+    ctx.strokeStyle = t % (step * 4) === 0 ? '#1a1f2e' : '#10141e';
     ctx.beginPath(); ctx.moveTo(gx, RULER_HEIGHT); ctx.lineTo(gx, h); ctx.stroke();
-  }
-
-  // Act subtle vertical lines across lanes (Act boundaries and Midpoint)
-  const act120LaneX = TRACK_HEADER_WIDTH + vp.panX + 120 * PIXELS_PER_UNIT * vp.zoom;
-  const act240LaneX = TRACK_HEADER_WIDTH + vp.panX + 240 * PIXELS_PER_UNIT * vp.zoom;
-  const act360LaneX = TRACK_HEADER_WIDTH + vp.panX + 360 * PIXELS_PER_UNIT * vp.zoom;
-
-  if (act120LaneX >= TRACK_HEADER_WIDTH && act120LaneX <= w) {
-    ctx.save();
-    ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = 'rgba(99, 102, 241, 0.18)';
-    ctx.beginPath(); ctx.moveTo(act120LaneX, RULER_HEIGHT); ctx.lineTo(act120LaneX, h); ctx.stroke();
-    ctx.restore();
-  }
-
-  // Golden Midpoint divider across lanes
-  if (act240LaneX >= TRACK_HEADER_WIDTH && act240LaneX <= w) {
-    ctx.save();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(234, 179, 8, 0.22)';
-    ctx.beginPath(); ctx.moveTo(act240LaneX, RULER_HEIGHT); ctx.lineTo(act240LaneX, h); ctx.stroke();
-    ctx.restore();
-  }
-
-  if (act360LaneX >= TRACK_HEADER_WIDTH && act360LaneX <= w) {
-    ctx.save();
-    ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = 'rgba(244, 63, 94, 0.18)';
-    ctx.beginPath(); ctx.moveTo(act360LaneX, RULER_HEIGHT); ctx.lineTo(act360LaneX, h); ctx.stroke();
-    ctx.restore();
   }
 
   ctx.restore();
@@ -309,13 +279,16 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   });
   ctx.restore();
 
-  // 5. Narrative Structure 3-Act Ruler & Scrubber
+  // 5. Clean Sequence Timeline Ruler & Playhead (Free of hardcoded acts or arbitrary numbers)
   ctx.save();
   // Ruler Background
-  ctx.fillStyle = '#0a0d14';
+  ctx.fillStyle = '#0b0e17';
   ctx.fillRect(0, 0, w, RULER_HEIGHT);
-  ctx.fillStyle = '#1e2436';
+  ctx.fillStyle = '#1c2232';
   ctx.fillRect(0, RULER_HEIGHT - 1, w, 1);
+  // Hairline top border
+  ctx.fillStyle = '#141824';
+  ctx.fillRect(0, 0, w, 1);
 
   // Ruler timeline area (clipped to the right of track headers)
   ctx.save();
@@ -323,153 +296,76 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.rect(TRACK_HEADER_WIDTH, 0, w - TRACK_HEADER_WIDTH, RULER_HEIGHT);
   ctx.clip();
 
-  const act0X = TRACK_HEADER_WIDTH + vp.panX + 0 * PIXELS_PER_UNIT * vp.zoom;
-  const act120X = TRACK_HEADER_WIDTH + vp.panX + 120 * PIXELS_PER_UNIT * vp.zoom;
-  const act240X = TRACK_HEADER_WIDTH + vp.panX + 240 * PIXELS_PER_UNIT * vp.zoom;
-  const act360X = TRACK_HEADER_WIDTH + vp.panX + 360 * PIXELS_PER_UNIT * vp.zoom;
-  const actEndX = TRACK_HEADER_WIDTH + vp.panX + 600 * PIXELS_PER_UNIT * vp.zoom;
-
-  // Act I Band (0 .. 120): ACTO I · PLANTEAMIENTO
-  if (act120X > TRACK_HEADER_WIDTH && act0X < w) {
-    const startX = Math.max(TRACK_HEADER_WIDTH, act0X);
-    const endX = Math.min(w, act120X);
-    ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
-    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(99, 102, 241, 0.5)';
-    ctx.fillRect(startX, 0, endX - startX, 2);
-
-    const labelX = Math.max(act0X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 100 < act120X) {
-      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#a5b4fc';
-      ctx.fillText('ACTO I · PLANTEAMIENTO', labelX, 16);
-    }
-  }
-
-  // Act II-A Band (120 .. 240): ACTO II-A · ASCENSO
-  if (act240X > TRACK_HEADER_WIDTH && act120X < w) {
-    const startX = Math.max(TRACK_HEADER_WIDTH, act120X);
-    const endX = Math.min(w, act240X);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
-    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
-    ctx.fillRect(startX, 0, endX - startX, 2);
-
-    const labelX = Math.max(act120X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 90 < act240X - 42) {
-      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#7dd3fc';
-      ctx.fillText('ACTO II-A · ASCENSO', labelX, 16);
-    }
-  }
-
-  // Act II-B Band (240 .. 360): ACTO II-B · CRISIS
-  if (act360X > TRACK_HEADER_WIDTH && act240X < w) {
-    const startX = Math.max(TRACK_HEADER_WIDTH, act240X);
-    const endX = Math.min(w, act360X);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
-    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
-    ctx.fillRect(startX, 0, endX - startX, 2);
-
-    const labelX = Math.max(act240X + 46, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 80 < act360X) {
-      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#7dd3fc';
-      ctx.fillText('ACTO II-B · CRISIS', labelX, 16);
-    }
-  }
-
-  // Act III Band (360 .. 600+): ACTO III · CLÍMAX Y RESOLUCIÓN
-  if (actEndX > TRACK_HEADER_WIDTH && act360X < w) {
-    const startX = Math.max(TRACK_HEADER_WIDTH, act360X);
-    const endX = Math.min(w, Math.max(actEndX, w));
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.07)';
-    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
-    ctx.fillStyle = 'rgba(244, 63, 94, 0.5)';
-    ctx.fillRect(startX, 0, endX - startX, 2);
-
-    const labelX = Math.max(act360X + 10, TRACK_HEADER_WIDTH + 10);
-    if (labelX + 130 < endX) {
-      ctx.font = '600 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-      ctx.fillStyle = '#fb7185';
-      ctx.fillText('ACTO III · CLÍMAX Y RESOLUCIÓN', labelX, 16);
-    }
-  }
-
-  // Act divider lines
-  if (act120X >= TRACK_HEADER_WIDTH && act120X <= w) {
-    ctx.strokeStyle = '#6366f1';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(act120X, 0); ctx.lineTo(act120X, RULER_HEIGHT - 1); ctx.stroke();
-  }
-  if (act360X >= TRACK_HEADER_WIDTH && act360X <= w) {
-    ctx.strokeStyle = '#f43f5e';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(act360X, 0); ctx.lineTo(act360X, RULER_HEIGHT - 1); ctx.stroke();
-  }
-
-  // Punto Medio (~240): Golden line & badge
-  if (act240X >= TRACK_HEADER_WIDTH && act240X <= w) {
-    ctx.strokeStyle = '#eab308';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(act240X, 0);
-    ctx.lineTo(act240X, RULER_HEIGHT - 1);
-    ctx.stroke();
-
-    const badgeW = 74;
-    const badgeH = 15;
-    const badgeX = act240X - badgeW / 2;
-    if (badgeX >= TRACK_HEADER_WIDTH && badgeX + badgeW <= w) {
-      ctx.fillStyle = 'rgba(234, 179, 8, 0.2)';
-      ctx.strokeStyle = '#eab308';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(badgeX, 4, badgeW, badgeH, 3);
-      else ctx.rect(badgeX, 4, badgeW, badgeH);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif';
-      ctx.fillStyle = '#fde047';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('PUNTO MEDIO', act240X, 4 + badgeH / 2);
-      ctx.textAlign = 'start';
-      ctx.textBaseline = 'alphabetic';
-    }
-  }
-
-  // Bottom Graduation Ticks
+  // Clean rhythmic narrative ticks (No arbitrary numbers or rigid act constraints)
   for (let t = stT; t <= endT; t += step) {
     const rx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
     if (rx < TRACK_HEADER_WIDTH || rx > w) continue;
-    const isMajor = t % (step * 2) === 0;
-    ctx.fillStyle = isMajor ? '#475569' : '#1e293b';
-    ctx.fillRect(rx, RULER_HEIGHT - (isMajor ? 8 : 4), 1, isMajor ? 8 : 4);
-    if (isMajor && Math.abs(rx - act240X) > 20) {
-      ctx.font = '9px ui-monospace, monospace';
-      ctx.fillStyle = '#64748b';
-      ctx.fillText(`${t}`, rx + 3, RULER_HEIGHT - 10);
+    const isMajor = t % (step * 4) === 0;
+    const isMedium = !isMajor && t % (step * 2) === 0;
+
+    if (isMajor) {
+      // Major rhythm tick
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(rx, RULER_HEIGHT - 12, 1, 12);
+
+      // Subtle indicator node above major ticks
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+      ctx.beginPath();
+      ctx.arc(rx, 15, 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (isMedium) {
+      // Medium rhythm tick
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(rx, RULER_HEIGHT - 8, 1, 8);
+    } else {
+      // Minor rhythm tick
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(rx, RULER_HEIGHT - 4, 1, 4);
     }
   }
   ctx.restore();
 
-  // Pinned Top-Left Header: ESTRUCTURA NARRATIVA
-  ctx.fillStyle = '#0e111a'; ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
-  ctx.fillStyle = '#1e2436'; ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
-  ctx.fillStyle = '#1e2436'; ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
-  ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#cbd5e1';
-  ctx.fillText('ESTRUCTURA NARRATIVA', 16, 26);
+  // Pinned Top-Left Header: SECUENCIA NARRATIVA
+  ctx.fillStyle = '#0e121d';
+  ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
+  ctx.fillStyle = '#1c2232';
+  ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
+  ctx.fillStyle = '#1c2232';
+  ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
 
-  // Scrubber (Current Time Marker)
+  // Subtle indigo jewel dot + label
+  ctx.fillStyle = '#6366f1';
+  ctx.beginPath();
+  ctx.arc(20, RULER_HEIGHT / 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.fillStyle = '#cbd5e1';
+  ctx.fillText('SECUENCIA NARRATIVA', 30, RULER_HEIGHT / 2 + 4);
+
+  // Playhead / Cursor (Current Time Marker)
   const sx = TRACK_HEADER_WIDTH + vp.panX + currentTime * PIXELS_PER_UNIT * vp.zoom;
   if (sx >= TRACK_HEADER_WIDTH && sx <= w) {
-    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke();
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath(); ctx.moveTo(sx - 5, 0); ctx.lineTo(sx + 5, 0); ctx.lineTo(sx + 5, RULER_HEIGHT - 6); ctx.lineTo(sx, RULER_HEIGHT); ctx.lineTo(sx - 5, RULER_HEIGHT - 6); ctx.fill();
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx, h);
+    ctx.stroke();
+
+    ctx.fillStyle = '#6366f1';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(sx - 5, 2, 10, 16, 3);
+    else ctx.fillRect(sx - 5, 2, 10, 16);
+    ctx.fill();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(sx - 3, 8);
+    ctx.lineTo(sx + 3, 8);
+    ctx.lineTo(sx, 12);
+    ctx.closePath();
+    ctx.fill();
   }
   ctx.restore();
   ctx.restore();
