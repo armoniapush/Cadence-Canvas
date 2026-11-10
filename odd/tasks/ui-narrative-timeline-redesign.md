@@ -28,6 +28,37 @@
 
 | Slice ID | Módulo | Objetivo Causal | Límite LOC | Conventional Commit | Estado / Receipt |
 |---|---|---|---|---|---|
-| **Slice 6.1** | `canvas/renderer` | Rediseñar el renderizador visual: regla de 3 actos, fichas de escena literarias con extracto de texto, y cabeceras de hilos narrativos con control de visibilidad `[ 👁 ]`. | <= 300 LOC | `feat(ui-narrative): transform daw canvas into literary story timeline` | ⏳ Ready |
-| **Slice 6.2** | `ui/app` | Limpiar encabezados globales, terminología de navegación ('Línea Narrativa', 'Red de Personajes'), y barra de estado editorial. | <= 250 LOC | `feat(ui-narrative): narrative terminology and refined editorial chrome` | ⏳ Pending |
+| **Slice 6.1** | `canvas/renderer` | Rediseñar el renderizador visual: regla de 3 actos, fichas de escena literarias con extracto de texto, y cabeceras de hilos narrativos con control de visibilidad `[ 👁 ]`. | <= 300 LOC | `feat(ui-narrative): transform daw canvas into literary story timeline` | ✅ Completed |
+| **Slice 6.2** | `ui/app` | Limpiar encabezados globales, terminología de navegación ('Línea Narrativa', 'Red de Personajes'), y barra de estado editorial. | <= 250 LOC | `feat(ui-narrative): transform daw canvas into literary story timeline` | ✅ Completed |
 | **Slice 6.3** | `testing` | Pruebas automáticas y en vivo con Chrome DevTools certificando la nueva experiencia narrativa. | <= 200 LOC | `test(ui-narrative): verify narrative timeline and literary controls` | ⏳ Pending |
+
+---
+
+## 3. Receipts & Evidencia de Implementación (Slices 6.1 & 6.2)
+
+- **Fichas Literarias de Novela (Index Cards)**:
+  * Altura de tarjeta: 88px (`TRACK_HEIGHT = 104`, `CARD_PAD_Y = 8`, `CARD_HEIGHT = 88`).
+  * Escala métrica: `PIXELS_PER_UNIT = 1.3`.
+  * Cabecera de hilos: `TRACK_HEADER_WIDTH = 200`.
+  * Paleta Warm-Slate: fondo `#161822`, selección `#1e2235`, esquinas redondeadas 6px, acento izquierdo de 4px con el color del hilo/subtrama.
+  * Extracto narrativo dinámico en gris `#94a3b8` mostrando las primeras palabras de la escena.
+  * Badge inferior editorial: `[ X palabras · ~Y min ]` y etiqueta `v{version}` limpia, eliminando códigos de audio (`0w T:218`).
+- **Regla Superior en Tres Actos**:
+  * Acto I (0 .. 120): `ACTO I · PLANTEAMIENTO`
+  * Acto II (120 .. 360): `ACTO II · CONFRONTACIÓN`
+  * Punto Medio (~240): Línea vertical dorada `#eab308` y badge `PUNTO MEDIO` en regla y carriles.
+  * Acto III (360 .. 480+): `ACTO III · CLÍMAX Y RESOLUCIÓN`
+  * Título fijo de cabecera: `ESTRUCTURA NARRATIVA`.
+- **Hilos Narrativos y Visibilidad**:
+  * Botón de visibilidad `[ 👁 ]` / `[ 👁‍🗨 ]` reemplaza `[ M ]` de audio.
+  * Atenuación de escenas cuando el hilo está oculto (`globalAlpha = 0.35`).
+- **Limpieza de Terminología Editorial**:
+  * `+ Nueva Subtrama` -> `+ Nuevo Hilo Narrativo`.
+  * `☵ Vista Canvas DAW` -> `☵ Línea de Tiempo`.
+  * `◈ Constelación Causal / Vista Radar` -> `◈ Red de Personajes & Lugares`.
+  * Barra de estado: `{tracks.length} hilos narrativos · {scenes.length} escenas`.
+- **Verificación**:
+  * `npm test --prefix ui`: 9 tests passing (100% assertions green).
+  * `npm run build --prefix ui`: Vite build completado en 876ms sin errores.
+  * `cargo check`: Verificado con 0 errores.
+

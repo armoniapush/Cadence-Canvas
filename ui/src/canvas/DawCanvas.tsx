@@ -123,11 +123,11 @@ export function DawCanvas({
     if (!rect) return;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
-    // Check mute button click in track headers
+    // Check visibility toggle button click in narrative track headers
     if (mx <= TRACK_HEADER_WIDTH && my > RULER_HEIGHT && onToggleMuteTrack && e.button === 0) {
       for (let i = 0; i < tracks.length; i++) {
         const btn = getTrackMuteButtonRect(i, viewport);
-        if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
+        if (mx >= btn.x - 3 && mx <= btn.x + btn.w + 3 && my >= btn.y - 3 && my <= btn.y + btn.h + 3) {
           onToggleMuteTrack(tracks[i].id);
           return;
         }

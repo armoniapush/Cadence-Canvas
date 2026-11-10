@@ -115,8 +115,8 @@ export function RadialConstellation({
       {/* Tactical Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', borderBottom: '1px solid #1e293b', backgroundColor: '#0e111a', zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 700 }}>◈ RADAR CAUSAL // CONSTELACIÓN EGO-GRAPH</span>
-          <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)' }}>1-HOP ORBITAL</span>
+          <span style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 700 }}>◈ RED DE PERSONAJES & LUGARES</span>
+          <span style={{ fontSize: '10px', padding: '1px 5px', borderRadius: '3px', backgroundColor: 'rgba(56,189,248,0.1)', color: '#38bdf8', border: '1px solid rgba(56,189,248,0.3)' }}>VISTA ORBITAL</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '11px', color: '#94a3b8' }}>Centro Ego:</span>
@@ -129,7 +129,7 @@ export function RadialConstellation({
           <button onClick={() => setShowAudit((p) => !p)} style={{ padding: '3px 8px', borderRadius: '4px', border: anachronisms.length > 0 ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(16,185,129,0.4)', backgroundColor: anachronisms.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(16,185,129,0.12)', color: anachronisms.length > 0 ? '#f87171' : '#34d399', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
             ⚠ Auditoría ({anachronisms.length})
           </button>
-          {onClose && <button onClick={onClose} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #334155', backgroundColor: '#1e293b', color: '#cbd5e1', fontSize: '11px', cursor: 'pointer' }}>✕ Canvas</button>}
+          {onClose && <button onClick={onClose} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #334155', backgroundColor: '#1e293b', color: '#cbd5e1', fontSize: '11px', cursor: 'pointer' }}>✕ Línea de Tiempo</button>}
         </div>
       </div>
 

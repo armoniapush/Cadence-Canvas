@@ -1,19 +1,19 @@
 import type { Track, Scene, ReadingAnchor } from '../types';
 
-export const RULER_HEIGHT = 34;
-export const TRACK_HEADER_WIDTH = 180;
-export const TRACK_HEIGHT = 86;
-export const TRACK_GAP = 8;
+export const RULER_HEIGHT = 42;
+export const TRACK_HEADER_WIDTH = 200;
+export const TRACK_HEIGHT = 104;
+export const TRACK_GAP = 10;
 export const CARD_PAD_Y = 8;
 export const CARD_HEIGHT = TRACK_HEIGHT - CARD_PAD_Y * 2;
-export const PIXELS_PER_UNIT = 1.2;
-export const MUTE_BTN_W = 24;
-export const MUTE_BTN_H = 20;
+export const PIXELS_PER_UNIT = 1.3;
+export const MUTE_BTN_W = 28;
+export const MUTE_BTN_H = 24;
 
 export function getTrackMuteButtonRect(trackIndex: number, vp: Viewport) {
   const ly = RULER_HEIGHT + vp.panY + trackIndex * (TRACK_HEIGHT + TRACK_GAP);
   return {
-    x: TRACK_HEADER_WIDTH - 34,
+    x: TRACK_HEADER_WIDTH - 38,
     y: ly + (TRACK_HEIGHT - MUTE_BTN_H) / 2,
     w: MUTE_BTN_W,
     h: MUTE_BTN_H,
@@ -48,7 +48,7 @@ export function getSceneRect(s: Scene, tracks: Track[], vp: Viewport, drag?: Dra
   return {
     x: TRACK_HEADER_WIDTH + vp.panX + tStart * PIXELS_PER_UNIT * vp.zoom,
     y: RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y,
-    w: Math.max(76, s.duration * PIXELS_PER_UNIT * vp.zoom),
+    w: Math.max(88, s.duration * PIXELS_PER_UNIT * vp.zoom),
     h: CARD_HEIGHT,
     idx,
     isD,
@@ -60,7 +60,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.save();
   ctx.scale(dpr, dpr);
 
-  // 1. Base & Lanes
+  // 1. Base & Story Lanes
   ctx.fillStyle = '#090a0f';
   ctx.fillRect(0, 0, w, h);
   ctx.save();
@@ -70,9 +70,9 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
   tracks.forEach((_, i) => {
     const ly = RULER_HEIGHT + vp.panY + i * (TRACK_HEIGHT + TRACK_GAP);
-    ctx.fillStyle = i % 2 === 0 ? '#0e111a' : '#121520';
+    ctx.fillStyle = i % 2 === 0 ? '#0d1017' : '#10131e';
     ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, TRACK_HEIGHT);
-    ctx.fillStyle = '#1c2130';
+    ctx.fillStyle = '#1b2030';
     ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);
   });
 
@@ -84,9 +84,40 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   for (let t = stT; t <= endT; t += step) {
     const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
     if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
-    ctx.strokeStyle = t % (step * 4) === 0 ? '#22283a' : '#141824';
+    ctx.strokeStyle = t % (step * 4) === 0 ? '#1f2538' : '#131622';
     ctx.beginPath(); ctx.moveTo(gx, RULER_HEIGHT); ctx.lineTo(gx, h); ctx.stroke();
   }
+
+  // Act subtle vertical lines across lanes (Act boundaries and Midpoint)
+  const act120LaneX = TRACK_HEADER_WIDTH + vp.panX + 120 * PIXELS_PER_UNIT * vp.zoom;
+  const act240LaneX = TRACK_HEADER_WIDTH + vp.panX + 240 * PIXELS_PER_UNIT * vp.zoom;
+  const act360LaneX = TRACK_HEADER_WIDTH + vp.panX + 360 * PIXELS_PER_UNIT * vp.zoom;
+
+  if (act120LaneX >= TRACK_HEADER_WIDTH && act120LaneX <= w) {
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(99, 102, 241, 0.18)';
+    ctx.beginPath(); ctx.moveTo(act120LaneX, RULER_HEIGHT); ctx.lineTo(act120LaneX, h); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Golden Midpoint divider across lanes
+  if (act240LaneX >= TRACK_HEADER_WIDTH && act240LaneX <= w) {
+    ctx.save();
+    ctx.setLineDash([4, 4]);
+    ctx.strokeStyle = 'rgba(234, 179, 8, 0.22)';
+    ctx.beginPath(); ctx.moveTo(act240LaneX, RULER_HEIGHT); ctx.lineTo(act240LaneX, h); ctx.stroke();
+    ctx.restore();
+  }
+
+  if (act360LaneX >= TRACK_HEADER_WIDTH && act360LaneX <= w) {
+    ctx.save();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(244, 63, 94, 0.18)';
+    ctx.beginPath(); ctx.moveTo(act360LaneX, RULER_HEIGHT); ctx.lineTo(act360LaneX, h); ctx.stroke();
+    ctx.restore();
+  }
+
   ctx.restore();
 
   const trkMap = new Map(tracks.map((t) => [t.id, t]));
@@ -105,7 +136,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     if (!src || !dst) continue;
     const sR = getSceneRect(src, tracks, vp, dragState), dR = getSceneRect(dst, tracks, vp, dragState);
     const x1 = sR.x + sR.w, y1 = sR.y + sR.h / 2, x2 = dR.x, y2 = dR.y + dR.h / 2;
-    const rh = Math.max(12, Math.min(26, 16 * wt)), dx = Math.max(36, x2 - x1);
+    const rh = Math.max(14, Math.min(28, 16 * wt)), dx = Math.max(36, x2 - x1);
     const c1x = x1 + dx * 0.48, c2x = x2 - dx * 0.48;
     ctx.beginPath();
     ctx.moveTo(x1, y1 - rh / 2);
@@ -122,7 +153,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   }
   ctx.restore();
 
-  // 3. Tactical Cards
+  // 3. Fichas Literarias de Novela (Index Cards)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
@@ -137,92 +168,285 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     ctx.save();
     if (isMuted) {
-      ctx.globalAlpha = 0.38;
+      ctx.globalAlpha = 0.35;
     }
 
-    ctx.fillStyle = isSel ? '#1c2233' : '#141824';
-    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, scnW, scnH, 4) : ctx.rect(x, y, scnW, scnH); ctx.fill();
-    ctx.fillStyle = isSel ? '#4b5563' : '#2d3748';
-    ctx.fillRect(x + 2, y + 1, scnW - 4, 1);
-    ctx.fillStyle = col; ctx.fillRect(x, y, 4, scnH);
+    // Card background: warm-slate #161822, selected #1e2235, rounded 6px
+    ctx.fillStyle = isSel ? '#1e2235' : '#161822';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, 6);
+    else ctx.rect(x, y, scnW, scnH);
+    ctx.fill();
 
-    ctx.lineWidth = isSel || isD ? 1.5 : 1;
-    ctx.strokeStyle = isD ? '#f59e0b' : isSel ? '#38bdf8' : '#222838';
-    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, 4) : ctx.strokeRect(x, y, scnW, scnH); ctx.stroke();
+    // Subtle top highlight
+    ctx.fillStyle = isSel ? '#3b4363' : '#232736';
+    ctx.fillRect(x + 6, y + 1, scnW - 12, 1);
 
+    // Left border of 4px with track color, clipped to rounded card
     ctx.save();
-    ctx.beginPath(); ctx.rect(x + 8, y + 2, scnW - 12, scnH - 4); ctx.clip();
-    ctx.font = '600 12px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#f1f5f9';
-    ctx.fillText(s.title, x + 10, y + 22);
-
-    const bY = y + 36;
-    ctx.fillStyle = '#0f121a'; ctx.fillRect(x + 10, bY, 46, 16);
-    ctx.strokeStyle = '#242a3a'; ctx.strokeRect(x + 10, bY, 46, 16);
-    ctx.font = '10px ui-monospace, monospace'; ctx.fillStyle = '#94a3b8';
-    ctx.fillText(`${s.word_count || 0}w`, x + 14, bY + 12);
-    ctx.fillStyle = '#38bdf8'; ctx.fillText(`v${s.version}`, x + 62, bY + 12);
-    ctx.fillStyle = '#64748b'; ctx.fillText(`T:${isD && dragState ? dragState.previewTStart : s.t_start}`, x + 94, bY + 12);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, 6);
+    else ctx.rect(x, y, scnW, scnH);
+    ctx.clip();
+    ctx.fillStyle = col;
+    ctx.fillRect(x, y, 4, scnH);
     ctx.restore();
 
+    // Card outer border
+    ctx.lineWidth = isSel || isD ? 1.5 : 1;
+    ctx.strokeStyle = isD ? '#f59e0b' : isSel ? '#6366f1' : '#282f44';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, 6);
+    else ctx.strokeRect(x, y, scnW, scnH);
+    ctx.stroke();
+
+    // Card text and details (clipped)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x + 8, y + 2, Math.max(10, scnW - 14), scnH - 4);
+    ctx.clip();
+
+    // Title (13px bold)
+    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = isSel ? '#ffffff' : '#f1f5f9';
+    ctx.fillText(s.title, x + 12, y + 22);
+
+    // Narrative excerpt (first words in gray #94a3b8)
+    const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
+    const excerpt = rawText.length > 0
+      ? (rawText.length > 42 ? rawText.slice(0, 42) + '...' : rawText)
+      : '(Sin contenido aún)';
+    ctx.font = '400 11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(excerpt, x + 12, y + 42);
+
+    // Bottom badge: [ X palabras · ~Y min ] & v{version}
+    const words = s.word_count || 0;
+    const readingMins = Math.max(1, Math.ceil(words / 250));
+    const bY = y + 58;
+    const badgeH = 18;
+
+    if (scnW >= 110) {
+      const metricStr = scnW >= 170 ? `${words} palabras · ~${readingMins} min` : `${words} pal · ~${readingMins} min`;
+      ctx.font = '500 10px ui-sans-serif, system-ui, sans-serif';
+      const textW = ctx.measureText(metricStr).width;
+      const badgeW = textW + 12;
+
+      ctx.fillStyle = '#10131d';
+      ctx.strokeStyle = '#22293a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x + 12, bY, badgeW, badgeH, 4);
+      else ctx.rect(x + 12, bY, badgeW, badgeH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText(metricStr, x + 18, bY + 12);
+    }
+
+    // Version tag on bottom right
+    if (scnW >= 70) {
+      ctx.font = '500 10px ui-monospace, monospace';
+      ctx.fillStyle = '#64748b';
+      const verText = `v${s.version}`;
+      ctx.textAlign = 'right';
+      ctx.fillText(verText, x + scnW - 10, bY + 12);
+      ctx.textAlign = 'start';
+    }
+
+    ctx.restore();
     ctx.restore();
   }
   ctx.restore();
 
-  // Pinned Track Headers & Top Ruler
+  // 4. Pinned Track Headers (Hilos Narrativos)
   ctx.save();
   ctx.beginPath(); ctx.rect(0, RULER_HEIGHT, TRACK_HEADER_WIDTH, h - RULER_HEIGHT); ctx.clip();
   tracks.forEach((trk, idx) => {
     const ly = RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
-    ctx.fillStyle = '#0d1017'; ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, TRACK_HEIGHT);
-    ctx.fillStyle = '#1e2436'; ctx.fillRect(TRACK_HEADER_WIDTH - 1, ly, 1, TRACK_HEIGHT);
-    ctx.fillStyle = trk.color_hex; ctx.fillRect(10, ly + 16, 4, TRACK_HEIGHT - 32);
-    ctx.font = '600 12px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#e2e8f0';
-    ctx.fillText(trk.name, 22, ly + 34);
-    ctx.font = '10px ui-monospace, monospace'; ctx.fillStyle = '#64748b';
-    ctx.fillText(`TRK 0${trk.track_order + 1}`, 22, ly + 54);
+    ctx.fillStyle = '#0f121b'; ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, TRACK_HEIGHT);
+    ctx.fillStyle = '#1e2436'; ctx.fillRect(0, ly + TRACK_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
+    ctx.fillRect(TRACK_HEADER_WIDTH - 1, ly, 1, TRACK_HEIGHT);
 
-    // Mute button [ M ]
+    // Color marker
+    ctx.fillStyle = trk.color_hex;
+    ctx.fillRect(10, ly + 16, 4, TRACK_HEIGHT - 32);
+
+    // Track Name
+    ctx.font = '600 13px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = trk.is_muted ? '#64748b' : '#f1f5f9';
+    const truncatedName = trk.name.length > 17 ? trk.name.slice(0, 16) + '…' : trk.name;
+    ctx.fillText(truncatedName, 22, ly + 36);
+
+    // Subtitle: Hilo Narrativo
+    ctx.font = '500 11px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.fillText('Hilo Narrativo', 22, ly + 56);
+
+    // Visibility button [ 👁 ] / [ 👁‍🗨 ]
     const mBtn = getTrackMuteButtonRect(idx, vp);
     const isM = trk.is_muted;
-    ctx.fillStyle = isM ? 'rgba(239, 68, 68, 0.25)' : '#161b26';
-    ctx.strokeStyle = isM ? '#ef4444' : '#273142';
+    ctx.fillStyle = isM ? 'rgba(245, 158, 11, 0.2)' : '#161b26';
+    ctx.strokeStyle = isM ? '#f59e0b' : '#273142';
     ctx.lineWidth = 1;
     ctx.beginPath();
     if (ctx.roundRect) {
-      ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 3);
+      ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 4);
     } else {
       ctx.rect(mBtn.x, mBtn.y, mBtn.w, mBtn.h);
     }
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = 'bold 10px ui-monospace, monospace';
-    ctx.fillStyle = isM ? '#f87171' : '#64748b';
+    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    ctx.fillStyle = isM ? '#fbbf24' : '#94a3b8';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('M', mBtn.x + mBtn.w / 2, mBtn.y + mBtn.h / 2);
+    ctx.fillText(isM ? '👁‍🗨' : '👁', mBtn.x + mBtn.w / 2, mBtn.y + mBtn.h / 2);
     ctx.textAlign = 'start';
     ctx.textBaseline = 'alphabetic';
   });
   ctx.restore();
 
-  // Ruler & Scrubber
+  // 5. Narrative Structure 3-Act Ruler & Scrubber
   ctx.save();
-  ctx.fillStyle = '#0a0d14'; ctx.fillRect(0, 0, w, RULER_HEIGHT);
-  ctx.fillStyle = '#1e2436'; ctx.fillRect(0, RULER_HEIGHT - 1, w, 1);
+  // Ruler Background
+  ctx.fillStyle = '#0a0d14';
+  ctx.fillRect(0, 0, w, RULER_HEIGHT);
+  ctx.fillStyle = '#1e2436';
+  ctx.fillRect(0, RULER_HEIGHT - 1, w, 1);
+
+  // Ruler timeline area (clipped to the right of track headers)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(TRACK_HEADER_WIDTH, 0, w - TRACK_HEADER_WIDTH, RULER_HEIGHT);
+  ctx.clip();
+
+  const act0X = TRACK_HEADER_WIDTH + vp.panX + 0 * PIXELS_PER_UNIT * vp.zoom;
+  const act120X = TRACK_HEADER_WIDTH + vp.panX + 120 * PIXELS_PER_UNIT * vp.zoom;
+  const act240X = TRACK_HEADER_WIDTH + vp.panX + 240 * PIXELS_PER_UNIT * vp.zoom;
+  const act360X = TRACK_HEADER_WIDTH + vp.panX + 360 * PIXELS_PER_UNIT * vp.zoom;
+  const actEndX = TRACK_HEADER_WIDTH + vp.panX + 600 * PIXELS_PER_UNIT * vp.zoom;
+
+  // Act I Band (0 .. 120): ACTO I · PLANTEAMIENTO
+  if (act120X > TRACK_HEADER_WIDTH && act0X < w) {
+    const startX = Math.max(TRACK_HEADER_WIDTH, act0X);
+    const endX = Math.min(w, act120X);
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.08)';
+    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.4)';
+    ctx.fillRect(startX, 0, endX - startX, 2);
+
+    const labelX = Math.max(act0X + 10, TRACK_HEADER_WIDTH + 10);
+    if (labelX + 110 < act120X) {
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = '#a5b4fc';
+      ctx.fillText('ACTO I · PLANTEAMIENTO', labelX, 17);
+    }
+  }
+
+  // Act II Band (120 .. 360): ACTO II · CONFRONTACIÓN
+  if (act360X > TRACK_HEADER_WIDTH && act120X < w) {
+    const startX = Math.max(TRACK_HEADER_WIDTH, act120X);
+    const endX = Math.min(w, act360X);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.06)';
+    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.fillRect(startX, 0, endX - startX, 2);
+
+    const labelX = Math.max(act120X + 10, TRACK_HEADER_WIDTH + 10);
+    if (labelX + 120 < act360X) {
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('ACTO II · CONFRONTACIÓN', labelX, 17);
+    }
+  }
+
+  // Act III Band (360 .. 480+): ACTO III · CLÍMAX Y RESOLUCIÓN
+  if (actEndX > TRACK_HEADER_WIDTH && act360X < w) {
+    const startX = Math.max(TRACK_HEADER_WIDTH, act360X);
+    const endX = Math.min(w, Math.max(actEndX, w));
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.07)';
+    ctx.fillRect(startX, 0, endX - startX, RULER_HEIGHT - 1);
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.4)';
+    ctx.fillRect(startX, 0, endX - startX, 2);
+
+    const labelX = Math.max(act360X + 10, TRACK_HEADER_WIDTH + 10);
+    if (labelX + 140 < endX) {
+      ctx.font = '600 10px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = '#fb7185';
+      ctx.fillText('ACTO III · CLÍMAX Y RESOLUCIÓN', labelX, 17);
+    }
+  }
+
+  // Act divider lines
+  if (act120X >= TRACK_HEADER_WIDTH && act120X <= w) {
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(act120X, 0); ctx.lineTo(act120X, RULER_HEIGHT - 1); ctx.stroke();
+  }
+  if (act360X >= TRACK_HEADER_WIDTH && act360X <= w) {
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(act360X, 0); ctx.lineTo(act360X, RULER_HEIGHT - 1); ctx.stroke();
+  }
+
+  // Punto Medio (~240): Golden line & badge
+  if (act240X >= TRACK_HEADER_WIDTH && act240X <= w) {
+    ctx.strokeStyle = '#eab308';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(act240X, 0);
+    ctx.lineTo(act240X, RULER_HEIGHT - 1);
+    ctx.stroke();
+
+    const badgeW = 74;
+    const badgeH = 15;
+    const badgeX = act240X - badgeW / 2;
+    if (badgeX >= TRACK_HEADER_WIDTH && badgeX + badgeW <= w) {
+      ctx.fillStyle = 'rgba(234, 179, 8, 0.2)';
+      ctx.strokeStyle = '#eab308';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(badgeX, 4, badgeW, badgeH, 3);
+      else ctx.rect(badgeX, 4, badgeW, badgeH);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = '700 9px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillStyle = '#fde047';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('PUNTO MEDIO', act240X, 4 + badgeH / 2);
+      ctx.textAlign = 'start';
+      ctx.textBaseline = 'alphabetic';
+    }
+  }
+
+  // Bottom Graduation Ticks
   for (let t = stT; t <= endT; t += step) {
     const rx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
     if (rx < TRACK_HEADER_WIDTH || rx > w) continue;
-    const isM = t % (step * 2) === 0;
-    ctx.fillStyle = isM ? '#475569' : '#1e293b';
-    ctx.fillRect(rx, RULER_HEIGHT - (isM ? 12 : 6), 1, isM ? 12 : 6);
-    if (isM) { ctx.font = '10px ui-monospace, monospace'; ctx.fillStyle = '#64748b'; ctx.fillText(`${t}`, rx + 4, RULER_HEIGHT - 14); }
+    const isMajor = t % (step * 2) === 0;
+    ctx.fillStyle = isMajor ? '#475569' : '#1e293b';
+    ctx.fillRect(rx, RULER_HEIGHT - (isMajor ? 8 : 4), 1, isMajor ? 8 : 4);
+    if (isMajor && Math.abs(rx - act240X) > 20) {
+      ctx.font = '9px ui-monospace, monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText(`${t}`, rx + 3, RULER_HEIGHT - 10);
+    }
   }
-  ctx.fillStyle = '#0f131d'; ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
-  ctx.fillStyle = '#1e2436'; ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
-  ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#94a3b8';
-  ctx.fillText('CRONOLOGÍA', 14, 21);
+  ctx.restore();
 
+  // Pinned Top-Left Header: ESTRUCTURA NARRATIVA
+  ctx.fillStyle = '#0e111a'; ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
+  ctx.fillStyle = '#1e2436'; ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
+  ctx.fillStyle = '#1e2436'; ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
+  ctx.font = '700 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#cbd5e1';
+  ctx.fillText('ESTRUCTURA NARRATIVA', 16, 26);
+
+  // Scrubber (Current Time Marker)
   const sx = TRACK_HEADER_WIDTH + vp.panX + currentTime * PIXELS_PER_UNIT * vp.zoom;
   if (sx >= TRACK_HEADER_WIDTH && sx <= w) {
     ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 1.5;
@@ -236,7 +460,14 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
 export class DawCanvasRenderer {
   private rafId: number | null = null;
-  constructor(private canvas: HTMLCanvasElement, private getState: () => CanvasRenderData) {}
+  private canvas: HTMLCanvasElement;
+  private getState: () => CanvasRenderData;
+
+  constructor(canvas: HTMLCanvasElement, getState: () => CanvasRenderData) {
+    this.canvas = canvas;
+    this.getState = getState;
+  }
+
   public start() {
     const loop = () => { this.render(); this.rafId = requestAnimationFrame(loop); };
     this.rafId = requestAnimationFrame(loop);

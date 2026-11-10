@@ -43,12 +43,12 @@ function CreateTrackModal({
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.72)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
       <div style={{ width: '360px', backgroundColor: '#11141f', border: '1px solid #242b3d', borderRadius: '8px', padding: '18px', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)', display: 'flex', flexDirection: 'column', gap: '14px' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#f1f5f9' }}>Crear Nueva Subtrama</h2>
+          <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#f1f5f9' }}>Crear Nuevo Hilo Narrativo</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer', padding: '2px 6px' }}>✕</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Nombre del carril</label>
+            <label style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 500 }}>Nombre del hilo narrativo</label>
             <input type="text" autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="ej. POV Antagonista, Subtrama de Misterio..." style={{ padding: '8px 10px', backgroundColor: '#0a0d14', border: '1px solid #242b3d', borderRadius: '4px', color: '#f1f5f9', fontSize: '13px', outline: 'none' }} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -61,7 +61,7 @@ function CreateTrackModal({
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
             <button type="button" onClick={onClose} style={{ padding: '5px 12px', backgroundColor: 'transparent', color: '#94a3b8', border: '1px solid #242b3d', borderRadius: '4px', fontSize: '12px', cursor: 'pointer' }}>Cancelar</button>
-            <button type="submit" disabled={!name.trim()} style={{ padding: '5px 14px', backgroundColor: name.trim() ? '#6366f1' : '#2e354b', color: name.trim() ? '#ffffff' : '#64748b', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Crear Subtrama</button>
+            <button type="submit" disabled={!name.trim()} style={{ padding: '5px 14px', backgroundColor: name.trim() ? '#6366f1' : '#2e354b', color: name.trim() ? '#ffffff' : '#64748b', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: name.trim() ? 'pointer' : 'not-allowed' }}>Crear Hilo Narrativo</button>
           </div>
         </form>
       </div>
@@ -207,7 +207,7 @@ export function App() {
     async (name: string, color: string) => {
       try {
         const projId = project?.id || 'mock-proj-1';
-        setStatus(`Creando subtrama '${name}'...`);
+        setStatus(`Creando hilo narrativo '${name}'...`);
         const newTrack = await createTrack(
           projectPath,
           projId,
@@ -216,12 +216,12 @@ export function App() {
           tracks.length
         );
         setTracks((prev) => [...prev, newTrack]);
-        setStatus(`Subtrama '${newTrack.name}' creada en SQLite WAL.`);
+        setStatus(`Hilo narrativo '${newTrack.name}' creado en SQLite WAL.`);
         setIsCreateTrackOpen(false);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setError(`Error creando subtrama: ${msg}`);
-        setStatus('Error al crear carril de subtrama.');
+        setError(`Error creando hilo narrativo: ${msg}`);
+        setStatus('Error al crear carril de hilo narrativo.');
       }
     },
     [projectPath, project, tracks.length]
@@ -238,12 +238,12 @@ export function App() {
           prev.map((t) => (t.id === trackId ? { ...t, is_muted: nextMuted } : t))
         );
         setStatus(
-          `Carril '${track.name}' ${nextMuted ? 'silenciado (excluido de export)' : 'activado'}.`
+          `Hilo narrativo '${track.name}' ${nextMuted ? 'ocultado (excluido de vista)' : 'visible'}.`
         );
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        setError(`Error al cambiar estado de silencio: ${msg}`);
-        setStatus('Error al actualizar silencio de pista.');
+        setError(`Error al cambiar visibilidad: ${msg}`);
+        setStatus('Error al actualizar visibilidad de hilo.');
       }
     },
     [projectPath, tracks]
@@ -328,7 +328,7 @@ export function App() {
               gap: '6px',
             }}
           >
-            + Nueva Subtrama
+            + Nuevo Hilo Narrativo
           </button>
 
           <button
@@ -351,7 +351,7 @@ export function App() {
               gap: '6px',
             }}
           >
-            {showConstellation ? '☵ Vista Canvas DAW' : '◈ Constelación Causal / Vista Radar'}
+            {showConstellation ? '☵ Línea de Tiempo' : '◈ Red de Personajes & Lugares'}
           </button>
 
           {selectedScene && (
@@ -405,9 +405,9 @@ export function App() {
         </div>
       </header>
 
-      {/* Main Workspace Body (DAW Canvas spans full width when editor closed) */}
+      {/* Main Workspace Body (Timeline Canvas spans full width when editor closed) */}
       <main style={{ flex: 1, display: 'flex', gap: '12px', padding: '12px', overflow: 'hidden' }}>
-        {/* Center Stage: Hardware-Accelerated DAW Canvas or Radial Constellation Radar */}
+        {/* Center Stage: Hardware-Accelerated Story Timeline or Radial Constellation */}
         <section
           style={{
             flex: 1,
@@ -498,7 +498,7 @@ export function App() {
           </div>
           <span style={{ color: 'var(--border-specular)' }}>|</span>
           <span>
-            {tracks.length} pistas · {scenes.length} escenas
+            {tracks.length} hilos narrativos · {scenes.length} escenas
           </span>
         </div>
 

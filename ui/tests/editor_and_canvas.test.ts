@@ -1,5 +1,17 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import {
+  RULER_HEIGHT,
+  TRACK_HEADER_WIDTH,
+  TRACK_HEIGHT,
+  TRACK_GAP,
+  CARD_PAD_Y,
+  CARD_HEIGHT,
+  PIXELS_PER_UNIT,
+  getTrackMuteButtonRect,
+  getSceneRect,
+} from '../src/canvas/renderer.ts';
+import type { Track, Scene, Viewport } from '../src/types.ts';
 
 describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
   test('reading time and word count calculations are accurate', () => {
@@ -90,5 +102,47 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     const deleteOnCanvas = handleKeyDown('Delete', 'CANVAS');
     assert.strictEqual(deleteOnCanvas, true);
     assert.strictEqual(deletedSceneId, selectedSceneId);
+  });
+
+  test('narrative timeline dimensional constants and literary card layout', () => {
+    // Assert Slice 6.1 dimensional invariants
+    assert.strictEqual(RULER_HEIGHT, 42);
+    assert.strictEqual(TRACK_HEADER_WIDTH, 200);
+    assert.strictEqual(TRACK_HEIGHT, 104);
+    assert.strictEqual(TRACK_GAP, 10);
+    assert.strictEqual(CARD_PAD_Y, 8);
+    assert.strictEqual(CARD_HEIGHT, 88);
+    assert.strictEqual(PIXELS_PER_UNIT, 1.3);
+
+    const vp: Viewport = { panX: 0, panY: 0, zoom: 1.0 };
+
+    // Track visibility toggle button coordinates inside track header
+    const btnRect = getTrackMuteButtonRect(0, vp);
+    assert.ok(btnRect.x > 0);
+    assert.ok(btnRect.x + btnRect.w <= TRACK_HEADER_WIDTH);
+    assert.strictEqual(btnRect.y, RULER_HEIGHT + (TRACK_HEIGHT - btnRect.h) / 2);
+
+    // Scene card rect calculation
+    const mockTracks: Track[] = [
+      { id: 'trk-1', project_id: 'p1', name: 'Trama Principal', color_hex: '#6366f1', track_order: 0, is_muted: false },
+      { id: 'trk-2', project_id: 'p1', name: 'Subtrama', color_hex: '#10b981', track_order: 1, is_muted: false },
+    ];
+    const mockScene: Scene = {
+      id: 'scn-1',
+      project_id: 'p1',
+      track_id: 'trk-1',
+      title: 'Capítulo 1',
+      t_start: 120, // Act II start
+      duration: 60,
+      text: 'La niebla cubría el valle cuando partieron.',
+      word_count: 8,
+      version: 1,
+    };
+
+    const rect = getSceneRect(mockScene, mockTracks, vp);
+    assert.strictEqual(rect.x, TRACK_HEADER_WIDTH + 120 * PIXELS_PER_UNIT * vp.zoom);
+    assert.strictEqual(rect.y, RULER_HEIGHT + CARD_PAD_Y);
+    assert.strictEqual(rect.h, 88);
+    assert.ok(rect.w >= 88);
   });
 });
