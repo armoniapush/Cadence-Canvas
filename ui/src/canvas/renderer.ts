@@ -480,31 +480,6 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
   ctx.fillStyle = '#e2e8f0';
   ctx.fillText('SECUENCIA NARRATIVA', 30, RULER_HEIGHT / 2 + 4);
-
-  // Playhead / Cursor (Current Time Marker)
-  const sx = TRACK_HEADER_WIDTH + vp.panX + currentTime * PIXELS_PER_UNIT * vp.zoom;
-  if (sx >= TRACK_HEADER_WIDTH && sx <= w) {
-    ctx.strokeStyle = '#4361ee';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(sx, 0);
-    ctx.lineTo(sx, h);
-    ctx.stroke();
-
-    ctx.fillStyle = '#4361ee';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(sx - 5, 2, 10, 16, 3);
-    else ctx.fillRect(sx - 5, 2, 10, 16);
-    ctx.fill();
-
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(sx - 3, 8);
-    ctx.lineTo(sx + 3, 8);
-    ctx.lineTo(sx, 12);
-    ctx.closePath();
-    ctx.fill();
-  }
   ctx.restore();
   ctx.restore();
 }
