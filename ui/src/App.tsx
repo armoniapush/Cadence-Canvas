@@ -7,6 +7,7 @@ import {
   listAnchors,
   createScene,
   moveScene,
+  deleteScene,
 } from './api';
 import { DawCanvas } from './canvas/DawCanvas';
 import { AtomicEditor } from './editor/AtomicEditor';
@@ -110,7 +111,7 @@ export function App() {
           title,
           tStart,
           120,
-          'Borrador táctico inicial redactado en la estación narrativa.'
+          'Borrador inicial redactado en la estación narrativa.'
         );
         setScenes((prev) => [...prev, newScene]);
         setSelectedSceneId(newScene.id);
@@ -123,8 +124,29 @@ export function App() {
     [projectPath, scenes.length]
   );
 
+  const handleDeleteScene = useCallback(
+    async (sceneId: string) => {
+      try {
+        setStatus(`Eliminando escena '${sceneId}'...`);
+        await deleteScene(projectPath, sceneId);
+        setScenes((prev) => prev.filter((s) => s.id !== sceneId));
+        setAnchors((prev) =>
+          prev.filter((a) => a.source_scene_id !== sceneId && a.target_scene_id !== sceneId)
+        );
+        if (selectedSceneId === sceneId) {
+          setSelectedSceneId(null);
+        }
+        setStatus('Escena eliminada de SQLite WAL.');
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setError(`Error eliminando escena: ${msg}`);
+        setStatus('Error al eliminar escena.');
+      }
+    },
+    [projectPath, selectedSceneId]
+  );
+
   const selectedScene = scenes.find((s) => s.id === selectedSceneId) || null;
-  const selectedTrack = tracks.find((t) => t.id === selectedScene?.track_id);
 
   // Zen Mode View
   if (isZen && selectedScene) {
@@ -135,6 +157,7 @@ export function App() {
         isZen={true}
         onToggleZen={handleToggleZen}
         onSceneUpdated={handleSceneUpdated}
+        onDeleteScene={handleDeleteScene}
       />
     );
   }
@@ -149,7 +172,7 @@ export function App() {
         backgroundColor: 'var(--bg-station)',
       }}
     >
-      {/* Tactical Top Bar */}
+      {/* Top Header */}
       <header
         style={{
           display: 'flex',
@@ -163,8 +186,8 @@ export function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div
             style={{
-              width: '10px',
-              height: '10px',
+              width: '9px',
+              height: '9px',
               borderRadius: '50%',
               backgroundColor: error ? '#ef4444' : '#10b981',
               boxShadow: error ? '0 0 8px #ef4444' : '0 0 8px #10b981',
@@ -175,28 +198,14 @@ export function App() {
               margin: 0,
               fontSize: '14px',
               fontWeight: 600,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
             }}
           >
-            Cadence Canvas{' '}
-            <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>
-              // Estación de Montaje Narrativo
+            Cadence Canvas
+            <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: '8px', fontSize: '12px' }}>
+              — Estación Narrativa
             </span>
           </h1>
-          <span
-            style={{
-              fontSize: '11px',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              backgroundColor: 'rgba(56, 189, 248, 0.12)',
-              color: 'var(--accent-cyan)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              fontWeight: 600,
-            }}
-          >
-            CANVAS DAW 120 FPS
-          </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -234,6 +243,7 @@ export function App() {
                 borderRadius: '4px',
                 fontSize: '12px',
                 fontWeight: 600,
+                cursor: 'pointer',
               }}
             >
               ⛶ Modo Zen (F11)
@@ -265,6 +275,7 @@ export function App() {
               borderRadius: '4px',
               fontSize: '12px',
               fontWeight: 500,
+              cursor: 'pointer',
             }}
           >
             Reconectar
@@ -272,113 +283,9 @@ export function App() {
         </div>
       </header>
 
-      {/* Main Workspace Body */}
+      {/* Main Workspace Body (DAW Canvas spans full width when editor closed) */}
       <main style={{ flex: 1, display: 'flex', gap: '12px', padding: '12px', overflow: 'hidden' }}>
-        {/* Left Rack: Telemetry, Project & Invariants */}
-        <section
-          style={{
-            width: '260px',
-            backgroundColor: 'var(--bg-surface)',
-            border: '1px solid var(--border-specular)',
-            borderRadius: '6px',
-            padding: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            overflowY: 'auto',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.08em',
-              color: 'var(--accent-cyan)',
-              textTransform: 'uppercase',
-            }}
-          >
-            Telemetría Causal IPC
-          </div>
-
-          <div
-            style={{
-              fontSize: '12px',
-              lineHeight: '1.4',
-              color: error ? '#f87171' : 'var(--text-main)',
-            }}
-          >
-            {status}
-          </div>
-
-          {project && (
-            <div
-              style={{
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                backgroundColor: 'var(--bg-rack)',
-                padding: '6px 8px',
-                borderRadius: '4px',
-                border: '1px solid var(--border-specular)',
-              }}
-            >
-              Proyecto: <strong style={{ color: '#e2e8f0' }}>{project.title}</strong> (
-              {project.author || 'Autor'})
-            </div>
-          )}
-
-          {selectedTrack && (
-            <div
-              style={{
-                backgroundColor: 'var(--bg-rack)',
-                borderRadius: '4px',
-                padding: '8px',
-                border: '1px solid var(--border-specular)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                fontSize: '11px',
-              }}
-            >
-              <div style={{ color: 'var(--text-muted)' }}>Carril Activo:</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: selectedTrack.color_hex,
-                  }}
-                />
-                <span style={{ color: '#f1f5f9', fontWeight: 600 }}>{selectedTrack.name}</span>
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              marginTop: 'auto',
-              padding: '10px',
-              backgroundColor: 'var(--bg-rack)',
-              borderRadius: '4px',
-              border: '1px solid var(--border-specular)',
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-            }}
-          >
-            <div style={{ fontWeight: 600, color: 'var(--accent-cyan)' }}>Controles Tácticos</div>
-            <div>• Clic: Seleccionar / Abrir Editor</div>
-            <div>• Arrastre tarjeta: Mover escena (OCC)</div>
-            <div>• Doble clic: Crear nueva escena</div>
-            <div>• F11: Activar Modo Zen</div>
-            <div>• Ctrl+S: Guardar escena</div>
-            <div>• ◈ Radar / Constelación Causal</div>
-          </div>
-        </section>
-
-        {/* Center Stage: Hardware-Accelerated 120 FPS DAW Canvas or Radial Constellation Radar */}
+        {/* Center Stage: Hardware-Accelerated DAW Canvas or Radial Constellation Radar */}
         <section
           style={{
             flex: 1,
@@ -408,71 +315,84 @@ export function App() {
               onSelectScene={handleSelectScene}
               onMoveScene={handleMoveScene}
               onCreateScene={handleCreateScene}
+              onDeleteScene={handleDeleteScene}
             />
           )}
         </section>
 
-        {/* Right Stage: Atomic Editor with Leica/ARRI Tonal HUD */}
-        <section
-          style={{
-            width: '420px',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
-          {selectedScene ? (
+        {/* Right Stage: Atomic Editor (Displayed only when a scene is selected) */}
+        {selectedScene && (
+          <aside
+            style={{
+              width: '420px',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
             <AtomicEditor
               scene={selectedScene}
               projectPath={projectPath}
               isZen={false}
               onToggleZen={handleToggleZen}
               onSceneUpdated={handleSceneUpdated}
+              onDeleteScene={handleDeleteScene}
               onClose={() => setSelectedSceneId(null)}
             />
-          ) : (
-            <div
-              style={{
-                height: '100%',
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px dashed var(--border-specular)',
-                borderRadius: '6px',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center',
-                gap: '12px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: '1px solid var(--border-specular)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--accent-cyan)',
-                  fontSize: '16px',
-                }}
-              >
-                ✎
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#cbd5e1' }}>
-                Editor Atómico Desacoplado
-              </div>
-              <div style={{ fontSize: '11px', lineHeight: 1.5, maxWidth: '240px' }}>
-                Selecciona una escena en el Canvas DAW para editar su contenido con HUD tonal
-                cuadricanal y control de concurrencia optimista (OCC).
-              </div>
-            </div>
-          )}
-        </section>
+          </aside>
+        )}
       </main>
+
+      {/* Bottom Status Bar: Compact Telemetry & WAL Heartbeat */}
+      <footer
+        style={{
+          height: '26px',
+          backgroundColor: 'var(--bg-surface)',
+          borderTop: '1px solid var(--border-specular)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 14px',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: error ? '#ef4444' : '#10b981',
+                boxShadow: error ? '0 0 6px #ef4444' : '0 0 6px #10b981',
+              }}
+            />
+            <span style={{ color: error ? '#f87171' : '#cbd5e1', fontWeight: 500 }}>
+              {projectPath} (SQLite WAL)
+            </span>
+          </div>
+          <span style={{ color: 'var(--border-specular)' }}>|</span>
+          <span>
+            {tracks.length} pistas · {scenes.length} escenas
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span
+            style={{
+              color: error ? '#fca5a5' : '#94a3b8',
+              maxWidth: '600px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {error ? `⚠️ ${error}` : status}
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }

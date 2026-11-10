@@ -10,6 +10,7 @@ export interface AtomicEditorProps {
   onToggleZen: () => void;
   onSceneUpdated: (updated: Scene) => void;
   onClose?: () => void;
+  onDeleteScene?: (sceneId: string) => void;
 }
 
 export const AtomicEditor: React.FC<AtomicEditorProps> = ({
@@ -19,6 +20,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
   onToggleZen,
   onSceneUpdated,
   onClose,
+  onDeleteScene,
 }) => {
   const [draftTitle, setDraftTitle] = useState(scene.title);
   const [draftText, setDraftText] = useState(scene.text);
@@ -27,6 +29,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
   const [hasConflict, setHasConflict] = useState(false);
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<TonalHistogram | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const saveTimerRef = useRef<number | null>(null);
   const metricsTimerRef = useRef<number | null>(null);
@@ -39,6 +42,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
     setHasConflict(false);
     setConflictError(null);
     setSaveStatus('saved');
+    setConfirmDelete(false);
     computeTonalMetrics(scene.text).then(setMetrics).catch(() => {});
   }, [scene.id]);
 
@@ -166,8 +170,67 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
           <span style={{ fontSize: '11px', fontFamily: 'monospace', color: saveStatus === 'conflict' ? '#ef4444' : saveStatus === 'saving' ? '#f59e0b' : saveStatus === 'dirty' ? '#94a3b8' : '#10b981' }}>
             {saveStatus === 'saving' ? 'Guardando...' : saveStatus === 'dirty' ? 'Modificado' : saveStatus === 'conflict' ? 'Conflicto OCC' : `v${expectedVersion}`}
           </span>
-          <button onClick={onToggleZen} title="Modo Zen (F11)" style={{ padding: '4px 8px', backgroundColor: 'var(--bg-rack)', border: '1px solid var(--border-specular)', borderRadius: '4px', color: 'var(--accent-cyan)', fontSize: '11px' }}>⛶ Zen</button>
-          {onClose && <button onClick={onClose} style={{ padding: '4px 8px', backgroundColor: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '14px' }}>✕</button>}
+          <button onClick={onToggleZen} title="Modo Zen (F11)" style={{ padding: '4px 8px', backgroundColor: 'var(--bg-rack)', border: '1px solid var(--border-specular)', borderRadius: '4px', color: 'var(--accent-cyan)', fontSize: '11px', cursor: 'pointer' }}>⛶ Zen</button>
+          {onDeleteScene && (
+            confirmDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <button
+                  onClick={() => {
+                    onDeleteScene(scene.id);
+                    setConfirmDelete(false);
+                  }}
+                  title="Confirmar eliminación"
+                  style={{
+                    padding: '3px 8px',
+                    backgroundColor: '#ef4444',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ¿Borrar?
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  title="Cancelar"
+                  style={{
+                    padding: '3px 6px',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border-specular)',
+                    borderRadius: '4px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Eliminar escena"
+                style={{
+                  padding: '4px 8px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  borderRadius: '4px',
+                  color: '#f87171',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>✕</span> Borrar
+              </button>
+            )
+          )}
+          {onClose && <button onClick={onClose} style={{ padding: '4px 8px', backgroundColor: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer' }}>✕</button>}
         </div>
       </div>
 

@@ -176,8 +176,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   }
   ctx.fillStyle = '#0f131d'; ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
   ctx.fillStyle = '#1e2436'; ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
-  ctx.font = '700 10px ui-monospace, monospace'; ctx.fillStyle = '#38bdf8';
-  ctx.fillText('TIMELINE // 120 FPS', 12, 21);
+  ctx.font = '600 11px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = '#94a3b8';
+  ctx.fillText('CRONOLOGÍA', 14, 21);
 
   const sx = TRACK_HEADER_WIDTH + vp.panX + currentTime * PIXELS_PER_UNIT * vp.zoom;
   if (sx >= TRACK_HEADER_WIDTH && sx <= w) {

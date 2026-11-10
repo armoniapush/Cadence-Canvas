@@ -21,6 +21,7 @@ export interface DawCanvasProps {
   onSelectScene: (scene: Scene | null) => void;
   onMoveScene: (scene: Scene, newTrackId: string, newTStart: number) => void;
   onCreateScene: (trackId: string, tStart: number) => void;
+  onDeleteScene?: (sceneId: string) => void;
 }
 
 export function DawCanvas({
@@ -31,12 +32,37 @@ export function DawCanvas({
   onSelectScene,
   onMoveScene,
   onCreateScene,
+  onDeleteScene,
 }: DawCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewport, setViewport] = useState<Viewport>({ panX: 20, panY: 0, zoom: 1.0 });
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [size, setSize] = useState({ width: 800, height: 600, dpr: 1 });
+
+  // Keyboard shortcut listener: Delete or Backspace to remove selected scene
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedSceneId || !onDeleteScene) return;
+
+      const activeEl = document.activeElement;
+      const isEditingText =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      if (isEditingText) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        onDeleteScene(selectedSceneId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedSceneId, onDeleteScene]);
 
   const dragRef = useRef<{ mx: number; my: number; s: Scene; t0: number; trk0: string; moved: boolean } | null>(null);
   const panRef = useRef<{ mx: number; my: number; px: number; py: number } | null>(null);
