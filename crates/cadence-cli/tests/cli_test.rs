@@ -215,6 +215,27 @@ fn test_cli_scene_lifecycle_and_occ() {
     .assert()
     .failure()
     .code(75);
+
+    // 9. Delete scene with --json
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    let assert = cmd
+        .args(["--json", "scene", "delete", db_str, "--id", scene_id])
+        .assert()
+        .success();
+    let del_json: Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
+    assert_eq!(del_json["deleted"], scene_id);
+
+    // 10. Verify scene is no longer retrievable
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args(["--json", "scene", "get", db_str, "--id", scene_id])
+        .assert()
+        .failure();
+
+    // 11. Verify deleting non-existent scene fails
+    let mut cmd = Command::cargo_bin("cadence").unwrap();
+    cmd.args(["--json", "scene", "delete", db_str, "--id", scene_id])
+        .assert()
+        .failure();
 }
 
 #[test]

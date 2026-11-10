@@ -30,6 +30,6 @@
 
 | Slice ID | Módulo | Objetivo Causal | Límite LOC | Conventional Commit | Estado / Receipt |
 |---|---|---|---|---|---|
-| **Slice 5.1** | `core/ipc/cli` | Exponer `delete_scene` en Tauri IPC (`commands.rs`), comando `scene delete` en `cadence-cli`, y tests de integración. | <= 200 LOC | `feat(ipc-cli): support scene deletion in tauri commands and cli` | ⏳ Ready |
+| **Slice 5.1** | `core/ipc/cli` | Exponer `delete_scene` en Tauri IPC (`commands.rs`), comando `scene delete` en `cadence-cli`, y tests de integración. | <= 200 LOC | `feat(ipc-cli): support scene deletion in tauri commands and cli` | ✅ Completed (+60 LOC, 48/48 cargo tests pass) |
 | **Slice 5.2** | `ui/cleanup` | Eliminar HUDs tácticos innecesarios, compactar telemetría en status bar inferior, y agregar botón y atajo `Delete` para borrar escenas. | <= 350 LOC | `feat(ui-clean): remove noisy tactical huds and add scene deletion` | ⏳ Pending |
 | **Slice 5.3** | `testing` | Suite de tests automatizados para borrado de escena, atajos y renderizado limpio sin HUDs ruidosos. | <= 250 LOC | `test(ui): verify scene deletion lifecycle and clean layout` | ⏳ Pending |

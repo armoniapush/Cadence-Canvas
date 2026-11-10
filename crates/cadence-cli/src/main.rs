@@ -178,6 +178,12 @@ enum SceneCommands {
         #[arg(long)]
         duration: i64,
     },
+    /// Delete a scene block by ID
+    Delete {
+        path: PathBuf,
+        #[arg(long)]
+        id: String,
+    },
 }
 
 fn run(cli: &Cli) -> Result<(), CadenceError> {
@@ -290,6 +296,15 @@ fn run(cli: &Cli) -> Result<(), CadenceError> {
                     println!("{}", serde_json::to_string_pretty(&scene)?);
                 } else {
                     println!("Moved scene '{}' to track={}, t={}, dur={}, v={}", scene.id, scene.track_id, scene.t_start, scene.duration, scene.version);
+                }
+            }
+            SceneCommands::Delete { path, id } => {
+                let db = Database::open(path)?;
+                Scene::delete(db.conn(), id)?;
+                if cli.json {
+                    println!("{}", serde_json::json!({ "deleted": id }));
+                } else {
+                    println!("Deleted scene '{}'", id);
                 }
             }
         },

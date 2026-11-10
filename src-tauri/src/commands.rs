@@ -81,6 +81,12 @@ pub fn move_scene(
 }
 
 #[tauri::command]
+pub fn delete_scene(path: String, id: String) -> Result<(), String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    Scene::delete(db.conn(), &id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn list_anchors(path: String, project_id: String) -> Result<Vec<ReadingAnchor>, String> {
     let db = Database::open(&path).map_err(|e| e.to_string())?;
     ReadingAnchor::list_by_project(db.conn(), &project_id).map_err(|e| e.to_string())
@@ -297,5 +303,12 @@ mod tests {
         let docx_res = export_docx(db_path.clone(), project.id.clone(), docx_out.clone()).expect("export_docx");
         assert_eq!(docx_res, docx_out);
         assert!(std::path::Path::new(&docx_out).exists());
+
+        // 11. delete_scene & verify removal
+        delete_scene(db_path.clone(), scene2.id.clone()).expect("delete_scene");
+        let remaining_scenes = list_scenes(db_path.clone(), project.id.clone()).expect("list_scenes after delete");
+        assert_eq!(remaining_scenes.len(), 1);
+        assert_eq!(remaining_scenes[0].id, moved.id);
+        assert!(delete_scene(db_path.clone(), scene2.id.clone()).is_err());
     }
 }

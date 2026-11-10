@@ -328,6 +328,16 @@ export async function moveScene(
   return { ...target };
 }
 
+export async function deleteScene(projectPath: string, sceneId: string): Promise<void> {
+  if (isTauri()) {
+    return invoke<void>('delete_scene', { path: projectPath, id: sceneId });
+  }
+  mockState.scenes = mockState.scenes.filter((s) => s.id !== sceneId);
+  mockState.anchors = mockState.anchors.filter(
+    (a) => a.source_scene_id !== sceneId && a.target_scene_id !== sceneId
+  );
+}
+
 export async function listAnchors(path: string, projectId: string): Promise<ReadingAnchor[]> {
   if (isTauri()) {
     return invoke<ReadingAnchor[]>('list_anchors', { path, projectId });
