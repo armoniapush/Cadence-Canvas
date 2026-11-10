@@ -190,15 +190,35 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.rect(0, RULER_HEIGHT, w, h - RULER_HEIGHT);
   ctx.clip();
 
-  // Render lanes with subtle matte graphite backgrounds
-  tracks.forEach((_, i) => {
+  // Render lanes with subtle matte graphite backgrounds & swimlanes framing
+  tracks.forEach((trk, i) => {
     const ly = RULER_HEIGHT + vp.panY + i * (TRACK_HEIGHT + TRACK_GAP);
-    ctx.fillStyle = i % 2 === 0 ? '#111317' : '#141620';
+    ctx.fillStyle = i % 2 === 0 ? '#0d0f15' : '#10131a';
     ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, TRACK_HEIGHT);
 
-    // Subtle 1px specular lane separator
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    // Top border
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, 1);
+
+    // Bottom border
     ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);
+
+    // Subtle vertical color indicator strip near left edge
+    ctx.save();
+    ctx.beginPath();
+    const indX = TRACK_HEADER_WIDTH + 6;
+    const indY = ly + 16;
+    const indW = 3;
+    const indH = TRACK_HEIGHT - 32;
+    if (ctx.roundRect) ctx.roundRect(indX, indY, indW, indH, 1.5);
+    else ctx.fillRect(indX, indY, indW, indH);
+    ctx.fillStyle = trk.color_hex || '#4361ee';
+    ctx.fill();
+    ctx.restore();
+
+    // Faint horizontal centerline track guide
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT / 2, w - TRACK_HEADER_WIDTH, 1);
   });
 
   // 2. High-Performance Batched Wavely-Style Dot-Matrix Grid Background
@@ -453,6 +473,10 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     ctx.restore();
 
+    // Card Duration Progress Meter (Fluxa style)
+    ctx.fillStyle = hexToRgba(col, 0.35);
+    ctx.fillRect(x + CARD_BORDER_RADIUS, y + scnH - 3, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 2);
+
     // In-Port (Left Causal Anchor) & Out-Port (Right Causal Output)
     const inPortX = x;
     const inPortY = y + scnH / 2;
@@ -463,23 +487,35 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const isOutHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'out';
     const isConnecting = Boolean(data.connectingWire);
 
-    // In-Port circle (Input / Causa)
+    // In-Port circle (Input / Causa) with subtle #818cf8 ring
     ctx.save();
-    ctx.beginPath();
     const inR = isInHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
+    ctx.beginPath();
+    ctx.arc(inPortX, inPortY, inR + 2.5, 0, Math.PI * 2);
+    ctx.strokeStyle = isInHover ? 'rgba(129, 140, 248, 0.6)' : 'rgba(129, 140, 248, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
     ctx.arc(inPortX, inPortY, inR, 0, Math.PI * 2);
-    ctx.fillStyle = isInHover ? col : '#13151e';
-    ctx.strokeStyle = isInHover ? '#ffffff' : isSel ? col : 'rgba(255, 255, 255, 0.4)';
+    ctx.fillStyle = isInHover ? '#818cf8' : '#13151e';
+    ctx.strokeStyle = isInHover ? '#ffffff' : '#818cf8';
     ctx.lineWidth = 1.5;
     ctx.fill();
     ctx.stroke();
 
-    // Out-Port circle (Output / Efecto)
-    ctx.beginPath();
+    // Out-Port circle (Output / Efecto) with subtle #38bdf8 ring
     const outR = isOutHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
+    ctx.beginPath();
+    ctx.arc(outPortX, outPortY, outR + 2.5, 0, Math.PI * 2);
+    ctx.strokeStyle = isOutHover ? 'rgba(56, 189, 248, 0.6)' : 'rgba(56, 189, 248, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
     ctx.arc(outPortX, outPortY, outR, 0, Math.PI * 2);
-    ctx.fillStyle = isOutHover ? '#38bdf8' : isSel ? col : '#13151e';
-    ctx.strokeStyle = isOutHover ? '#ffffff' : isSel ? '#38bdf8' : 'rgba(255, 255, 255, 0.4)';
+    ctx.fillStyle = isOutHover ? '#38bdf8' : '#13151e';
+    ctx.strokeStyle = isOutHover ? '#ffffff' : '#38bdf8';
     ctx.lineWidth = 1.5;
     ctx.fill();
     ctx.stroke();
@@ -641,6 +677,15 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.beginPath();
       ctx.arc(rx, 15, 2, 0, Math.PI * 2);
       ctx.fill();
+
+      // Timecode timestamp (Create.Video style)
+      const minutes = Math.floor(t / 60);
+      const seconds = Math.floor(t % 60);
+      const timecode = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      ctx.font = '500 10px ui-monospace, monospace';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText(timecode, rx + 6, RULER_HEIGHT - 14);
     } else if (isMedium) {
       // Medium rhythm tick
       ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';

@@ -43,6 +43,12 @@
   --accent-purple: #7c3aed;
   --accent-rose: #be123c;
 
+  /* Narrative Voice Channels */
+  --color-dialogue: #38bdf8;
+  --color-action: #f97316;
+  --color-lore: #10b981;
+  --color-monologue: #a855f7;
+
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 }

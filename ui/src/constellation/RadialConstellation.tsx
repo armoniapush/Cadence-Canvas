@@ -219,17 +219,47 @@ export function RadialConstellation({
             <circle cx="0" cy="0" r="100" fill="none" stroke="rgba(56, 189, 248, 0.16)" strokeWidth="1" />
             <line x1="-280" y1="0" x2="280" y2="0" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
             <line x1="0" y1="-280" x2="0" y2="280" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
-            <text x="5" y="-105" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA I (100)</text>
-            <text x="5" y="-175" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA II (170)</text>
-            <text x="5" y="-245" fill="#475569" fontSize="8" fontFamily="var(--font-mono)">ÓRBITA III (240)</text>
+            {/* Non-colliding Orbit Labels with Pill Badges (Angle 38°) */}
+            {[
+              { rad: 100, label: 'ÓRBITA I (100)', w: 74 },
+              { rad: 170, label: 'ÓRBITA II (170)', w: 78 },
+              { rad: 240, label: 'ÓRBITA III (240)', w: 82 },
+            ].map(({ rad, label, w }) => {
+              const ox = rad * Math.cos(0.66) + 4;
+              const oy = -rad * Math.sin(0.66);
+              return (
+                <g key={label}>
+                  <rect
+                    x={ox - 4}
+                    y={oy - 8}
+                    width={w}
+                    height={14}
+                    rx={3}
+                    fill="#0d1017"
+                    stroke="rgba(255, 255, 255, 0.08)"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={ox}
+                    y={oy + 2}
+                    fill="#64748b"
+                    fontSize="8"
+                    fontFamily="var(--font-mono)"
+                  >
+                    {label}
+                  </text>
+                </g>
+              );
+            })}
 
             {/* Co-occurrence Edges */}
             {neighbors.map((neighbor, idx) => {
               const edge = edges.find((e) => (e.source_id === centerNode?.id && e.target_id === neighbor.id) || (e.target_id === centerNode?.id && e.source_id === neighbor.id));
               const weight = edge ? edge.weight : 1;
               const angle = (2 * Math.PI * idx) / neighbors.length - Math.PI / 2;
-              const nx = 170 * Math.cos(angle);
-              const ny = 170 * Math.sin(angle);
+              const radius = weight >= 3.2 ? 120 : weight >= 2.0 ? 175 : 235;
+              const nx = radius * Math.cos(angle);
+              const ny = radius * Math.sin(angle);
               const ls = checkLifespan(neighbor);
               const isHov = hoveredNodeId === neighbor.id;
               const opacity = ls.isAttenuated ? 0.12 : isHov ? 1.0 : Math.max(0.25, Math.min(0.85, weight / maxWeight));
@@ -245,16 +275,38 @@ export function RadialConstellation({
 
             {/* 1-Hop Neighbor Nodes */}
             {neighbors.map((neighbor, idx) => {
+              const edge = edges.find((e) => (e.source_id === centerNode?.id && e.target_id === neighbor.id) || (e.target_id === centerNode?.id && e.source_id === neighbor.id));
+              const weight = edge ? edge.weight : 1;
               const angle = (2 * Math.PI * idx) / neighbors.length - Math.PI / 2;
-              const nx = 170 * Math.cos(angle);
-              const ny = 170 * Math.sin(angle);
+              const radius = weight >= 3.2 ? 120 : weight >= 2.0 ? 175 : 235;
+              const nx = radius * Math.cos(angle);
+              const ny = radius * Math.sin(angle);
               const ls = checkLifespan(neighbor);
               const style = getEntityStyle(neighbor.entity_type, neighbor.color_hex);
               const isHov = hoveredNodeId === neighbor.id;
+              const nameWidth = Math.max(36, neighbor.name.length * 6.5);
               return (
-                <g key={neighbor.id} transform={`translate(${nx}, ${ny})`} onClick={() => setSelectedEntityId(neighbor.id)} onMouseEnter={() => setHoveredNodeId(neighbor.id)} onMouseLeave={() => setHoveredNodeId(null)} style={{ cursor: 'pointer' }} opacity={ls.isAttenuated ? 0.28 : 1.0}>
+                <g
+                  key={neighbor.id}
+                  transform={`translate(${nx}, ${ny})`}
+                  onClick={() => setSelectedEntityId(neighbor.id)}
+                  onMouseEnter={() => setHoveredNodeId(neighbor.id)}
+                  onMouseLeave={() => setHoveredNodeId(null)}
+                  style={{ cursor: 'pointer' }}
+                  opacity={ls.isAttenuated ? 0.28 : 1.0}
+                >
                   <circle r={isHov ? 24 : 18} fill="#121520" stroke={style.color} strokeWidth={isHov ? 2.5 : 1.5} strokeDasharray={ls.isAttenuated ? '3 3' : undefined} />
                   <text textAnchor="middle" dy="4" fill={style.color} fontSize={isHov ? 13 : 11} fontWeight="700">{style.prefix}</text>
+                  <rect
+                    x={-nameWidth / 2 - 6}
+                    y={isHov ? 24 : 18}
+                    width={nameWidth + 12}
+                    height={16}
+                    rx={4}
+                    fill="#0e111a"
+                    stroke={isHov ? style.color : "rgba(255, 255, 255, 0.1)"}
+                    strokeWidth={1}
+                  />
                   <text textAnchor="middle" y={isHov ? 36 : 30} fill={ls.isAttenuated ? '#94a3b8' : '#f1f5f9'} fontSize="10" fontWeight="600">{neighbor.name}</text>
                   {ls.isAttenuated && <text textAnchor="middle" y={isHov ? 48 : 42} fill="#ef4444" fontSize="8">{ls.reason}</text>}
                 </g>

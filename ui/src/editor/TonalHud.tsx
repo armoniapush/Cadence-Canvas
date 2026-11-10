@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { TonalHistogram } from '../types';
 
 export interface TonalHudProps {
@@ -9,6 +9,8 @@ export interface TonalHudProps {
 }
 
 export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCount, compact }) => {
+  const [hoveredChannel, setHoveredChannel] = useState<string | null>(null);
+
   const m = useMemo(() => {
     return metrics || {
       dialogue: 0.28,
@@ -37,6 +39,13 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
     const mono = Math.max(0, 100 - (d + a + l));
     return { pDialogue: d, pAction: a, pLore: l, pMonologue: mono };
   }, [m]);
+
+  const channels = useMemo(() => [
+    { key: 'dialogue', label: 'Diálogo', pct: pDialogue, colorVar: 'var(--color-dialogue, #38bdf8)', colorHex: '#38bdf8' },
+    { key: 'action', label: 'Acción', pct: pAction, colorVar: 'var(--color-action, #f97316)', colorHex: '#f97316' },
+    { key: 'lore', label: 'Lore', pct: pLore, colorVar: 'var(--color-lore, #10b981)', colorHex: '#10b981' },
+    { key: 'monologue', label: 'Monólogo', pct: pMonologue, colorVar: 'var(--color-monologue, #a855f7)', colorHex: '#a855f7' },
+  ], [pDialogue, pAction, pLore, pMonologue]);
 
   const readingMinutes = Math.max(1, Math.ceil(wordCount / 240));
 
@@ -98,7 +107,7 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           style={{
             display: 'flex',
             width: '84px',
-            height: '5px',
+            height: '6px',
             borderRadius: '9999px',
             overflow: 'hidden',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -106,17 +115,24 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
           }}
           title={`Diálogo: ${pDialogue}% | Acción: ${pAction}% | Lore: ${pLore}% | Monólogo: ${pMonologue}%`}
         >
-          <div style={{ width: `${pDialogue}%`, backgroundColor: '#0284c7', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pAction}%`, backgroundColor: '#c2410c', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pLore}%`, backgroundColor: '#1f9a73', transition: 'width 0.3s ease' }} />
-          <div style={{ width: `${pMonologue}%`, backgroundColor: '#7c3aed', transition: 'width 0.3s ease' }} />
+          {channels.map((ch) => (
+            <div
+              key={ch.key}
+              style={{
+                width: `${ch.pct}%`,
+                backgroundColor: ch.colorVar,
+                transition: 'width 0.3s ease',
+              }}
+            />
+          ))}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px' }}>
-          <span style={{ color: '#0284c7', fontWeight: 600 }}>{pDialogue}%</span>
-          <span style={{ color: '#c2410c', fontWeight: 600 }}>{pAction}%</span>
-          <span style={{ color: '#1f9a73', fontWeight: 600 }}>{pLore}%</span>
-          <span style={{ color: '#7c3aed', fontWeight: 600 }}>{pMonologue}%</span>
+          {channels.map((ch) => (
+            <span key={ch.key} style={{ color: ch.colorVar, fontWeight: 600 }}>
+              {ch.pct}%
+            </span>
+          ))}
         </div>
       </div>
     );
@@ -218,11 +234,11 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
       </div>
 
       {/* Continuous Chromatic Voice Ribbon with Clean Typography Legend */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         <div
           style={{
             display: 'flex',
-            height: '6px',
+            height: '8px',
             width: '100%',
             borderRadius: '9999px',
             overflow: 'hidden',
@@ -231,38 +247,25 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             border: '1px solid rgba(255, 255, 255, 0.05)',
           }}
         >
-          <div
-            style={{
-              width: `${pDialogue}%`,
-              backgroundColor: '#0284c7',
-              transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            title={`Diálogo: ${pDialogue}%`}
-          />
-          <div
-            style={{
-              width: `${pAction}%`,
-              backgroundColor: '#c2410c',
-              transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            title={`Acción: ${pAction}%`}
-          />
-          <div
-            style={{
-              width: `${pLore}%`,
-              backgroundColor: '#1f9a73',
-              transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            title={`Lore: ${pLore}%`}
-          />
-          <div
-            style={{
-              width: `${pMonologue}%`,
-              backgroundColor: '#7c3aed',
-              transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-            title={`Monólogo: ${pMonologue}%`}
-          />
+          {channels.map((ch) => {
+            const isHovered = hoveredChannel === ch.key;
+            return (
+              <div
+                key={ch.key}
+                onMouseEnter={() => setHoveredChannel(ch.key)}
+                onMouseLeave={() => setHoveredChannel(null)}
+                style={{
+                  width: `${ch.pct}%`,
+                  backgroundColor: ch.colorVar,
+                  opacity: hoveredChannel === null || isHovered ? 1 : 0.45,
+                  filter: isHovered ? 'brightness(1.2)' : 'none',
+                  cursor: 'pointer',
+                  transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, filter 0.2s ease',
+                }}
+                title={`${ch.label}: ${ch.pct}%`}
+              />
+            );
+          })}
         </div>
 
         {/* Clean Typographic Legend */}
@@ -276,34 +279,32 @@ export const TonalHud: React.FC<TonalHudProps> = ({ metrics, wordCount, charCoun
             padding: '2px 2px 0 2px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: '#0284c7', fontSize: '9px' }}>●</span>
-            <span>Diálogo</span>
-            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-              {pDialogue}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: '#c2410c', fontSize: '9px' }}>●</span>
-            <span>Acción</span>
-            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-              {pAction}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: '#1f9a73', fontSize: '9px' }}>●</span>
-            <span>Lore</span>
-            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-              {pLore}%
-            </span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ color: '#7c3aed', fontSize: '9px' }}>●</span>
-            <span>Monólogo</span>
-            <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-              {pMonologue}%
-            </span>
-          </div>
+          {channels.map((ch) => {
+            const isHovered = hoveredChannel === ch.key;
+            return (
+              <div
+                key={ch.key}
+                onMouseEnter={() => setHoveredChannel(ch.key)}
+                onMouseLeave={() => setHoveredChannel(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  opacity: hoveredChannel === null || isHovered ? 1 : 0.45,
+                  transform: isHovered ? 'scale(1.05)' : 'none',
+                  transition: 'opacity 0.2s ease, transform 0.2s ease',
+                }}
+                title={`Canal ${ch.label}: ${ch.pct}% del texto`}
+              >
+                <span style={{ color: ch.colorVar, fontSize: '9px' }}>●</span>
+                <span style={{ color: isHovered ? 'var(--text-primary)' : 'inherit', fontWeight: isHovered ? 600 : 400 }}>{ch.label}</span>
+                <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  {ch.pct}%
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
