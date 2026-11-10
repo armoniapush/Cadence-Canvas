@@ -286,7 +286,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   const trkMap = new Map(tracks.map((t) => [t.id, t]));
   const scnMap = new Map(scenes.map((s) => [s.id, s]));
 
-  // 3. High-Craft Glowing Bézier Causal Cables with Energy Pulses (Fluxa / Wavely / Markus AI style)
+  // 3. Organic Fluid Bézier Ribbons with Animated Glowing Energy Pulses (Hybrid Stream Design)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
@@ -296,7 +296,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ? anchors.map((a) => ({ src: scnMap.get(a.source_scene_id), dst: scnMap.get(a.target_scene_id), wt: a.weight || 1 }))
     : [...scenes].sort((a, b) => a.t_start - b.t_start).slice(0, -1).map((s, i) => ({ src: s, dst: scenes[i + 1], wt: 1 }));
 
-  ribbons.forEach(({ src, dst }, cableIdx) => {
+  ribbons.forEach(({ src, dst, wt = 1 }, cableIdx) => {
     if (!src || !dst) return;
     const sR = getSceneRect(src, tracks, vp, dragState);
     const dR = getSceneRect(dst, tracks, vp, dragState);
@@ -306,51 +306,84 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const y2 = dR.y + dR.h / 2;
 
     const isConnectedToSel = selectedSceneId && (src.id === selectedSceneId || dst.id === selectedSceneId);
-    const dist = Math.max(45, Math.abs(x2 - x1) * 0.45);
+    const dx = x2 - x1;
+    // Buttery smooth sigmoid tangents: control distance scales proportionally to horizontal span
+    const dist = dx > 0 ? Math.max(18, Math.min(dx * 0.48, 85)) : Math.max(45, Math.abs(dx) * 0.45);
     const c1x = x1 + dist;
     const c2x = x2 - dist;
 
     const colSrc = trkMap.get(src.track_id)?.color_hex || '#6366f1';
     const colDst = trkMap.get(dst.track_id)?.color_hex || '#38bdf8';
 
-    // 1. Ambient soft glow path
+    const rh = Math.max(10, Math.min(20, 13 * wt));
+
+    // 1. Organic Fluid Ribbon Stream Body (The beloved ribbon shape)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 - rh / 2);
+    ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
+    ctx.lineTo(x2, y2 + rh / 2);
+    ctx.bezierCurveTo(c2x, y2 + rh / 2, c1x, y1 + rh / 2, x1, y1 + rh / 2);
+    ctx.closePath();
+
+    const g = ctx.createLinearGradient(x1, y1, x2, y2);
+    const alphaBase = isConnectedToSel ? 0.36 : 0.20;
+    const alphaMid = isConnectedToSel ? 0.22 : 0.10;
+    g.addColorStop(0, hexToRgba(colSrc, alphaBase));
+    g.addColorStop(0.5, hexToRgba(colSrc, alphaMid));
+    g.addColorStop(1, hexToRgba(colDst, alphaBase));
+    ctx.fillStyle = g;
+    ctx.fill();
+
+    // Specular contour boundary edges on top and bottom of the ribbon
+    const contourGrad = ctx.createLinearGradient(x1, y1, x2, y2);
+    contourGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.80 : 0.42));
+    contourGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.80 : 0.42));
+    ctx.strokeStyle = contourGrad;
+    ctx.lineWidth = isConnectedToSel ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 - rh / 2);
+    ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 + rh / 2);
+    ctx.bezierCurveTo(c1x, y1 + rh / 2, c2x, y2 + rh / 2, x2, y2 + rh / 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. Central Luminescent Flow Core (New vibrant color gradient)
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
-    ctx.strokeStyle = hexToRgba(colSrc, isConnectedToSel ? 0.35 : 0.14);
-    ctx.lineWidth = isConnectedToSel ? 7 : 5;
-    ctx.lineCap = 'round';
+    const centerGrad = ctx.createLinearGradient(x1, y1, x2, y2);
+    centerGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.90 : 0.60));
+    centerGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.90 : 0.60));
+    ctx.strokeStyle = centerGrad;
+    ctx.lineWidth = isConnectedToSel ? 2 : 1.35;
     ctx.stroke();
     ctx.restore();
 
-    // 2. Crisp Core Cable Wire (Gradient from Source to Target track)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
-    const wireGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    wireGrad.addColorStop(0, colSrc);
-    wireGrad.addColorStop(1, colDst);
-    ctx.strokeStyle = wireGrad;
-    ctx.lineWidth = isConnectedToSel ? 2.5 : 1.85;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-    ctx.restore();
-
-    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect
+    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect (The new animation)
     const time = performance.now() / 1600;
-    const tPulse = (time + cableIdx * 0.38) % 1;
+    const tPulse = (time + cableIdx * 0.42) % 1;
     const u = 1 - tPulse;
     const px = u * u * u * x1 + 3 * u * u * tPulse * c1x + 3 * u * tPulse * tPulse * c2x + tPulse * tPulse * tPulse * x2;
     const py = u * u * u * y1 + 3 * u * u * tPulse * y1 + 3 * u * tPulse * tPulse * y2 + tPulse * tPulse * tPulse * y2;
 
     ctx.save();
     ctx.beginPath();
-    ctx.arc(px, py, isConnectedToSel ? 3.5 : 2.5, 0, Math.PI * 2);
+    ctx.arc(px, py, isConnectedToSel ? 4 : 3, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colSrc;
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = colDst;
+    ctx.shadowBlur = isConnectedToSel ? 10 : 6;
+    ctx.fill();
+
+    // Pulse core gem
+    ctx.beginPath();
+    ctx.arc(px, py, isConnectedToSel ? 2 : 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = colDst;
     ctx.fill();
     ctx.restore();
   });
