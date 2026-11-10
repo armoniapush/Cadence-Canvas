@@ -49,8 +49,9 @@
   --color-lore: #10b981;
   --color-monologue: #a855f7;
 
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', "SF Mono", Menlo, Consolas, monospace;
+  --font-editorial: 'Newsreader', 'Lora', Georgia, Cambria, "Times New Roman", serif;
 }
 
 * {
@@ -63,12 +64,41 @@ body {
   background-color: var(--bg-canvas);
   color: var(--text-main);
   font-family: var(--font-sans);
+  letter-spacing: -0.015em;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   user-select: none;
   overflow: hidden;
   height: 100vh;
   width: 100vw;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+  letter-spacing: -0.015em;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.font-editorial {
+  font-family: var(--font-editorial);
+  font-feature-settings: "liga", "kern";
+  text-wrap: pretty;
+}
+
+.editorial-prose {
+  font-family: var(--font-editorial);
+  font-size: 15px;
+  line-height: 1.82;
+  letter-spacing: 0.005em;
+  color: var(--text-main);
+  font-feature-settings: "liga", "kern";
+  text-wrap: pretty;
 }
 
 button {

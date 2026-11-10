@@ -227,7 +227,7 @@ export function ManuscriptBinder({
                   <span
                     style={{
                       fontSize: '10px',
-                      fontFamily: 'ui-monospace, monospace',
+                      fontFamily: 'var(--font-mono)',
                       color: isSel ? '#93c5fd' : '#64748b',
                       minWidth: '18px',
                     }}
@@ -252,6 +252,7 @@ export function ManuscriptBinder({
                       style={{
                         fontSize: '12px',
                         fontWeight: isSel ? 600 : 500,
+                        letterSpacing: '-0.015em',
                         color: isSel ? '#ffffff' : '#e2e8f0',
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
@@ -277,7 +278,7 @@ export function ManuscriptBinder({
                   <span
                     style={{
                       fontSize: '10px',
-                      fontFamily: 'ui-monospace, monospace',
+                      fontFamily: 'var(--font-mono)',
                       color: isSel ? '#cbd5e1' : '#94a3b8',
                       backgroundColor: 'rgba(255, 255, 255, 0.04)',
                       padding: '2px 5px',

@@ -1,5 +1,9 @@
 import type { Track, Scene, ReadingAnchor } from '../types';
 
+export const FONT_SANS = '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+export const FONT_MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+export const FONT_EDITORIAL = '"Newsreader", Georgia, Cambria, serif';
+
 export const RULER_HEIGHT = 42;
 export const TRACK_HEADER_WIDTH = 200;
 export const TRACK_HEIGHT = 104;
@@ -452,7 +456,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     // Inside Header: Index badge (#01, #02) + Scene Title + Version chip
     const numStr = `#0${sceneIdx + 1}`;
     ctx.save();
-    ctx.font = '700 9px ui-monospace, monospace';
+    ctx.font = '700 9px ' + FONT_MONO;
     const numW = ctx.measureText(numStr).width + 8;
     ctx.fillStyle = '#0f121b';
     ctx.beginPath();
@@ -466,7 +470,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fillText(numStr, x + 14, y + 18);
 
     // Title (Bold white 12px)
-    ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '600 12px ' + FONT_SANS;
     ctx.fillStyle = '#ffffff';
     const titleStartX = x + 10 + numW + 8;
     const maxTitleW = Math.max(20, scnW - numW - 65);
@@ -482,7 +486,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     // Version Chip on Right of Header
     if (scnW >= 150) {
       const verStr = `v${s.version}`;
-      ctx.font = '600 9px ui-monospace, monospace';
+      ctx.font = '600 9px ' + FONT_MONO;
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'right';
       ctx.fillText(verStr, x + scnW - 12, y + 18);
@@ -500,7 +504,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const excerpt = rawText.length > 0
       ? (rawText.length > 46 ? rawText.slice(0, 46) + '…' : rawText)
       : '(Sin contenido redactado aún)';
-    ctx.font = '400 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '400 11px ' + FONT_SANS;
     ctx.fillStyle = '#94a3b8';
     ctx.fillText(excerpt, x + 12, y + headerH + 18);
     ctx.restore();
@@ -512,7 +516,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     if (scnW >= 110) {
       const metricStr = `⏱ ${words} pal · ~${readingMins}m`;
-      ctx.font = '500 10px ui-sans-serif, system-ui, sans-serif';
+      ctx.font = '500 10px ' + FONT_MONO;
       const textW = ctx.measureText(metricStr).width;
       const bW = textW + 12;
 
@@ -679,12 +683,12 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     // Channel Index Chip (e.g. "CH 01")
     const chStr = `CH 0${idx + 1}`;
-    ctx.font = '700 9px ui-monospace, monospace';
+    ctx.font = '700 9px ' + FONT_MONO;
     ctx.fillStyle = '#64748b';
     ctx.fillText(chStr, 22, ly + 25);
 
     // Track Name (Bold 13px)
-    ctx.font = '600 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.font = '600 13px ' + FONT_SANS;
     ctx.fillStyle = trk.is_muted ? '#64748b' : '#f8fafc';
     const truncatedName = trk.name.length > 15 ? trk.name.slice(0, 14) + '…' : trk.name;
     ctx.fillText(truncatedName, 22, ly + 45);
@@ -693,7 +697,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const trkScenes = scenes.filter((s) => s.track_id === trk.id);
     const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
     const metaStr = `${trkScenes.length} esc · ${trkWords.toLocaleString()} pal`;
-    ctx.font = '500 10px ui-sans-serif, system-ui, sans-serif';
+    ctx.font = '500 10px ' + FONT_MONO;
     const metaW = ctx.measureText(metaStr).width + 12;
 
     ctx.save();
@@ -721,7 +725,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = '12px ui-sans-serif, system-ui, sans-serif';
+    ctx.font = '12px ' + FONT_SANS;
     ctx.fillStyle = isM ? '#fbbf24' : '#cbd5e1';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -766,7 +770,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       const minutes = Math.floor(t / 60);
       const seconds = Math.floor(t % 60);
       const timecode = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      ctx.font = '500 10px ui-monospace, monospace';
+      ctx.font = '500 10px ' + FONT_MONO;
       ctx.fillStyle = '#64748b';
       ctx.textAlign = 'left';
       ctx.fillText(timecode, rx + 6, RULER_HEIGHT - 14);
@@ -795,7 +799,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.arc(20, RULER_HEIGHT / 2, 3.5, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.font = '700 10px ' + FONT_SANS;
   ctx.fillStyle = '#f8fafc';
   ctx.fillText('SECUENCIA NARRATIVA', 32, RULER_HEIGHT / 2 + 4);
   ctx.restore();

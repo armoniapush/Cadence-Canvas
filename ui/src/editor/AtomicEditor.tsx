@@ -218,6 +218,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               color: 'var(--text-primary)',
               fontSize: '26px',
               fontWeight: 700,
+              letterSpacing: '-0.025em',
               padding: '8px 0',
               outline: 'none',
               marginBottom: '24px',
@@ -233,13 +234,14 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               flex: 1,
               backgroundColor: 'transparent',
               border: 'none',
-              color: 'var(--text-main)',
-              fontSize: '17px',
-              lineHeight: 1.85,
+              color: '#f1f5f9',
+              fontSize: '19px',
+              lineHeight: 1.9,
+              letterSpacing: '0.008em',
               outline: 'none',
               resize: 'none',
               caretColor: 'var(--text-primary)',
-              fontFamily: 'Georgia, Cambria, "Times New Roman", Times, serif',
+              fontFamily: 'var(--font-editorial)',
             }}
           />
         </div>
@@ -513,14 +515,15 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
           backgroundColor: 'var(--bg-canvas)',
           border: '1px solid var(--border-specular)',
           borderRadius: '10px',
-          color: 'var(--text-main)',
-          fontSize: '13px',
-          lineHeight: 1.7,
-          padding: '12px',
+          color: '#f1f5f9',
+          fontSize: '14.5px',
+          lineHeight: 1.82,
+          letterSpacing: '0.004em',
+          padding: '14px',
           outline: 'none',
           resize: 'none',
           caretColor: 'var(--accent-cyan)',
-          fontFamily: 'var(--font-sans)',
+          fontFamily: 'var(--font-editorial)',
         }}
       />
     </div>
