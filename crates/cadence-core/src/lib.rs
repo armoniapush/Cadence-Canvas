@@ -19,8 +19,9 @@ pub use sweep::{
     assemble_project, assemble_scenes, assemble_scenes_with_ranks, AssembledScene, SceneSweepKey,
 };
 pub use world::{
-    scan_all_candidates, scan_known_mentions, scan_untracked_candidates, sync_scene_mentions,
-    CandidateMention, EntityType, LoreEntity, MentionScanner, MentionSpan,
+    audit_temporal_causality, extract_entity_ego_graph, scan_all_candidates, scan_known_mentions,
+    scan_untracked_candidates, sync_scene_mentions, AnachronismIssue, CandidateMention, EgoGraph,
+    EntityType, GraphEdge, GraphNode, LoreEntity, MentionScanner, MentionSpan,
 };
 
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

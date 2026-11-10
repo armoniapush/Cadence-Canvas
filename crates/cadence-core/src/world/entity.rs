@@ -89,6 +89,18 @@ impl LoreEntity {
         Ok(conn.execute("DELETE FROM entities WHERE id = ?1", params![id])? > 0)
     }
 
+    pub fn update_meta(conn: &Connection, id: &str, meta_json: &str) -> Result<(), CadenceError> {
+        let now = chrono::Utc::now().timestamp();
+        let rows = conn.execute(
+            "UPDATE entities SET meta_json = ?1, updated_at = ?2 WHERE id = ?3",
+            params![meta_json, now, id],
+        )?;
+        if rows == 0 {
+            return Err(CadenceError::NotFound(format!("LoreEntity not found: {id}")));
+        }
+        Ok(())
+    }
+
     pub fn find_by_name_or_alias(conn: &Connection, project_id: &str, query: &str) -> Result<Option<Self>, CadenceError> {
         let q = query.trim();
         if q.is_empty() { return Ok(None); }

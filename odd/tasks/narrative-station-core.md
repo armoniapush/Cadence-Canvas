@@ -198,5 +198,5 @@ CREATE INDEX IF NOT EXISTS idx_mentions_entity ON scene_entity_mentions(entity_i
 | **Slice 2.3** | `export/md` | Exporter Markdown puro con write-to-temp atómico y tests byte-exact. | <= 260 LOC | `feat(export): deterministic markdown manuscript generator` | ✅ Delivered (3/3 tests ok, 135 LOC) |
 | **Slice 2.4** | `export/docx`| Exporter Docx modular implementando el trait `DocumentExporter`. | <= 380 LOC | `feat(export): standard manuscript docx generator` | ✅ Delivered (3/3 tests ok, 183 LOC) |
 | **Slice 3.1** | `mentions` | Matcher Aho-Corasick para `@`, `#`, `!` en memoria y resolución de entidades. | <= 300 LOC | `feat(mentions): fast aho-corasick entity mention extraction` | ✅ Delivered (5/5 tests ok, 241 LOC) |
-| **Slice 3.2** | `world_graph` | Subgrafo 1-hop de escena y auditor de anacronismos temporales. | <= 340 LOC | `feat(world): 1-hop ego-graph extraction and temporal validator` |
+| **Slice 3.2** | `world_graph` | Subgrafo 1-hop de escena y auditor de anacronismos temporales. | <= 340 LOC | `feat(world): 1-hop ego-graph extraction and temporal validator` | ✅ Delivered (3/3 tests ok, 236 LOC) |
 | **Slice 3.3** | `metrics` | Pipeline de histograma tonal en 1 pasada (< 0.5ms) sobre buffer de texto. | <= 280 LOC | `feat(metrics): single-pass 4-channel tonal histogram engine` |
