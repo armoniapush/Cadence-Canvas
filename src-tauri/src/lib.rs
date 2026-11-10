@@ -7,6 +7,7 @@ pub fn run() {
             commands::open_project,
             commands::list_tracks,
             commands::create_track,
+            commands::set_track_muted,
             commands::list_scenes,
             commands::create_scene,
             commands::update_scene_content,

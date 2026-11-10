@@ -1,12 +1,24 @@
 import type { Track, Scene, ReadingAnchor } from '../types';
 
 export const RULER_HEIGHT = 34;
-export const TRACK_HEADER_WIDTH = 160;
+export const TRACK_HEADER_WIDTH = 180;
 export const TRACK_HEIGHT = 86;
 export const TRACK_GAP = 8;
 export const CARD_PAD_Y = 8;
 export const CARD_HEIGHT = TRACK_HEIGHT - CARD_PAD_Y * 2;
 export const PIXELS_PER_UNIT = 1.2;
+export const MUTE_BTN_W = 24;
+export const MUTE_BTN_H = 20;
+
+export function getTrackMuteButtonRect(trackIndex: number, vp: Viewport) {
+  const ly = RULER_HEIGHT + vp.panY + trackIndex * (TRACK_HEIGHT + TRACK_GAP);
+  return {
+    x: TRACK_HEADER_WIDTH - 34,
+    y: ly + (TRACK_HEIGHT - MUTE_BTN_H) / 2,
+    w: MUTE_BTN_W,
+    h: MUTE_BTN_H,
+  };
+}
 
 export interface Viewport { panX: number; panY: number; zoom: number; }
 export interface DragState { sceneId: string; previewTrackId: string; previewTStart: number; }
@@ -119,7 +131,14 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const { x, y, w: scnW, h: scnH, isD } = getSceneRect(s, tracks, vp, dragState);
     if (x + scnW < TRACK_HEADER_WIDTH || x > w || y + scnH < RULER_HEIGHT || y > h) continue;
     const isSel = s.id === selectedSceneId;
-    const col = trkMap.get(isD && dragState ? dragState.previewTrackId : s.track_id)?.color_hex || '#6366f1';
+    const track = trkMap.get(isD && dragState ? dragState.previewTrackId : s.track_id);
+    const col = track?.color_hex || '#6366f1';
+    const isMuted = track?.is_muted ?? false;
+
+    ctx.save();
+    if (isMuted) {
+      ctx.globalAlpha = 0.38;
+    }
 
     ctx.fillStyle = isSel ? '#1c2233' : '#141824';
     ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, scnW, scnH, 4) : ctx.rect(x, y, scnW, scnH); ctx.fill();
@@ -144,6 +163,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fillStyle = '#38bdf8'; ctx.fillText(`v${s.version}`, x + 62, bY + 12);
     ctx.fillStyle = '#64748b'; ctx.fillText(`T:${isD && dragState ? dragState.previewTStart : s.t_start}`, x + 94, bY + 12);
     ctx.restore();
+
+    ctx.restore();
   }
   ctx.restore();
 
@@ -159,6 +180,29 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.fillText(trk.name, 22, ly + 34);
     ctx.font = '10px ui-monospace, monospace'; ctx.fillStyle = '#64748b';
     ctx.fillText(`TRK 0${trk.track_order + 1}`, 22, ly + 54);
+
+    // Mute button [ M ]
+    const mBtn = getTrackMuteButtonRect(idx, vp);
+    const isM = trk.is_muted;
+    ctx.fillStyle = isM ? 'rgba(239, 68, 68, 0.25)' : '#161b26';
+    ctx.strokeStyle = isM ? '#ef4444' : '#273142';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (ctx.roundRect) {
+      ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 3);
+    } else {
+      ctx.rect(mBtn.x, mBtn.y, mBtn.w, mBtn.h);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = 'bold 10px ui-monospace, monospace';
+    ctx.fillStyle = isM ? '#f87171' : '#64748b';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('M', mBtn.x + mBtn.w / 2, mBtn.y + mBtn.h / 2);
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
   });
   ctx.restore();
 

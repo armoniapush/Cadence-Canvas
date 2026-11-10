@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   openProject,
   listTracks,
+  createTrack,
+  setTrackMuted,
   listScenes,
   createScene,
   updateSceneContent,
@@ -28,6 +30,42 @@ describe('Cadence Canvas UI API & Lifecycle Tests', () => {
     assert.ok(Array.isArray(tracks));
     assert.ok(tracks.length >= 2);
     assert.strictEqual(tracks[0].name, 'Trama Principal');
+  });
+
+  test('track lifecycle: createTrack and setTrackMuted', async () => {
+    const initialTracks = await listTracks(projectPath, 'mock-proj-1');
+    const initialCount = initialTracks.length;
+
+    // 1. Create a new subplot track
+    const newTrack = await createTrack(
+      projectPath,
+      'mock-proj-1',
+      'POV Antagonista',
+      '#f43f5e',
+      initialCount
+    );
+    assert.ok(newTrack.id);
+    assert.strictEqual(newTrack.name, 'POV Antagonista');
+    assert.strictEqual(newTrack.color_hex, '#f43f5e');
+    assert.strictEqual(newTrack.track_order, initialCount);
+    assert.strictEqual(newTrack.is_muted, false);
+
+    const tracksAfterCreate = await listTracks(projectPath, 'mock-proj-1');
+    assert.strictEqual(tracksAfterCreate.length, initialCount + 1);
+
+    // 2. Mute the track
+    await setTrackMuted(projectPath, newTrack.id, true);
+    const tracksAfterMute = await listTracks(projectPath, 'mock-proj-1');
+    const mutedTrack = tracksAfterMute.find((t) => t.id === newTrack.id);
+    assert.ok(mutedTrack);
+    assert.strictEqual(mutedTrack.is_muted, true);
+
+    // 3. Unmute the track
+    await setTrackMuted(projectPath, newTrack.id, false);
+    const tracksAfterUnmute = await listTracks(projectPath, 'mock-proj-1');
+    const unmutedTrack = tracksAfterUnmute.find((t) => t.id === newTrack.id);
+    assert.ok(unmutedTrack);
+    assert.strictEqual(unmutedTrack.is_muted, false);
   });
 
   test('scene lifecycle: create -> edit -> move -> delete', async () => {

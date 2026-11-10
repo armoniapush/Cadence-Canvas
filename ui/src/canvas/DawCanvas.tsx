@@ -3,6 +3,7 @@ import type { Track, Scene, ReadingAnchor } from '../types';
 import {
   DawCanvasRenderer,
   getSceneRect,
+  getTrackMuteButtonRect,
   RULER_HEIGHT,
   TRACK_HEADER_WIDTH,
   TRACK_HEIGHT,
@@ -22,6 +23,7 @@ export interface DawCanvasProps {
   onMoveScene: (scene: Scene, newTrackId: string, newTStart: number) => void;
   onCreateScene: (trackId: string, tStart: number) => void;
   onDeleteScene?: (sceneId: string) => void;
+  onToggleMuteTrack?: (trackId: string) => void;
 }
 
 export function DawCanvas({
@@ -33,6 +35,7 @@ export function DawCanvas({
   onMoveScene,
   onCreateScene,
   onDeleteScene,
+  onToggleMuteTrack,
 }: DawCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -120,6 +123,17 @@ export function DawCanvas({
     if (!rect) return;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
+    // Check mute button click in track headers
+    if (mx <= TRACK_HEADER_WIDTH && my > RULER_HEIGHT && onToggleMuteTrack && e.button === 0) {
+      for (let i = 0; i < tracks.length; i++) {
+        const btn = getTrackMuteButtonRect(i, viewport);
+        if (mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h) {
+          onToggleMuteTrack(tracks[i].id);
+          return;
+        }
+      }
+    }
+
     let hitScene: Scene | null = null;
     for (let i = scenes.length - 1; i >= 0; i--) {
       const s = scenes[i], r = getSceneRect(s, tracks, viewport);
@@ -135,7 +149,7 @@ export function DawCanvas({
       panRef.current = { mx, my, px: viewport.panX, py: viewport.panY };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
     }
-  }, [scenes, tracks, viewport, onSelectScene]);
+  }, [scenes, tracks, viewport, onSelectScene, onToggleMuteTrack]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();

@@ -35,6 +35,12 @@ pub fn create_track(
 }
 
 #[tauri::command]
+pub fn set_track_muted(path: String, id: String, is_muted: bool) -> Result<(), String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    Track::set_muted(db.conn(), &id, is_muted).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn list_scenes(path: String, project_id: String) -> Result<Vec<Scene>, String> {
     let db = Database::open(&path).map_err(|e| e.to_string())?;
     Scene::list_by_project(db.conn(), &project_id).map_err(|e| e.to_string())
@@ -200,6 +206,16 @@ mod tests {
 
         let tracks = list_tracks(db_path.clone(), project.id.clone()).expect("list_tracks");
         assert_eq!(tracks.len(), 1);
+        assert!(!tracks[0].is_muted);
+
+        // 2b. set_track_muted
+        set_track_muted(db_path.clone(), track.id.clone(), true).expect("set_track_muted true");
+        let tracks_muted = list_tracks(db_path.clone(), project.id.clone()).expect("list_tracks after mute");
+        assert!(tracks_muted[0].is_muted);
+
+        set_track_muted(db_path.clone(), track.id.clone(), false).expect("set_track_muted false");
+        let tracks_unmuted = list_tracks(db_path.clone(), project.id.clone()).expect("list_tracks after unmute");
+        assert!(!tracks_unmuted[0].is_muted);
 
         // 3. create_scene & list_scenes
         let scene = create_scene(

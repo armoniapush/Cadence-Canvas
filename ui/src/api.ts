@@ -225,6 +225,20 @@ export async function createTrack(
   return newTrack;
 }
 
+export async function setTrackMuted(
+  projectPath: string,
+  trackId: string,
+  isMuted: boolean,
+): Promise<void> {
+  if (isTauri()) {
+    return invoke<void>('set_track_muted', { path: projectPath, id: trackId, isMuted });
+  }
+  const track = mockState.tracks.find((t) => t.id === trackId);
+  if (track) {
+    track.is_muted = isMuted;
+  }
+}
+
 export async function listScenes(path: string, projectId: string): Promise<Scene[]> {
   if (isTauri()) {
     return invoke<Scene[]>('list_scenes', { path, projectId });
