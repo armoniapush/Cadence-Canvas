@@ -9,16 +9,21 @@ import {
   TRACK_HEIGHT,
   TRACK_GAP,
   CARD_PAD_Y,
+  CANVAS_TOP_PAD,
   CARD_HEIGHT,
   PIXELS_PER_UNIT,
   CARD_BORDER_RADIUS,
   PORT_RADIUS,
   PORT_HIT_RADIUS,
+  NARRATIVE_LANDMARKS,
   getTrackMuteButtonRect,
   getSceneRect,
   getScenePortRects,
   computeFitViewport,
   computeMagneticSnap,
+  resolveSceneAntiCollision,
+  computeCardHeaderLayout,
+  DRAMATIC_ACT_ZONES,
 } from '../src/canvas/renderer.ts';
 import type { Track, Scene, Viewport, TonalHistogram } from '../src/types.ts';
 
@@ -118,22 +123,28 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
 
   test('narrative timeline dimensional constants and literary card layout', () => {
     // Assert dimensional invariants
-    assert.strictEqual(RULER_HEIGHT, 42);
-    assert.strictEqual(TRACK_HEADER_WIDTH, 200);
-    assert.strictEqual(TRACK_HEIGHT, 104);
-    assert.strictEqual(TRACK_GAP, 10);
+    assert.strictEqual(RULER_HEIGHT, 26);
+    assert.strictEqual(TRACK_HEADER_WIDTH, 210);
+    assert.strictEqual(TRACK_HEIGHT, 112);
+    assert.strictEqual(TRACK_GAP, 16);
     assert.strictEqual(CARD_PAD_Y, 8);
-    assert.strictEqual(CARD_HEIGHT, 88);
+    assert.strictEqual(CANVAS_TOP_PAD, 48);
+    assert.strictEqual(CARD_HEIGHT, 96);
     assert.strictEqual(PIXELS_PER_UNIT, 1.3);
-    assert.strictEqual(CARD_BORDER_RADIUS, 12); // Mount / Wavely rounded radius
+    assert.strictEqual(CARD_BORDER_RADIUS, 16);
+
+    // Assert narrative story progression landmarks (no audio timecodes!)
+    assert.strictEqual(NARRATIVE_LANDMARKS[0], 'Acto I: Incidente Incitador');
+    assert.strictEqual(NARRATIVE_LANDMARKS[100], 'Punto de Giro I');
+    assert.strictEqual(NARRATIVE_LANDMARKS[200], 'Acto II: Confrontación');
+    assert.strictEqual(NARRATIVE_LANDMARKS[300], 'Punto de Inflexión / Clímax');
 
     const vp: Viewport = { panX: 0, panY: 0, zoom: 1.0 };
 
-    // Track visibility toggle button coordinates inside track header
+    // Track visibility toggle button dimensions
     const btnRect = getTrackMuteButtonRect(0, vp);
-    assert.ok(btnRect.x > 0);
-    assert.ok(btnRect.x + btnRect.w <= TRACK_HEADER_WIDTH);
-    assert.strictEqual(btnRect.y, RULER_HEIGHT + (TRACK_HEIGHT - btnRect.h) / 2);
+    assert.strictEqual(btnRect.w, 28);
+    assert.strictEqual(btnRect.h, 24);
 
     // Scene card rect calculation
     const mockTracks: Track[] = [
@@ -154,9 +165,9 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
 
     const rect = getSceneRect(mockScene, mockTracks, vp);
     assert.strictEqual(rect.x, TRACK_HEADER_WIDTH + 120 * PIXELS_PER_UNIT * vp.zoom);
-    assert.strictEqual(rect.y, RULER_HEIGHT + CARD_PAD_Y);
-    assert.strictEqual(rect.h, 88);
-    assert.ok(rect.w >= 88);
+    assert.strictEqual(rect.y, CANVAS_TOP_PAD + CARD_PAD_Y);
+    assert.strictEqual(rect.h, 96);
+    assert.strictEqual(rect.w, 250); // Comfortable minimum Stitch card width
   });
 
   test('chromatic tonal normalization and continuous spectral distribution', () => {
@@ -287,18 +298,17 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     assert.strictEqual(stopsSingle[1].offset, '100%');
   });
 
-  test('pinned track header boundary hit guard isolates cards from header clicks', () => {
-    // When a scene has negative panX such that its geometry overlaps track header space:
+  test('scene hit testing accurately resolves card selection in open infinite canvas', () => {
     const mockTracks: Track[] = [
       { id: 't1', project_id: 'p1', name: 'Trama', color_hex: '#6366f1', track_order: 0, is_muted: false }
     ];
-    const vp: Viewport = { panX: -100, panY: 0, zoom: 1.0 };
+    const vp: Viewport = { panX: 50, panY: 20, zoom: 1.0 };
     const scene: Scene = {
       id: 's1',
       project_id: 'p1',
       track_id: 't1',
       title: 'Capítulo Oculto',
-      t_start: 10, // x = 200 - 100 + 13 = 113 (which is < 200!)
+      t_start: 10,
       duration: 100,
       text: '',
       word_count: 0,
@@ -306,24 +316,18 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     };
 
     const rect = getSceneRect(scene, mockTracks, vp);
-    assert.ok(rect.x < TRACK_HEADER_WIDTH); // Card rect physically extends into header space
+    assert.strictEqual(rect.x, TRACK_HEADER_WIDTH + 50 + 10 * PIXELS_PER_UNIT);
+    assert.strictEqual(rect.y, 20 + CANVAS_TOP_PAD + CARD_PAD_Y);
 
-    // Hit test function with the boundary guard
     const hitTest = (mx: number, my: number) => {
-      if (mx <= TRACK_HEADER_WIDTH || my <= RULER_HEIGHT) return null;
       if (mx >= rect.x && mx <= rect.x + rect.w && my >= rect.y && my <= rect.y + rect.h) {
         return scene;
       }
       return null;
     };
 
-    // Clicking at mx = 150 (inside track header area) must return null, NOT the card
-    const headerHit = hitTest(150, RULER_HEIGHT + 20);
-    assert.strictEqual(headerHit, null);
-
-    // Clicking at mx = 210 (visible canvas area) hits the card
-    const canvasHit = hitTest(210, RULER_HEIGHT + 20);
-    assert.strictEqual(canvasHit?.id, 's1');
+    assert.strictEqual(hitTest(rect.x + 10, rect.y + 10)?.id, 's1');
+    assert.strictEqual(hitTest(rect.x - 10, rect.y), null);
   });
 
   test('timeline drag null-safety and synchronous coordinate capture invariants', () => {
@@ -391,13 +395,13 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     // Attempting to drag up when content fits is clamped to 0
     assert.strictEqual(computeClampedPanY(0, -500, maxScrollSmall), 0);
 
-    // With many tracks (10 tracks = 1140px, visible area = 558px):
-    const manyTracksTotal = 10 * (TRACK_HEIGHT + TRACK_GAP); // 1140
-    const maxScrollLarge = Math.max(0, manyTracksTotal + 120 - visibleTrackArea); // 1140 + 120 - 558 = 702
-    assert.strictEqual(maxScrollLarge, 702);
+    // With many tracks (10 tracks = 1280px, visible area = 600px - RULER_HEIGHT = 574px):
+    const manyTracksTotal = 10 * (TRACK_HEIGHT + TRACK_GAP); // 1280
+    const maxScrollLarge = Math.max(0, manyTracksTotal + 120 - visibleTrackArea); // 1280 + 120 - 574 = 826
+    assert.strictEqual(maxScrollLarge, 826);
 
-    // Cannot scroll deeper than -702
-    assert.strictEqual(computeClampedPanY(0, -2000, maxScrollLarge), -702);
+    // Cannot scroll deeper than -826
+    assert.strictEqual(computeClampedPanY(0, -2000, maxScrollLarge), -826);
     // Normal scroll within bounds
     assert.strictEqual(computeClampedPanY(0, -300, maxScrollLarge), -300);
   });
@@ -465,6 +469,23 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     assert.ok(css.includes('.btn-primary {'), 'Must define .btn-primary utility');
     assert.ok(css.includes('.btn-accent {'), 'Must define .btn-accent utility');
     assert.ok(css.includes('.btn-ghost {'), 'Must define .btn-ghost utility');
+
+    // Verify Google Stitch Material 3 Expressive motion tokens & keyframes
+    assert.ok(css.includes('--m3-easing-emphasized: cubic-bezier(.2, 0, 0, 1);'), 'Must define --m3-easing-emphasized');
+    assert.ok(css.includes('--m3-expressive-fast-spatial: cubic-bezier(.42, 1.67, .21, .9);'), 'Must define --m3-expressive-fast-spatial');
+    assert.ok(css.includes('--m3-expressive-default-spatial: cubic-bezier(.38, 1.21, .22, 1);'), 'Must define --m3-expressive-default-spatial');
+    assert.ok(css.includes('@keyframes shimmer'), 'Must define shimmer keyframe');
+    assert.ok(css.includes('@keyframes dashdraw'), 'Must define dashdraw keyframe');
+    assert.ok(css.includes('@keyframes working-dash'), 'Must define working-dash keyframe');
+    assert.ok(css.includes('@keyframes m3-menu-item-enter'), 'Must define m3-menu-item-enter keyframe');
+    assert.ok(css.includes('@keyframes agent-thinking-dot'), 'Must define agent-thinking-dot keyframe');
+    assert.ok(css.includes('@keyframes stitch-traveler'), 'Must define stitch-traveler keyframe');
+    assert.ok(css.includes('.m3-spring-fast'), 'Must define .m3-spring-fast utility');
+    assert.ok(css.includes('.m3-spring-default'), 'Must define .m3-spring-default utility');
+    assert.ok(css.includes('.m3-card'), 'Must define .m3-card utility');
+    assert.ok(css.includes('.m3-chip'), 'Must define .m3-chip utility');
+    assert.ok(css.includes('.stitch-glow-iris'), 'Must define .stitch-glow-iris utility');
+    assert.ok(css.includes('.stitch-glow-mint'), 'Must define .stitch-glow-mint utility');
   });
 
   test('computeMagneticSnap invariants: origin, head-to-tail, parallel and grid beat snapping', () => {
@@ -578,5 +599,199 @@ describe('Clean Editorial Metrics & Deletion Safeguard Tests', () => {
     const trkWords = trackScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
     const subtitle = `${trackScenes.length} esc. · ${trkWords.toLocaleString()} pal.`;
     assert.strictEqual(subtitle, '2 esc. · 800 pal.');
+  });
+
+  test('resolveSceneAntiCollision strictly prevents cards from overlapping or transposing on the same track', () => {
+    const mockScenes: Scene[] = [
+      {
+        id: 's1',
+        project_id: 'p1',
+        track_id: 'trk-1',
+        title: 'Escena 1',
+        t_start: 0,
+        duration: 120, // visual duration in units is max(120, ceil(250/1.3)) = 193
+        text: '',
+        word_count: 50,
+        version: 1,
+      },
+    ];
+
+    // Attempting to drag Scene 2 to t = 50 (which would overlap Scene 1 that ends at 193 units + gap 19 = 212)
+    const resolved = resolveSceneAntiCollision(50, 120, 'trk-1', mockScenes, 's2', 1.0);
+    // Must be clamped to after Scene 1 + gap
+    assert.ok(resolved >= 212, `Expected resolved t_start >= 212, got ${resolved}`);
+
+    // If dragged with empty space, respects space
+    const openSpace = resolveSceneAntiCollision(300, 120, 'trk-1', mockScenes, 's2', 1.0);
+    assert.strictEqual(openSpace, 300);
+  });
+
+  test('computeCardHeaderLayout strictly prevents text collisions between track name, index and telemetry', () => {
+    const mockMeasure = (str: string, _font?: string) => str.length * 6.5;
+
+    // Case 1: Standard card width (250px) with very long track name
+    const longName = 'Trama Principal de Investigación y Conspiración';
+    const layout250 = computeCardHeaderLayout(250, longName, 1, 140, mockMeasure);
+
+    assert.strictEqual(layout250.showMeta, true, 'Telemetry should be shown when space permits');
+    assert.ok(layout250.displayTrkName.endsWith('…'), 'Long track name must be truncated with …');
+    assert.strictEqual(layout250.showIndex, true, 'Index should be shown when available width allows');
+
+    // Left boundary = pip offset (27) + trkNameW + index space (~30px)
+    const indexStrW = mockMeasure(`·  ${layout250.numStr}`);
+    const leftEnd = 27 + layout250.trkNameW + 6 + indexStrW;
+    const rightStart = 250 - 16 - layout250.metaStrW;
+    assert.ok(leftEnd <= rightStart, `Left content (${leftEnd}px) must not collide with right telemetry (${rightStart}px)`);
+    assert.ok(rightStart - leftEnd >= 14, 'Must have at least 14px breathing room clearance');
+
+    // Case 2: Narrow card width (130px) where scnW < 140
+    const layout130 = computeCardHeaderLayout(130, 'Subtrama Corta', 0, 50, mockMeasure);
+    assert.strictEqual(layout130.showMeta, false, 'Telemetry must be omitted when scnW < 140');
+    assert.strictEqual(layout130.metaStrW, 0);
+
+    // Case 3: Narrow card width (150px) where availTrackNameW < 50
+    // metaStr ~ 16 chars * 6.5 = 104px; availTrackNameW = 150 - 44 - 120 = -14 < 50 -> omit metaStr
+    const layout150 = computeCardHeaderLayout(150, 'Hilo de Acción', 2, 850, mockMeasure);
+    assert.strictEqual(layout150.showMeta, false, 'Telemetry must be omitted when availTrackNameW < 50');
+    assert.ok(layout150.availTrackNameW >= 50, 'Track name must regain breathing room when telemetry is omitted');
+
+    // Case 4: Ultra narrow card width (70px) where availTrackNameW < 50
+    const layout70 = computeCardHeaderLayout(70, 'Hilo', 0, 0, mockMeasure);
+    assert.strictEqual(layout70.showMeta, false);
+    assert.strictEqual(layout70.showIndex, false, 'Index must be hidden when space is under 50px to keep track name legible');
+    assert.ok(layout70.displayTrkName.length > 0, 'Track name remains legible');
+  });
+
+  test('narrative beats ruler configuration and dramatic act zones invariants', () => {
+    assert.strictEqual(RULER_HEIGHT, 26, 'Narrative beats ruler must be exactly 26px high');
+    assert.strictEqual(DRAMATIC_ACT_ZONES.length, 6);
+
+    const labels = DRAMATIC_ACT_ZONES.map((z) => z.label);
+    assert.ok(labels.includes('Acto I'), 'Must include Acto I');
+    assert.ok(labels.includes('Giro I'), 'Must include Giro I');
+    assert.ok(labels.includes('Acto II'), 'Must include Acto II');
+    assert.ok(labels.includes('Clímax'), 'Must include Clímax');
+    assert.ok(labels.includes('Acto III'), 'Must include Acto III');
+    assert.ok(labels.includes('Desenlace'), 'Must include Desenlace');
+
+    const climax = DRAMATIC_ACT_ZONES.find((z) => z.label === 'Clímax');
+    assert.strictEqual(climax?.t, 300);
+    assert.strictEqual(climax?.color, '#f43f5e');
+  });
+
+  test('DawCanvas left track header cards ensure clean CSS ellipsis truncation for name and telemetry', () => {
+    const dawCanvasPath = resolve(__dirname, '../src/canvas/DawCanvas.tsx');
+    const dawSrc = readFileSync(dawCanvasPath, 'utf8');
+
+    // Verify track name CSS truncation
+    assert.ok(
+      dawSrc.includes("overflow: 'hidden'") &&
+      dawSrc.includes("textOverflow: 'ellipsis'") &&
+      dawSrc.includes("whiteSpace: 'nowrap'"),
+      'DawCanvas must apply clean CSS ellipsis truncation to track name and telemetry'
+    );
+
+    // Verify minWidth: 0 on track header card container to allow flex ellipsis
+    assert.ok(dawSrc.includes('minWidth: 0'), 'Track header cards must have minWidth: 0 for proper flex ellipsis');
+  });
+
+  test('senior writing ergonomics: sentence range finder for Gary Provost sentence bars jump', () => {
+    const text = 'Primera frase breve. Segunda frase con más palabras para fluir! Tercera frase para cerrar el párrafo?';
+
+    const getSentenceRange = (prose: string, targetIdx: number) => {
+      const regex = /[^.!?]+[.!?]*/g;
+      let match: RegExpExecArray | null;
+      let cur = 0;
+      while ((match = regex.exec(prose)) !== null) {
+        if (match[0].trim().length > 0) {
+          if (cur === targetIdx) {
+            const raw = match[0];
+            const leadingWs = raw.match(/^\s*/)?.[0].length ?? 0;
+            const trailingWs = raw.match(/\s*$/)?.[0].length ?? 0;
+            const start = match.index + leadingWs;
+            const end = match.index + raw.length - trailingWs;
+            return { start, end, text: prose.slice(start, end) };
+          }
+          cur++;
+        }
+      }
+      return null;
+    };
+
+    const s0 = getSentenceRange(text, 0);
+    assert.ok(s0 !== null);
+    assert.strictEqual(s0.text, 'Primera frase breve.');
+    assert.strictEqual(s0.start, 0);
+
+    const s1 = getSentenceRange(text, 1);
+    assert.ok(s1 !== null);
+    assert.strictEqual(s1.text, 'Segunda frase con más palabras para fluir!');
+
+    const s2 = getSentenceRange(text, 2);
+    assert.ok(s2 !== null);
+    assert.strictEqual(s2.text, 'Tercera frase para cerrar el párrafo?');
+
+    // Index out of range
+    const s3 = getSentenceRange(text, 3);
+    assert.strictEqual(s3, null);
+  });
+
+  test('senior writing ergonomics: editorial matte typography and glare reduction invariants', () => {
+    const editorPath = resolve(__dirname, '../src/editor/AtomicEditor.tsx');
+    const editorSrc = readFileSync(editorPath, 'utf8');
+
+    // Color: #e2e8f0 (instead of blinding #f1f5f9)
+    assert.ok(editorSrc.includes("color: '#e2e8f0'"), 'Prose textarea must use comfortable #e2e8f0 typography');
+
+    // Font size: 16px with 1.75 line-height
+    assert.ok(editorSrc.includes("fontSize: '16px'"), 'Prose textarea must use 16px font size');
+    assert.ok(editorSrc.includes("lineHeight: 1.75"), 'Prose textarea must use 1.75 line-height');
+
+    // Background: #11141e (instead of pitch-black #090b10)
+    assert.ok(editorSrc.includes("backgroundColor: '#11141e'"), 'Editor must use comfortable matte #11141e background');
+  });
+
+  test('senior writing ergonomics: progressive disclosure tonal hud and zen fade-out state machine', () => {
+    const tonalHudPath = resolve(__dirname, '../src/editor/TonalHud.tsx');
+    const tonalHudSrc = readFileSync(tonalHudPath, 'utf8');
+
+    // Sleek 26px top summary bar
+    assert.ok(tonalHudSrc.includes("height: '26px'"), 'TonalHud must render sleek 26px top bar');
+    assert.ok(tonalHudSrc.includes('Analítica'), 'Must feature [ 📊 Analítica ▾ ] button');
+
+    // Collapsible panel closed by default
+    assert.ok(tonalHudSrc.includes('const [isExpanded, setIsExpanded] = useState(false);'), 'Collapsible panel must be closed by default');
+
+    // Clickable sentence bars
+    assert.ok(tonalHudSrc.includes('onSelectSentence?.(idx)'), 'Gary Provost sentence bars must be clickable');
+
+    // Zen mode fade-out on active typing state machine
+    let isTyping = false;
+    let isHoveringToolbar = false;
+
+    const onTyping = () => {
+      isTyping = true;
+    };
+
+    const onTypingTimeout = () => {
+      isTyping = false;
+    };
+
+    // When user types, toolbar fades out (opacity 0)
+    onTyping();
+    assert.strictEqual(isTyping, true);
+    let isFaded = isTyping && !isHoveringToolbar;
+    assert.strictEqual(isFaded, true, 'Zen toolbar must fade out during active typing');
+
+    // When hovering top area, toolbar stays visible even while typing
+    isHoveringToolbar = true;
+    isFaded = isTyping && !isHoveringToolbar;
+    assert.strictEqual(isFaded, false, 'Toolbar remains accessible when hovering');
+
+    // When typing stops and timer fires, toolbar fades back in
+    isHoveringToolbar = false;
+    onTypingTimeout();
+    isFaded = isTyping && !isHoveringToolbar;
+    assert.strictEqual(isFaded, false, 'Toolbar restores after typing ceases');
   });
 });

@@ -1,22 +1,211 @@
 import type { Track, Scene, ReadingAnchor } from '../types';
 
 export const FONT_SANS = '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-export const FONT_MONO = '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace';
+export const FONT_MONO = FONT_SANS; // Unified with senior sans: quita fuentes de código mono
 export const FONT_EDITORIAL = '"Newsreader", Georgia, Cambria, serif';
 
-export const RULER_HEIGHT = 42;
-export const TRACK_HEADER_WIDTH = 200;
-export const TRACK_HEIGHT = 104;
-export const TRACK_GAP = 10;
+export const RULER_HEIGHT = 26;
+export const TRACK_HEADER_WIDTH = 210;
+export const TRACK_HEIGHT = 112;
+export const TRACK_GAP = 16;
 export const CARD_PAD_Y = 8;
-export const CARD_HEIGHT = TRACK_HEIGHT - CARD_PAD_Y * 2; // 88
+export const CANVAS_TOP_PAD = 48;
+export const CARD_HEIGHT = TRACK_HEIGHT - CARD_PAD_Y * 2; // 96
 export const PIXELS_PER_UNIT = 1.3;
 export const MUTE_BTN_W = 28;
 export const MUTE_BTN_H = 24;
-export const CARD_BORDER_RADIUS = 12;
+export const CARD_BORDER_RADIUS = 16;
 export const PORT_RADIUS = 4;
 export const PORT_HOVER_RADIUS = 6;
 export const PORT_HIT_RADIUS = 14;
+export const CARD_MIN_WIDTH = 250;
+export const CARD_MIN_GAP_PX = 24;
+
+export function getEffectiveSceneDuration(duration: number, zoom: number): number {
+  return Math.max(duration, Math.ceil(CARD_MIN_WIDTH / (PIXELS_PER_UNIT * zoom)));
+}
+
+export function getEffectiveGapUnits(zoom: number): number {
+  return Math.ceil(CARD_MIN_GAP_PX / (PIXELS_PER_UNIT * zoom));
+}
+
+/**
+ * Enforces spatial anti-collision on the target track.
+ * Cards on the same narrative track are prevented from overlapping ("transponerse").
+ */
+export function resolveSceneAntiCollision(
+  desiredTStart: number,
+  duration: number,
+  targetTrackId: string,
+  scenes: Scene[],
+  activeSceneId: string,
+  zoom: number
+): number {
+  const activeUnits = getEffectiveSceneDuration(duration, zoom);
+  const gapUnits = getEffectiveGapUnits(zoom);
+
+  // Other scenes on the target track sorted by t_start
+  const trackScenes = scenes
+    .filter((s) => s.id !== activeSceneId && s.track_id === targetTrackId)
+    .sort((a, b) => a.t_start - b.t_start);
+
+  if (trackScenes.length === 0) {
+    return Math.max(0, desiredTStart);
+  }
+
+  // Find slot between scenes
+  const first = trackScenes[0];
+  const firstStart = first.t_start;
+  const firstEnd = first.t_start + getEffectiveSceneDuration(first.duration, zoom);
+
+  // If desired is to the left of the midpoint of the first scene
+  if (desiredTStart + activeUnits / 2 < (firstStart + firstEnd) / 2) {
+    if (firstStart >= activeUnits + gapUnits) {
+      return Math.max(0, Math.min(desiredTStart, firstStart - activeUnits - gapUnits));
+    } else {
+      // Allow dragging all the way to the left boundary of the track (t >= 0)
+      return Math.max(0, desiredTStart);
+    }
+  }
+
+  // Check intermediate slots
+  for (let i = 0; i < trackScenes.length - 1; i++) {
+    const cur = trackScenes[i];
+    const next = trackScenes[i + 1];
+    const curEnd = cur.t_start + getEffectiveSceneDuration(cur.duration, zoom);
+    const nextStart = next.t_start;
+    const nextEnd = next.t_start + getEffectiveSceneDuration(next.duration, zoom);
+
+    const midCur = (cur.t_start + curEnd) / 2;
+    const midNext = (nextStart + nextEnd) / 2;
+
+    if (desiredTStart >= midCur && desiredTStart < midNext) {
+      const minT = curEnd + gapUnits;
+      const maxT = nextStart - activeUnits - gapUnits;
+      if (minT <= maxT) {
+        return Math.max(minT, Math.min(desiredTStart, maxT));
+      } else {
+        const distToMin = Math.abs(desiredTStart - minT);
+        const distToNextEnd = Math.abs(desiredTStart - (nextEnd + gapUnits));
+        return distToMin <= distToNextEnd ? minT : nextEnd + gapUnits;
+      }
+    }
+  }
+
+  // After the last scene
+  const last = trackScenes[trackScenes.length - 1];
+  const lastEnd = last.t_start + getEffectiveSceneDuration(last.duration, zoom);
+  return Math.max(lastEnd + gapUnits, desiredTStart);
+}
+
+export const NARRATIVE_LANDMARKS: Record<number, string> = {
+  0: 'Acto I: Incidente Incitador',
+  100: 'Punto de Giro I',
+  200: 'Acto II: Confrontación',
+  300: 'Punto de Inflexión / Clímax',
+  400: 'Acto III: Resolución',
+  500: 'Desenlace',
+};
+
+export const NARRATIVE_LANDMARKS_SHORT: Record<number, string> = {
+  0: 'Acto I',
+  100: 'Giro I',
+  200: 'Acto II',
+  300: 'Clímax',
+  400: 'Acto III',
+  500: 'Fin',
+};
+
+export interface DramaticActZone {
+  t: number;
+  label: string;
+  color: string;
+}
+
+export const DRAMATIC_ACT_ZONES: DramaticActZone[] = [
+  { t: 0, label: 'Acto I', color: '#818cf8' },
+  { t: 100, label: 'Giro I', color: '#38bdf8' },
+  { t: 200, label: 'Acto II', color: '#a78bfa' },
+  { t: 300, label: 'Clímax', color: '#f43f5e' },
+  { t: 400, label: 'Acto III', color: '#34d399' },
+  { t: 500, label: 'Desenlace', color: '#94a3b8' },
+];
+
+export interface CardHeaderLayout {
+  showMeta: boolean;
+  metaStr: string;
+  metaStrW: number;
+  showIndex: boolean;
+  numStr: string;
+  displayTitle: string;
+  titleW: number;
+  availTitleW: number;
+  displayTrkName: string;
+  trkNameW: number;
+  availTrackNameW: number;
+}
+
+/**
+ * Computes scene card header layout, preventing text collision between
+ * scene title, index, and reading telemetry under tight spatial widths.
+ */
+export function computeCardHeaderLayout(
+  scnW: number,
+  titleOrTrkName: string,
+  sceneIdx: number,
+  words: number,
+  measureText: (text: string, font: string) => number
+): CardHeaderLayout {
+  const numStr = `#${String(sceneIdx + 1).padStart(2, '0')}`;
+  const readingMins = Math.max(1, Math.ceil(words / 240));
+  const readingTimeStr = readingMins === 1 ? '~1 min' : `~${readingMins} min`;
+  const metaStr = `${words} pal · ${readingTimeStr}`;
+
+  const fontMeta = '500 10.5px ' + FONT_SANS;
+  const fontTitle = '600 11.5px ' + FONT_SANS;
+
+  let metaStrW = scnW >= 140 ? measureText(metaStr, fontMeta) : 0;
+  let availTitleW = Math.max(30, scnW - 44 - (metaStrW > 0 ? metaStrW + 16 : 0));
+
+  let showMeta = metaStrW > 0;
+  if (availTitleW < 50 && metaStrW > 0) {
+    showMeta = false;
+    metaStrW = 0;
+    availTitleW = Math.max(30, scnW - 44);
+  }
+
+  const indexStr = `·  ${numStr}`;
+  const indexW = measureText(indexStr, fontMeta);
+  let showIndex = availTitleW >= 50;
+  if (showIndex && availTitleW - indexW - 6 < 30) {
+    showIndex = false;
+  }
+
+  const maxTitleW = showIndex ? Math.max(20, availTitleW - indexW - 6) : availTitleW;
+
+  let displayTitle = titleOrTrkName;
+  if (measureText(displayTitle, fontTitle) > maxTitleW) {
+    while (displayTitle.length > 1 && measureText(displayTitle + '…', fontTitle) > maxTitleW) {
+      displayTitle = displayTitle.slice(0, -1);
+    }
+    displayTitle += '…';
+  }
+  const titleW = measureText(displayTitle, fontTitle);
+
+  return {
+    showMeta,
+    metaStr,
+    metaStrW,
+    showIndex,
+    numStr,
+    displayTitle,
+    titleW,
+    availTitleW,
+    displayTrkName: displayTitle,
+    trkNameW: titleW,
+    availTrackNameW: availTitleW,
+  };
+}
 
 export interface SnapResult {
   snappedTStart: number;
@@ -122,7 +311,7 @@ export function computeFitViewport(
 }
 
 export function getTrackMuteButtonRect(trackIndex: number, vp: Viewport) {
-  const ly = RULER_HEIGHT + vp.panY + trackIndex * (TRACK_HEIGHT + TRACK_GAP);
+  const ly = CANVAS_TOP_PAD + vp.panY + trackIndex * (TRACK_HEIGHT + TRACK_GAP);
   return {
     x: TRACK_HEADER_WIDTH - 38,
     y: ly + (TRACK_HEIGHT - MUTE_BTN_H) / 2,
@@ -157,6 +346,8 @@ export interface CanvasRenderData {
   magnetGuideT?: number | null;
   connectingWire?: { fromSceneId: string; fromPort: 'in' | 'out'; toX: number; toY: number } | null;
   hoveredPort?: { sceneId: string; port: 'in' | 'out' } | null;
+  editingSceneId?: string | null;
+  showDramaticActs?: boolean;
 }
 
 export const hexToRgba = (hex: string, a: number): string => {
@@ -171,8 +362,8 @@ export function getSceneRect(s: Scene, tracks: Track[], vp: Viewport, drag?: Dra
   const idx = Math.max(0, tracks.findIndex((t) => t.id === trkId));
   return {
     x: TRACK_HEADER_WIDTH + vp.panX + tStart * PIXELS_PER_UNIT * vp.zoom,
-    y: RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y,
-    w: Math.max(120, s.duration * PIXELS_PER_UNIT * vp.zoom),
+    y: vp.panY + CANVAS_TOP_PAD + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y,
+    w: Math.max(CARD_MIN_WIDTH, s.duration * PIXELS_PER_UNIT * vp.zoom),
     h: CARD_HEIGHT,
     idx,
     isD,
@@ -185,143 +376,125 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.save();
   ctx.scale(dpr, dpr);
 
-  // 1. Deep Atmospheric Slate Canvas & Grounded Modular Swimlanes (Fluxa / Imagion style)
-  ctx.fillStyle = '#0a0c12';
+  // 1. Base Canvas Void Background (Deep Pitch Obsidian)
+  ctx.fillStyle = '#040508';
   ctx.fillRect(0, 0, w, h);
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, RULER_HEIGHT, w, h - RULER_HEIGHT);
-  ctx.clip();
+  // 2. Google Stitch Multi-Stop Atmospheric Nebula Glows (Senior Ambient Bloom)
+  // Primary soft luminous indigo-violet aura centered on the canvas
+  const auraX = w * 0.46;
+  const auraY = h * 0.38;
+  const auraR = Math.max(w, h) * 0.72;
+  const auraGrad = ctx.createRadialGradient(auraX, auraY, 30, auraX, auraY, auraR);
+  auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.08)');
+  auraGrad.addColorStop(0.35, 'rgba(139, 92, 246, 0.04)');
+  auraGrad.addColorStop(0.7, 'rgba(14, 165, 233, 0.015)');
+  auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = auraGrad;
+  ctx.fillRect(0, 0, w, h);
 
-  // Render modular swimlane tracks with authentic depth and clear boundaries
-  tracks.forEach((trk, i) => {
-    const ly = RULER_HEIGHT + vp.panY + i * (TRACK_HEIGHT + TRACK_GAP);
-    const laneW = w - TRACK_HEADER_WIDTH;
+  // Secondary subtle cyan ambient highlight (bottom-right depth)
+  const cyanX = w * 0.75;
+  const cyanY = h * 0.65;
+  const cyanR = Math.max(w, h) * 0.45;
+  const cyanGrad = ctx.createRadialGradient(cyanX, cyanY, 20, cyanX, cyanY, cyanR);
+  cyanGrad.addColorStop(0, 'rgba(6, 182, 212, 0.045)');
+  cyanGrad.addColorStop(0.55, 'rgba(6, 182, 212, 0.01)');
+  cyanGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = cyanGrad;
+  ctx.fillRect(0, 0, w, h);
 
-    // Track Lane Bed: Solid slate-obsidian with alternating luminance for tangible channel separation
-    ctx.fillStyle = i % 2 === 0 ? '#121520' : '#151926';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, TRACK_HEIGHT);
+  // 3. Subtle Infinite Dot Grid (Stitch / Material 3 node grid)
+  const dotStep = 24;
+  const startDotX = Math.max(TRACK_HEADER_WIDTH, (((vp.panX % dotStep) + dotStep) % dotStep) + TRACK_HEADER_WIDTH);
+  const startDotY = (((vp.panY % dotStep) + dotStep) % dotStep) || 0;
 
-    // Subtle vertical surface gradient (matte depth)
-    const laneGrad = ctx.createLinearGradient(TRACK_HEADER_WIDTH, ly, TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT);
-    laneGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
-    laneGrad.addColorStop(1, 'rgba(0, 0, 0, 0.25)');
-    ctx.fillStyle = laneGrad;
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, TRACK_HEIGHT);
-
-    // Top hairline lane boundary
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, laneW, 1);
-
-    // Bottom hairline lane boundary
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 1, laneW, 1);
-
-    // Lane Left Accent Notch (connecting visually with the track header)
-    ctx.save();
-    ctx.fillStyle = trk.color_hex || '#4361ee';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(TRACK_HEADER_WIDTH + 8, ly + 14, 4, TRACK_HEIGHT - 28, 2);
-    else ctx.fillRect(TRACK_HEADER_WIDTH + 8, ly + 14, 4, TRACK_HEIGHT - 28);
-    ctx.fill();
-    ctx.restore();
-
-    // Subtle horizontal centerline track guide
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT / 2, laneW, 1);
-  });
-
-  // 2. High-Performance Batched Wavely-Style Dot-Matrix Grid Background
-  const step = vp.zoom > 1.4 ? 25 : vp.zoom > 0.7 ? 50 : vp.zoom > 0.35 ? 100 : 250;
-  const stT = Math.max(0, Math.floor(-vp.panX / (PIXELS_PER_UNIT * vp.zoom * step)) * step);
-  const endT = Math.ceil((w - TRACK_HEADER_WIDTH - vp.panX) / (PIXELS_PER_UNIT * vp.zoom * step)) * step;
-
-  // Draw subtle rhythmic vertical guidelines
-  ctx.lineWidth = 1;
-  for (let t = stT; t <= endT; t += step) {
-    const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
-    if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
-    const isMajor = t % (step * 4) === 0;
-    ctx.strokeStyle = isMajor ? 'rgba(255, 255, 255, 0.06)' : 'rgba(255, 255, 255, 0.025)';
-    ctx.beginPath();
-    ctx.moveTo(gx, RULER_HEIGHT);
-    ctx.lineTo(gx, h);
-    ctx.stroke();
-  }
-
-  // Batched dot matrix points across the full visible canvas with crisp tactile contrast
-  const dotStepY = 26;
-  const startY = RULER_HEIGHT + ((((vp.panY % dotStepY) + dotStepY) % dotStepY) || 0);
-
-  // Minor dots batch
-  ctx.beginPath();
-  for (let t = stT; t <= endT; t += step) {
-    const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
-    if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
-    const isMajor = t % (step * 4) === 0;
-    if (isMajor) continue;
-
-    for (let gy = startY; gy <= h; gy += dotStepY) {
-      ctx.moveTo(gx + 1, gy);
-      ctx.arc(gx, gy, 1, 0, Math.PI * 2);
-    }
-  }
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.09)';
-  ctx.fill();
-
-  // Major dots batch
-  ctx.beginPath();
-  for (let t = stT; t <= endT; t += step) {
-    const gx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
-    if (gx < TRACK_HEADER_WIDTH || gx > w) continue;
-    const isMajor = t % (step * 4) === 0;
-    if (!isMajor) continue;
-
-    for (let gy = startY; gy <= h; gy += dotStepY) {
-      ctx.moveTo(gx + 1.5, gy);
-      ctx.arc(gx, gy, 1.5, 0, Math.PI * 2);
-    }
-  }
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-  ctx.fill();
-
-  ctx.restore();
-
-  const trkMap = new Map(tracks.map((t) => [t.id, t]));
-  const scnMap = new Map(scenes.map((s) => [s.id, s]));
-
-  // 3. Organic Fluid Bézier Ribbons with Animated Glowing Energy Pulses (Hybrid Stream Design)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
   ctx.clip();
 
-  const ribbons = anchors.length > 0
+  ctx.beginPath();
+  for (let gx = startDotX; gx <= w; gx += dotStep) {
+    for (let gy = startDotY; gy <= h; gy += dotStep) {
+      ctx.moveTo(gx + 0.85, gy);
+      ctx.arc(gx, gy, 0.85, 0, Math.PI * 2);
+    }
+  }
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+  ctx.fill();
+  ctx.restore();
+
+  // 3.5. Subtle Track Lane Corridors (Horizontally aligned with Left Track Headers)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
+  ctx.clip();
+
+  tracks.forEach((trk, idx) => {
+    const ly = CANVAS_TOP_PAD + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
+    if (ly + TRACK_HEIGHT < 0 || ly > h) return;
+
+    // Subtle track corridor ambient tint
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.012)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, TRACK_HEIGHT);
+
+    // Track lane boundary separator lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.032)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(TRACK_HEADER_WIDTH, ly + 0.5);
+    ctx.lineTo(w, ly + 0.5);
+    ctx.moveTo(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 0.5);
+    ctx.lineTo(w, ly + TRACK_HEIGHT - 0.5);
+    ctx.stroke();
+
+    // Subtle track color entrance indicator
+    ctx.fillStyle = hexToRgba(trk.color_hex || '#6366f1', 0.25);
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + 1, 3, TRACK_HEIGHT - 2);
+  });
+  ctx.restore();
+
+  const trkMap = new Map(tracks.map((t) => [t.id, t]));
+  const scnMap = new Map(scenes.map((s) => [s.id, s]));
+
+  // 4. Organic Fluid Bézier Ribbons with Animated Glowing Energy Pulses (Beloved Ribbon Shape)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
+  ctx.clip();
+
+  const cables = anchors.length > 0
     ? anchors.map((a) => ({ src: scnMap.get(a.source_scene_id), dst: scnMap.get(a.target_scene_id), wt: a.weight || 1 }))
     : [...scenes].sort((a, b) => a.t_start - b.t_start).slice(0, -1).map((s, i) => ({ src: s, dst: scenes[i + 1], wt: 1 }));
 
-  ribbons.forEach(({ src, dst, wt = 1 }, cableIdx) => {
+  cables.forEach(({ src, dst, wt = 1 }, cableIdx) => {
     if (!src || !dst) return;
     const sR = getSceneRect(src, tracks, vp, dragState);
     const dR = getSceneRect(dst, tracks, vp, dragState);
+    // Out-socket of source
     const x1 = sR.x + sR.w;
     const y1 = sR.y + sR.h / 2;
+    // In-socket of destination
     const x2 = dR.x;
     const y2 = dR.y + dR.h / 2;
 
     const isConnectedToSel = selectedSceneId && (src.id === selectedSceneId || dst.id === selectedSceneId);
     const dx = x2 - x1;
-    // Buttery smooth sigmoid tangents: control distance scales proportionally to horizontal span
-    const dist = dx > 0 ? Math.max(18, Math.min(dx * 0.48, 85)) : Math.max(45, Math.abs(dx) * 0.45);
+    const dy = y2 - y1;
+    // Smooth sigmoid control point distance: curves gracefully across tracks
+    const dist = dx > 0
+      ? Math.max(25, Math.min(dx * 0.48, 100)) + Math.abs(dy) * 0.15
+      : Math.max(50, Math.abs(dx) * 0.45) + Math.abs(dy) * 0.2;
     const c1x = x1 + dist;
     const c2x = x2 - dist;
 
     const colSrc = trkMap.get(src.track_id)?.color_hex || '#6366f1';
     const colDst = trkMap.get(dst.track_id)?.color_hex || '#38bdf8';
 
-    const rh = Math.max(10, Math.min(20, 13 * wt));
+    const rh = Math.max(10, Math.min(18, 13 * wt));
 
-    // 1. Organic Fluid Ribbon Stream Body (The beloved ribbon shape)
+    // 1. Organic Fluid Ribbon Stream Body (Translucent filled band)
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x1, y1 - rh / 2);
@@ -331,45 +504,53 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ctx.closePath();
 
     const g = ctx.createLinearGradient(x1, y1, x2, y2);
-    const alphaBase = isConnectedToSel ? 0.36 : 0.20;
-    const alphaMid = isConnectedToSel ? 0.22 : 0.10;
+    const alphaBase = isConnectedToSel ? 0.40 : 0.24;
+    const alphaMid = isConnectedToSel ? 0.22 : 0.12;
     g.addColorStop(0, hexToRgba(colSrc, alphaBase));
-    g.addColorStop(0.5, hexToRgba(colSrc, alphaMid));
+    g.addColorStop(0.35, hexToRgba('#38bdf8', alphaMid)); // Radiant cyan bridge
+    g.addColorStop(0.70, hexToRgba('#a855f7', alphaMid)); // Electric violet bridge
     g.addColorStop(1, hexToRgba(colDst, alphaBase));
     ctx.fillStyle = g;
     ctx.fill();
 
     // Specular contour boundary edges on top and bottom of the ribbon
     const contourGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    contourGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.80 : 0.42));
-    contourGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.80 : 0.42));
+    contourGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.90 : 0.55));
+    contourGrad.addColorStop(0.5, isConnectedToSel ? 'rgba(56, 189, 248, 0.75)' : 'rgba(56, 189, 248, 0.45)');
+    contourGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.90 : 0.55));
     ctx.strokeStyle = contourGrad;
-    ctx.lineWidth = isConnectedToSel ? 1.5 : 1;
+    ctx.lineWidth = isConnectedToSel ? 1.6 : 1.15;
+
+    // Top edge curve
     ctx.beginPath();
     ctx.moveTo(x1, y1 - rh / 2);
     ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
     ctx.stroke();
 
+    // Bottom edge curve
     ctx.beginPath();
     ctx.moveTo(x1, y1 + rh / 2);
     ctx.bezierCurveTo(c1x, y1 + rh / 2, c2x, y2 + rh / 2, x2, y2 + rh / 2);
     ctx.stroke();
     ctx.restore();
 
-    // 2. Central Luminescent Flow Core (New vibrant color gradient)
+    // 2. Central Luminescent Flow Core Wire with chromatic aura
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
     const centerGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    centerGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.90 : 0.60));
-    centerGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.90 : 0.60));
+    centerGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.95 : 0.75));
+    centerGrad.addColorStop(0.5, isConnectedToSel ? '#38bdf8' : 'rgba(56, 189, 248, 0.85)');
+    centerGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.95 : 0.75));
     ctx.strokeStyle = centerGrad;
-    ctx.lineWidth = isConnectedToSel ? 2 : 1.35;
+    ctx.lineWidth = isConnectedToSel ? 2.2 : 1.4;
+    ctx.shadowColor = isConnectedToSel ? '#38bdf8' : colDst;
+    ctx.shadowBlur = isConnectedToSel ? 10 : 5;
     ctx.stroke();
     ctx.restore();
 
-    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect (The new animation)
+    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect
     const time = performance.now() / 1600;
     const tPulse = (time + cableIdx * 0.42) % 1;
     const u = 1 - tPulse;
@@ -378,22 +559,22 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     ctx.save();
     ctx.beginPath();
-    ctx.arc(px, py, isConnectedToSel ? 4 : 3, 0, Math.PI * 2);
+    ctx.arc(px, py, isConnectedToSel ? 4.5 : 3.5, 0, Math.PI * 2);
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = colDst;
-    ctx.shadowBlur = isConnectedToSel ? 10 : 6;
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = isConnectedToSel ? 12 : 8;
     ctx.fill();
 
     // Pulse core gem
     ctx.beginPath();
-    ctx.arc(px, py, isConnectedToSel ? 2 : 1.5, 0, Math.PI * 2);
+    ctx.arc(px, py, isConnectedToSel ? 2.2 : 1.6, 0, Math.PI * 2);
     ctx.fillStyle = colDst;
     ctx.fill();
     ctx.restore();
   });
   ctx.restore();
 
-  // 4. Ultra-Senior Modular Story Node Cards (Fluxa / AI Creative Canvas / Wavely style)
+  // 5. Modular Scene Cards (Google Stitch Node Canvas Style)
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
@@ -401,7 +582,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
   scenes.forEach((s, sceneIdx) => {
     const { x, y, w: scnW, h: scnH, isD } = getSceneRect(s, tracks, vp, dragState);
-    if (x + scnW < TRACK_HEADER_WIDTH || x > w || y + scnH < RULER_HEIGHT || y > h) return;
+    if (x + scnW < 0 || x > w || y + scnH < RULER_HEIGHT || y > h) return;
 
     const isSel = s.id === selectedSceneId;
     const track = trkMap.get(isD && dragState ? dragState.previewTrackId : s.track_id);
@@ -413,134 +594,192 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.globalAlpha = 0.35;
     }
 
+    // Diffuse Ambient Chromatic Aurora Bloom (Pinterest SaaS Card Reveal & Orion)
+    if (isSel || isD) {
+      const cx = x + scnW / 2;
+      const cy = y + scnH / 2;
+      ctx.save();
+      const auraGrad = ctx.createRadialGradient(
+        cx,
+        cy,
+        Math.min(scnW, scnH) * 0.25,
+        cx,
+        cy,
+        Math.max(scnW, scnH) * 0.95
+      );
+      auraGrad.addColorStop(0, hexToRgba(col, isD ? 0.36 : 0.26));
+      auraGrad.addColorStop(0.45, 'rgba(56, 189, 248, 0.12)'); // Radiant cyan
+      auraGrad.addColorStop(0.75, 'rgba(168, 85, 247, 0.08)'); // Electric violet
+      auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x - 24, y - 24, scnW + 48, scnH + 48, CARD_BORDER_RADIUS + 14);
+      else ctx.rect(x - 24, y - 24, scnW + 48, scnH + 48);
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Physical Card Lift Shadow
     ctx.save();
-    ctx.shadowColor = isD ? 'rgba(0, 0, 0, 0.85)' : isSel ? 'rgba(0, 0, 0, 0.55)' : 'rgba(0, 0, 0, 0.35)';
-    ctx.shadowBlur = isD ? 26 : isSel ? 16 : 8;
-    ctx.shadowOffsetY = isD ? 12 : isSel ? 6 : 3;
+    if (isSel || isD) {
+      ctx.shadowColor = hexToRgba(col, 0.45);
+      ctx.shadowBlur = isD ? 28 : 20;
+      ctx.shadowOffsetY = isD ? 8 : 4;
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 4;
+    }
 
-    // Card Background Container: deep charcoal-obsidian
-    ctx.fillStyle = isD ? '#1e2436' : isSel ? '#191d2b' : '#141724';
+    // Card Container (Frosted Obsidian Glass - Ultra Minimalist Senior Surface)
+    const cardGrad = ctx.createLinearGradient(x, y, x, y + scnH);
+    if (isD) {
+      cardGrad.addColorStop(0, '#1c2236');
+      cardGrad.addColorStop(0.4, '#131828');
+      cardGrad.addColorStop(1, '#0c0f18');
+    } else if (isSel) {
+      cardGrad.addColorStop(0, '#161d30');
+      cardGrad.addColorStop(0.4, '#111524');
+      cardGrad.addColorStop(1, '#090c14');
+    } else {
+      cardGrad.addColorStop(0, '#111420');
+      cardGrad.addColorStop(0.5, '#0d0f17');
+      cardGrad.addColorStop(1, '#08090f');
+    }
+    ctx.fillStyle = cardGrad;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
     else ctx.rect(x, y, scnW, scnH);
     ctx.fill();
     ctx.restore();
 
-    // 1. Modular Header Bar (Height 28px) with subtle track tint (Fluxa style)
-    const headerH = 28;
-    ctx.save();
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x, y, scnW, headerH, [CARD_BORDER_RADIUS, CARD_BORDER_RADIUS, 0, 0]);
-    else ctx.rect(x, y, scnW, headerH);
-    ctx.fillStyle = hexToRgba(col, isSel ? 0.22 : 0.12);
-    ctx.fill();
-
-    // Header bottom hairline separator
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(x, y + headerH - 1, scnW, 1);
-    ctx.restore();
-
-    // Top Specular Highlight Line
-    ctx.fillStyle = isD ? 'rgba(255, 255, 255, 0.35)' : isSel ? 'rgba(255, 255, 255, 0.22)' : 'rgba(255, 255, 255, 0.09)';
+    // Razor-sharp 1px Top Edge Inset Specular Highlight (Apple / Vercel / Pinterest technique)
+    const rimGrad = ctx.createLinearGradient(x, y, x + scnW, y);
+    rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
+    rimGrad.addColorStop(0.2, isSel ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.12)');
+    rimGrad.addColorStop(0.8, isSel ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.12)');
+    rimGrad.addColorStop(1, 'rgba(255, 255, 255, 0.03)');
+    ctx.fillStyle = rimGrad;
     ctx.fillRect(x + CARD_BORDER_RADIUS, y + 1, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 1);
 
-    // Card Outer Border
-    ctx.lineWidth = isD ? 1.75 : isSel ? 1.5 : 1;
-    ctx.strokeStyle = isD ? '#60a5fa' : isSel ? col : 'rgba(255, 255, 255, 0.1)';
+    // Card Outer Border (Crisp 1px hair-line catching the track color)
+    ctx.lineWidth = isD ? 2 : isSel ? 1.5 : 1;
+    if (isSel) {
+      const borderGrad = ctx.createLinearGradient(x, y, x + scnW, y + scnH);
+      borderGrad.addColorStop(0, col);
+      borderGrad.addColorStop(0.5, '#38bdf8');
+      borderGrad.addColorStop(1, col);
+      ctx.strokeStyle = borderGrad;
+    } else {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    }
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, CARD_BORDER_RADIUS);
     else ctx.strokeRect(x, y, scnW, scnH);
     ctx.stroke();
 
-    // Inside Header: Index badge (#01, #02) + Scene Title + Version chip
-    const numStr = `#0${sceneIdx + 1}`;
-    ctx.save();
-    ctx.font = '700 9px ' + FONT_MONO;
-    const numW = ctx.measureText(numStr).width + 8;
-    ctx.fillStyle = '#0f121b';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x + 10, y + 6, numW, 16, 4);
-    else ctx.rect(x + 10, y + 6, numW, 16);
-    ctx.fill();
-    ctx.strokeStyle = hexToRgba(col, 0.4);
-    ctx.stroke();
-
-    ctx.fillStyle = isSel ? '#ffffff' : '#94a3b8';
-    ctx.fillText(numStr, x + 14, y + 18);
-
-    // Title (Bold white 12px)
-    ctx.font = '600 12px ' + FONT_SANS;
-    ctx.fillStyle = '#ffffff';
-    const titleStartX = x + 10 + numW + 8;
-    const maxTitleW = Math.max(20, scnW - numW - 65);
-    let displayTitle = s.title;
-    if (ctx.measureText(displayTitle).width > maxTitleW) {
-      while (displayTitle.length > 3 && ctx.measureText(displayTitle + '…').width > maxTitleW) {
-        displayTitle = displayTitle.slice(0, -1);
-      }
-      displayTitle += '…';
-    }
-    ctx.fillText(displayTitle, titleStartX, y + 18);
-
-    // Version Chip on Right of Header
-    if (scnW >= 150) {
-      const verStr = `v${s.version}`;
-      ctx.font = '600 9px ' + FONT_MONO;
-      ctx.fillStyle = '#64748b';
-      ctx.textAlign = 'right';
-      ctx.fillText(verStr, x + scnW - 12, y + 18);
-      ctx.textAlign = 'start';
-    }
-    ctx.restore();
-
-    // Card Body: Narrative Excerpt
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x + 10, y + headerH + 4, Math.max(10, scnW - 20), scnH - headerH - 26);
-    ctx.clip();
-
-    const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
-    const excerpt = rawText.length > 0
-      ? (rawText.length > 46 ? rawText.slice(0, 46) + '…' : rawText)
-      : '(Sin contenido redactado aún)';
-    ctx.font = '400 11px ' + FONT_SANS;
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(excerpt, x + 12, y + headerH + 18);
-    ctx.restore();
-
-    // Card Footer: Duration Pill
+    // 1. Senior Minimalist Header Row (Anti-collision: Scene Title, index, telemetry)
+    // Left: Luminous Thread Pip + Editable Scene Title + Scene Index
     const words = s.word_count || 0;
-    const readingMins = Math.max(1, Math.ceil(words / 240));
-    const bY = y + scnH - 22;
 
-    if (scnW >= 110) {
-      const metricStr = `⏱ ${words} pal · ~${readingMins}m`;
-      ctx.font = '500 10px ' + FONT_MONO;
-      const textW = ctx.measureText(metricStr).width;
-      const bW = textW + 12;
+    const headerLayout = computeCardHeaderLayout(
+      scnW,
+      s.title,
+      sceneIdx,
+      words,
+      (text, font) => {
+        ctx.font = font;
+        return ctx.measureText(text).width;
+      }
+    );
 
+    // 0. Hero Architectural Chapter Numeral: Prominent, high-visibility landmark
+    const sceneNum = String(sceneIdx + 1).padStart(2, '0');
+    ctx.save();
+    ctx.font = '800 36px ' + FONT_SANS;
+    ctx.fillStyle = hexToRgba(col, isSel ? 0.48 : 0.32);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(sceneNum, x + scnW - 14, y + scnH - 14);
+    ctx.restore();
+
+    ctx.save();
+    // Luminous thread accent pip (clean 3px dot with soft aura)
+    ctx.beginPath();
+    ctx.arc(x + 18, y + 20, 3, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.shadowColor = col;
+    ctx.shadowBlur = 6;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Scene Title (Clean 11.5px bold with collision-free truncation)
+    // Only render canvas title text if not currently active in inline edit overlay
+    if (data.editingSceneId !== s.id) {
+      ctx.font = '600 11.5px ' + FONT_SANS;
+      ctx.fillStyle = isSel ? '#ffffff' : '#e2e8f0';
+      ctx.fillText(headerLayout.displayTitle, x + 27, y + 23);
+    }
+
+    // Right-aligned High-Contrast Telemetry Capsule (Workflow Plan Pill Technique)
+    if (headerLayout.showMeta) {
+      const metaFont = '600 10px ' + FONT_SANS;
+      ctx.font = metaFont;
+      const textW = ctx.measureText(headerLayout.metaStr).width;
+      const pillPadX = 8;
+      const pillH = 18;
+      const pillW = textW + pillPadX * 2;
+      const pillX = x + scnW - 14 - pillW;
+      const pillY = y + 11;
+
+      // Pill capsule surface
       ctx.save();
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x + 10, bY, bW, 16, 4);
-      else ctx.rect(x + 10, bY, bW, 16);
+      if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 9999);
+      else ctx.rect(pillX, pillY, pillW, pillH);
+      ctx.fillStyle = isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)';
       ctx.fill();
+      ctx.strokeStyle = isSel ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
       ctx.stroke();
 
-      ctx.fillStyle = '#cbd5e1';
-      ctx.fillText(metricStr, x + 16, bY + 11);
+      // Tabular text inside capsule
+      ctx.fillStyle = isSel ? '#e2e8f0' : '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(headerLayout.metaStr, pillX + pillW / 2, pillY + pillH / 2 + 0.5);
       ctx.restore();
     }
-
-    // Bottom Duration Clip Accent Line (DAW timeline clip style)
-    ctx.save();
-    ctx.fillStyle = hexToRgba(col, 0.65);
-    ctx.fillRect(x + CARD_BORDER_RADIUS, y + scnH - 3, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 2);
     ctx.restore();
 
-    // Sockets / Ports (Fluxa & Wavely style)
+    // 2. Card Body: Excerpt prose text (Clean 11.5px subtle prose in slate)
+    ctx.font = '400 11.5px ' + FONT_SANS;
+    ctx.fillStyle = '#94a3b8';
+    const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
+    let excerpt = rawText.length > 0 ? rawText : '(Sin contenido redactado)';
+    const maxExcerptW = Math.max(20, scnW - 32);
+    if (ctx.measureText(excerpt).width > maxExcerptW) {
+      while (excerpt.length > 2 && ctx.measureText(excerpt + '…').width > maxExcerptW) {
+        excerpt = excerpt.slice(0, -1);
+      }
+      excerpt += '…';
+    }
+    ctx.fillText(excerpt, x + 16, y + 47);
+
+    // 3. Subtle Track lane indicator badge at bottom of card
+    const trkName = track?.name || 'Hilo';
+    ctx.font = '500 10px ' + FONT_SANS;
+    ctx.fillStyle = '#475569';
+    let displayTrkBadge = trkName;
+    if (ctx.measureText(displayTrkBadge).width > maxExcerptW) {
+      while (displayTrkBadge.length > 2 && ctx.measureText(displayTrkBadge + '…').width > maxExcerptW) {
+        displayTrkBadge = displayTrkBadge.slice(0, -1);
+      }
+      displayTrkBadge += '…';
+    }
+    ctx.fillText(displayTrkBadge, x + 16, y + 67);
+
+    // Concentric Physical In/Out Sockets
     const inPortX = x;
     const inPortY = y + scnH / 2;
     const outPortX = x + scnW;
@@ -550,39 +789,49 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     const isOutHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'out';
     const isConnecting = Boolean(data.connectingWire);
 
-    // In-Port (Left Causal Socket)
+    // In-Port (Left Concentric Physical Socket)
     ctx.save();
+    const inR = isInHover ? PORT_HOVER_RADIUS + 2 : isSel || isConnecting ? 6.5 : 5.5;
     ctx.beginPath();
-    const inR = isInHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
     ctx.arc(inPortX, inPortY, inR, 0, Math.PI * 2);
-    ctx.fillStyle = '#10131d';
-    ctx.strokeStyle = isInHover ? '#ffffff' : '#818cf8';
-    ctx.lineWidth = isInHover ? 2.5 : 1.75;
+    ctx.fillStyle = '#0a0d14';
+    ctx.strokeStyle = isInHover ? '#ffffff' : 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1;
     ctx.fill();
     ctx.stroke();
 
-    // Core dot inside In-Port
     ctx.beginPath();
-    ctx.arc(inPortX, inPortY, 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#818cf8';
+    ctx.arc(inPortX, inPortY, inR - 1.8, 0, Math.PI * 2);
+    ctx.strokeStyle = isInHover ? '#a5b4fc' : '#818cf8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(inPortX, inPortY, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = isInHover ? '#ffffff' : '#a5b4fc';
     ctx.fill();
     ctx.restore();
 
-    // Out-Port (Right Causal Socket)
+    // Out-Port (Right Concentric Physical Socket)
     ctx.save();
+    const outR = isOutHover ? PORT_HOVER_RADIUS + 2 : isSel || isConnecting ? 6.5 : 5.5;
     ctx.beginPath();
-    const outR = isOutHover ? PORT_HOVER_RADIUS : isSel || isConnecting ? 5 : PORT_RADIUS;
     ctx.arc(outPortX, outPortY, outR, 0, Math.PI * 2);
-    ctx.fillStyle = '#10131d';
-    ctx.strokeStyle = isOutHover ? '#ffffff' : '#38bdf8';
-    ctx.lineWidth = isOutHover ? 2.5 : 1.75;
+    ctx.fillStyle = '#0a0d14';
+    ctx.strokeStyle = isOutHover ? '#ffffff' : 'rgba(255, 255, 255, 0.22)';
+    ctx.lineWidth = 1;
     ctx.fill();
     ctx.stroke();
 
-    // Core dot inside Out-Port
     ctx.beginPath();
-    ctx.arc(outPortX, outPortY, 2, 0, Math.PI * 2);
-    ctx.fillStyle = '#38bdf8';
+    ctx.arc(outPortX, outPortY, outR - 1.8, 0, Math.PI * 2);
+    ctx.strokeStyle = isOutHover ? '#a5b4fc' : '#818cf8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(outPortX, outPortY, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = isOutHover ? '#ffffff' : '#a5b4fc';
     ctx.fill();
     ctx.restore();
 
@@ -609,8 +858,8 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.setLineDash([5, 5]);
 
       // Subtle ambient glow
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.22)';
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
+      ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.bezierCurveTo(c1x, startY, c2x, toY, toX, toY);
@@ -618,7 +867,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
       // Sharp core wire
       ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.75;
+      ctx.lineWidth = 2;
       ctx.stroke();
 
       // Magnetic cable tip with glowing halo
@@ -633,176 +882,78 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     }
   }
 
-  // Headless Magnetic Alignment Laser Guideline (Discreet, zero interface clutter)
-  if (data.magnetGuideT !== undefined && data.magnetGuideT !== null) {
-    const gx = TRACK_HEADER_WIDTH + vp.panX + data.magnetGuideT * PIXELS_PER_UNIT * vp.zoom;
-    if (gx >= TRACK_HEADER_WIDTH && gx <= w) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([2, 3]);
-      ctx.beginPath();
-      ctx.moveTo(gx, RULER_HEIGHT);
-      ctx.lineTo(gx, h);
-      ctx.stroke();
-      ctx.restore();
-    }
-  }
-
-  // 5. Pinned Track Headers (Hilos Narrativos)
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, RULER_HEIGHT, TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
-  ctx.clip();
-
-  tracks.forEach((trk, idx) => {
-    const ly = RULER_HEIGHT + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
-
-    // DAW Channel Strip Background: Deep slate-obsidian (#131622) with subtle top specular
-    ctx.fillStyle = '#131622';
-    ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, TRACK_HEIGHT);
-
-    // Subtle bevel top highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.fillRect(0, ly, TRACK_HEADER_WIDTH, 1);
-
-    // Bottom lane border
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.fillRect(0, ly + TRACK_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
-
-    // Right border specular dividing header from timeline
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.fillRect(TRACK_HEADER_WIDTH - 1, ly, 1, TRACK_HEIGHT);
-
-    // Left vertical track accent strip (5px wide)
-    ctx.fillStyle = trk.color_hex || '#4361ee';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(8, ly + 12, 5, TRACK_HEIGHT - 24, 2.5);
-    else ctx.fillRect(8, ly + 12, 5, TRACK_HEIGHT - 24);
-    ctx.fill();
-
-    // Channel Index Chip (e.g. "CH 01")
-    const chStr = `CH 0${idx + 1}`;
-    ctx.font = '700 9px ' + FONT_MONO;
-    ctx.fillStyle = '#64748b';
-    ctx.fillText(chStr, 22, ly + 25);
-
-    // Track Name (Bold 13px)
-    ctx.font = '600 13px ' + FONT_SANS;
-    ctx.fillStyle = trk.is_muted ? '#64748b' : '#f8fafc';
-    const truncatedName = trk.name.length > 15 ? trk.name.slice(0, 14) + '…' : trk.name;
-    ctx.fillText(truncatedName, 22, ly + 45);
-
-    // Dynamic Telemetry Pill: Scenes & Total Words
-    const trkScenes = scenes.filter((s) => s.track_id === trk.id);
-    const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
-    const metaStr = `${trkScenes.length} esc · ${trkWords.toLocaleString()} pal`;
-    ctx.font = '500 10px ' + FONT_MONO;
-    const metaW = ctx.measureText(metaStr).width + 12;
-
+  // 6. Narrative Beats Ruler (Sticky 26px Top Ruler with Dramatic Act Zones & Beat Ticks)
+  if (RULER_HEIGHT > 0) {
     ctx.save();
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(22, ly + 56, metaW, 16, 4);
-    else ctx.rect(22, ly + 56, metaW, 16);
-    ctx.fill();
-    ctx.stroke();
 
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillText(metaStr, 28, ly + 68);
+    // Pinned background across canvas width
+    ctx.fillStyle = '#0a0d14';
+    ctx.fillRect(0, 0, w, RULER_HEIGHT);
+
+    // Subtle 1px specular bottom border
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(0, RULER_HEIGHT - 1, w, 1);
+
+    // Timeline area clip (x >= TRACK_HEADER_WIDTH)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(TRACK_HEADER_WIDTH, 0, w - TRACK_HEADER_WIDTH, RULER_HEIGHT);
+    ctx.clip();
+
+    // Subtle beat tick marks every 60 units
+    const tickStep = 60;
+    const startTick = Math.max(0, Math.floor((-vp.panX) / (PIXELS_PER_UNIT * vp.zoom * tickStep))) * tickStep;
+    const endTick = Math.ceil((w - TRACK_HEADER_WIDTH - vp.panX) / (PIXELS_PER_UNIT * vp.zoom * tickStep)) * tickStep;
+
+    for (let t = startTick; t <= endTick; t += tickStep) {
+      const rx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
+      if (rx < TRACK_HEADER_WIDTH || rx > w) continue;
+
+      // Bottom-aligned tick mark
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
+      ctx.fillRect(rx, RULER_HEIGHT - 6, 1, 6);
+    }
+
+    // Optional Dramatic Act Zones (only rendered if explicitly enabled; hidden by default for custom author structure)
+    if (data.showDramaticActs) {
+      for (const zone of DRAMATIC_ACT_ZONES) {
+        const zx = TRACK_HEADER_WIDTH + vp.panX + zone.t * PIXELS_PER_UNIT * vp.zoom;
+        if (zx < TRACK_HEADER_WIDTH - 15 || zx > w + 60) continue;
+
+        // Vertical act boundary line
+        ctx.fillStyle = hexToRgba(zone.color, 0.35);
+        ctx.fillRect(zx, 0, 1, RULER_HEIGHT);
+
+        // Subtle luminous pip
+        ctx.beginPath();
+        ctx.arc(zx + 6, 8.5, 2.5, 0, Math.PI * 2);
+        ctx.fillStyle = zone.color;
+        ctx.shadowColor = zone.color;
+        ctx.shadowBlur = 4;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Clean, understated dramatic zone label
+        ctx.font = '600 9.5px ' + FONT_SANS;
+        ctx.fillStyle = zone.color;
+        ctx.textAlign = 'left';
+        ctx.fillText(zone.label.toUpperCase(), zx + 12, 11.5);
+      }
+    }
+
     ctx.restore();
 
-    // Hardware-style Visibility/Mute button [ 👁 ]
-    const mBtn = getTrackMuteButtonRect(idx, vp);
-    const isM = trk.is_muted;
-    ctx.fillStyle = isM ? 'rgba(245, 158, 11, 0.16)' : 'rgba(255, 255, 255, 0.05)';
-    ctx.strokeStyle = isM ? '#f59e0b' : 'rgba(255, 255, 255, 0.12)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(mBtn.x, mBtn.y, mBtn.w, mBtn.h, 6);
-    else ctx.rect(mBtn.x, mBtn.y, mBtn.w, mBtn.h);
-    ctx.fill();
-    ctx.stroke();
+    // Specular Divider Line between Left Track Column and Canvas Header
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
 
-    ctx.font = '12px ' + FONT_SANS;
-    ctx.fillStyle = isM ? '#fbbf24' : '#cbd5e1';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(isM ? '👁‍🗨' : '👁', mBtn.x + mBtn.w / 2, mBtn.y + mBtn.h / 2);
-    ctx.textAlign = 'start';
-    ctx.textBaseline = 'alphabetic';
-  });
-  ctx.restore();
-
-  // 6. Clean Sequence Timeline Ruler & Playhead
-  ctx.save();
-  // Ruler Background: matte obsidian
-  ctx.fillStyle = '#0c0e14';
-  ctx.fillRect(0, 0, w, RULER_HEIGHT);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
-  ctx.fillRect(0, RULER_HEIGHT - 1, w, 1);
-
-  // Ruler timeline area
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(TRACK_HEADER_WIDTH, 0, w - TRACK_HEADER_WIDTH, RULER_HEIGHT);
-  ctx.clip();
-
-  for (let t = stT; t <= endT; t += step) {
-    const rx = TRACK_HEADER_WIDTH + vp.panX + t * PIXELS_PER_UNIT * vp.zoom;
-    if (rx < TRACK_HEADER_WIDTH || rx > w) continue;
-    const isMajor = t % (step * 4) === 0;
-    const isMedium = !isMajor && t % (step * 2) === 0;
-
-    if (isMajor) {
-      // Major rhythm tick
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.fillRect(rx, RULER_HEIGHT - 12, 1, 12);
-
-      // Subtle indicator node above major ticks
-      ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
-      ctx.beginPath();
-      ctx.arc(rx, 15, 2, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Timecode timestamp (Create.Video style)
-      const minutes = Math.floor(t / 60);
-      const seconds = Math.floor(t % 60);
-      const timecode = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      ctx.font = '500 10px ' + FONT_MONO;
-      ctx.fillStyle = '#64748b';
-      ctx.textAlign = 'left';
-      ctx.fillText(timecode, rx + 6, RULER_HEIGHT - 14);
-    } else if (isMedium) {
-      // Medium rhythm tick
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-      ctx.fillRect(rx, RULER_HEIGHT - 8, 1, 8);
-    } else {
-      // Minor rhythm tick
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-      ctx.fillRect(rx, RULER_HEIGHT - 4, 1, 4);
-    }
+    ctx.restore();
   }
-  ctx.restore();
 
-  // Pinned Top-Left Header: SECUENCIA NARRATIVA
-  ctx.fillStyle = '#10131d';
-  ctx.fillRect(0, 0, TRACK_HEADER_WIDTH, RULER_HEIGHT);
+  // Specular Divider Line between Left Track Column and Canvas
   ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
-  ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, RULER_HEIGHT);
-  ctx.fillRect(0, RULER_HEIGHT - 1, TRACK_HEADER_WIDTH, 1);
+  ctx.fillRect(TRACK_HEADER_WIDTH - 1, 0, 1, h);
 
-  // Matte cyan dot + label
-  ctx.fillStyle = '#38bdf8';
-  ctx.beginPath();
-  ctx.arc(20, RULER_HEIGHT / 2, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.font = '700 10px ' + FONT_SANS;
-  ctx.fillStyle = '#f8fafc';
-  ctx.fillText('SECUENCIA NARRATIVA', 32, RULER_HEIGHT / 2 + 4);
-  ctx.restore();
   ctx.restore();
 }
 

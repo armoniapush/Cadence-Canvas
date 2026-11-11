@@ -102,14 +102,14 @@ fn test_scene_lifecycle_and_word_counts() {
     assert_eq!(all_scenes[1].id, scene_a2.id);
     assert_eq!(all_scenes[2].id, scene_b1.id);
 
-    // 8. Move scene coordinates (OCC with version 2 -> 3)
+    // 8. Move scene coordinates (OCC with version 2 preserved)
     let moved = Scene::move_coordinates(conn, &scene.id, 2, &track_b.id, 300, 180)
         .expect("Failed to move scene coordinates");
     assert_eq!(moved.id, scene.id);
     assert_eq!(moved.track_id, track_b.id);
     assert_eq!(moved.t_start, 300);
     assert_eq!(moved.duration, 180);
-    assert_eq!(moved.version, 3);
+    assert_eq!(moved.version, 2);
 
     // 9. Delete scene and verify non-existence
     Scene::delete(conn, &scene_a2.id).expect("Failed to delete scene A2");
@@ -188,10 +188,10 @@ fn test_optimistic_concurrency_locking() {
         other => panic!("Expected StaleMutationConflict, got {:?}", other),
     }
 
-    // 4. Move coordinates with valid expected_version = 2 increments version to 3
+    // 4. Move coordinates with valid expected_version = 2 preserves version = 2
     let moved = Scene::move_coordinates(conn, &scene.id, 2, &track.id, 10, 120)
         .expect("Legitimate move should succeed");
-    assert_eq!(moved.version, 3);
+    assert_eq!(moved.version, 2);
 
     // 5. Updating or moving a non-existent scene returns NotFound, NOT StaleMutationConflict
     let not_found_update = Scene::update_content(

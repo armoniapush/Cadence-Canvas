@@ -7,4 +7,17 @@ node_modules/
 dist/
 src-tauri/gen/
 
+# Temporary visual dumps & scratch files
+*.png
+*.jpg
+*.jpeg
+screenshots/
+stitch_*.html
+ui/pnpm-*.yaml
+
+# Graphify internal cache
+graphify-out/cache/
+graphify-out/.*
+
+
 

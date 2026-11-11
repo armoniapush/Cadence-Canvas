@@ -9,6 +9,7 @@ import {
   createScene,
   updateSceneContent,
   moveScene,
+  bumpSceneVersion,
   deleteScene,
   listAnchors,
   createAnchor,
@@ -131,7 +132,11 @@ describe('Cadence Canvas UI API & Lifecycle Tests', () => {
     assert.strictEqual(moved.track_id, 'mock-track-2');
     assert.strictEqual(moved.t_start, 600);
     assert.strictEqual(moved.duration, 150);
-    assert.strictEqual(moved.version, 3);
+    assert.strictEqual(moved.version, 2); // Spatial moving does NOT increment draft version!
+
+    // 5b. Explicitly bump draft version when requested by user
+    const bumped = await bumpSceneVersion(projectPath, created.id, moved.version);
+    assert.strictEqual(bumped.version, 3);
 
     // 6. Connect an anchor to this scene
     const anchor = await createAnchor(

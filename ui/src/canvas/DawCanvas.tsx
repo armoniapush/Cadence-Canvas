@@ -1,15 +1,20 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { Eye, EyeOff, Plus, Minus, Maximize2 } from 'lucide-react';
+import { GlowButton } from '../components/GlowButton';
+import { BorderGlow } from '../components/BorderGlow';
 import type { Track, Scene, ReadingAnchor } from '../types';
 import {
   DawCanvasRenderer,
   computeFitViewport,
   computeMagneticSnap,
+  resolveSceneAntiCollision,
   getSceneRect,
-  getTrackMuteButtonRect,
-  TRACK_HEADER_WIDTH,
+  CANVAS_TOP_PAD,
   TRACK_HEIGHT,
   TRACK_GAP,
-  RULER_HEIGHT,
+  CARD_HEIGHT,
+  CARD_PAD_Y,
+  TRACK_HEADER_WIDTH,
   PIXELS_PER_UNIT,
   PORT_HIT_RADIUS,
   type Viewport,
@@ -25,12 +30,15 @@ interface DawCanvasProps {
   selectedSceneId: string | null;
   onSelectScene: (scene: Scene | null) => void;
   onMoveScene: (scene: Scene, trackId: string, tStart: number) => void;
-  onCreateScene: (trackId: string, tStart: number) => void;
+  onCreateScene: (trackId: string, tStart: number, promptText?: string) => void;
   onDeleteScene?: (sceneId: string) => void;
   onToggleMuteTrack?: (trackId: string) => void;
   onCreateAnchor?: (sourceSceneId: string, targetSceneId: string) => void;
   onDuplicateScene?: (scene: Scene) => void;
   onSplitScene?: (scene: Scene) => void;
+  onUpdateSceneTitle?: (sceneId: string, newTitle: string) => void;
+  showDramaticActs?: boolean;
+  onCreateTrackClick?: () => void;
 }
 
 export function DawCanvas({
@@ -42,20 +50,23 @@ export function DawCanvas({
   onMoveScene,
   onCreateScene,
   onDeleteScene,
-  onToggleMuteTrack,
+  onToggleMuteTrack: _onToggleMuteTrack,
   onCreateAnchor,
   onDuplicateScene,
   onSplitScene,
+  onUpdateSceneTitle,
+  showDramaticActs = false,
+  onCreateTrackClick,
 }: DawCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [viewport, setViewport] = useState<Viewport>({ panX: 20, panY: 0, zoom: 1.0 });
+  const rendererRef = useRef<DawCanvasRenderer | null>(null);
+  const [viewport, setViewport] = useState<Viewport>({ panX: 0, panY: 20, zoom: 1.0 });
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [size, setSize] = useState({ width: 800, height: 600, dpr: 1 });
 
-  // Headless magnetic snapping (active by default; hold Alt or Shift for free placement)
+  // Headless magnetic snapping (permanent and active by default)
   const magnetEnabled = true;
-  const [magnetGuideT, setMagnetGuideT] = useState<number | null>(null);
   const [connectingWire, setConnectingWire] = useState<{
     fromSceneId: string;
     fromPort: 'in' | 'out';
@@ -63,6 +74,9 @@ export function DawCanvas({
     toY: number;
   } | null>(null);
   const [hoveredPort, setHoveredPort] = useState<{ sceneId: string; port: 'in' | 'out' } | null>(null);
+
+  // Inline Scene Title Editing State
+  const [editingTitleState, setEditingTitleState] = useState<{ id: string; title: string } | null>(null);
 
   // Floating Context Menu
   const [contextMenu, setContextMenu] = useState<{
@@ -133,7 +147,6 @@ export function DawCanvas({
     dpr: 1,
     width: 800,
     height: 600,
-    magnetGuideT,
     connectingWire,
     hoveredPort,
   });
@@ -150,9 +163,10 @@ export function DawCanvas({
     dpr: size.dpr,
     width: size.width,
     height: size.height,
-    magnetGuideT,
     connectingWire,
     hoveredPort,
+    editingSceneId: editingTitleState?.id || null,
+    showDramaticActs,
   };
 
   useEffect(() => {
@@ -166,6 +180,8 @@ export function DawCanvas({
       if (canvasRef.current) {
         canvasRef.current.width = Math.floor(width * dpr);
         canvasRef.current.height = Math.floor(height * dpr);
+        // Instant synchronous repaint prevents 1-frame blank canvas flicker during layout transitions
+        rendererRef.current?.render();
       }
     });
     obs.observe(el);
@@ -175,8 +191,12 @@ export function DawCanvas({
   useEffect(() => {
     if (!canvasRef.current) return;
     const renderer = new DawCanvasRenderer(canvasRef.current, () => stateRef.current);
+    rendererRef.current = renderer;
     renderer.start();
-    return () => renderer.stop();
+    return () => {
+      renderer.stop();
+      rendererRef.current = null;
+    };
   }, []);
 
   const capturePointerDefensively = useCallback((pointerId: number) => {
@@ -197,17 +217,31 @@ export function DawCanvas({
     e.preventDefault();
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const factor = e.deltaY < 0 ? 1.12 : 0.89;
-    const newZoom = Math.min(3.0, Math.max(0.2, viewport.zoom * factor));
-    const relX = mx - TRACK_HEADER_WIDTH;
-    const tAtCursor = (relX - viewport.panX) / (PIXELS_PER_UNIT * viewport.zoom);
-    setViewport((prev) => ({
-      ...prev,
-      zoom: newZoom,
-      panX: relX - tAtCursor * (PIXELS_PER_UNIT * newZoom),
-    }));
-  }, [viewport]);
+
+    if (e.ctrlKey || e.metaKey) {
+      const mx = e.clientX - rect.left;
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      const newZoom = Math.min(3.0, Math.max(0.2, viewport.zoom * factor));
+      const tAtCursor = (mx - TRACK_HEADER_WIDTH - viewport.panX) / (PIXELS_PER_UNIT * viewport.zoom);
+      setViewport((prev) => ({
+        ...prev,
+        zoom: newZoom,
+        panX: mx - TRACK_HEADER_WIDTH - tAtCursor * (PIXELS_PER_UNIT * newZoom),
+      }));
+    } else if (e.shiftKey) {
+      setViewport((prev) => ({
+        ...prev,
+        panX: prev.panX - e.deltaY,
+      }));
+    } else {
+      const totalTracksHeight = tracks.length * (TRACK_HEIGHT + TRACK_GAP) + CANVAS_TOP_PAD;
+      const maxScrollY = Math.max(0, totalTracksHeight - (rect.height - 120));
+      setViewport((prev) => ({
+        ...prev,
+        panY: Math.max(-maxScrollY, Math.min(0, prev.panY - e.deltaY)),
+      }));
+    }
+  }, [viewport, tracks.length]);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     // Dismiss context menu if open
@@ -217,26 +251,8 @@ export function DawCanvas({
     if (!rect) return;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
-    // 1. Guard click on pinned track headers
-    if (mx <= TRACK_HEADER_WIDTH) {
-      if (my > RULER_HEIGHT && onToggleMuteTrack && e.button === 0) {
-        for (let i = 0; i < tracks.length; i++) {
-          const btn = getTrackMuteButtonRect(i, viewport);
-          if (mx >= btn.x - 3 && mx <= btn.x + btn.w + 3 && my >= btn.y - 3 && my <= btn.y + btn.h + 3) {
-            onToggleMuteTrack(tracks[i].id);
-            return;
-          }
-        }
-      }
-      if (e.button === 0 || e.button === 1) {
-        panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: true };
-        capturePointerDefensively(e.pointerId);
-      }
-      return;
-    }
-
-    // 2. Port Hit Detection (dragging causal cables)
-    if (my > RULER_HEIGHT && e.button === 0) {
+    // 1. Port Hit Detection (dragging causal cables)
+    if (e.button === 0) {
       for (let i = scenes.length - 1; i >= 0; i--) {
         const s = scenes[i], r = getSceneRect(s, tracks, viewport);
         // In-Port: left edge
@@ -266,20 +282,18 @@ export function DawCanvas({
       }
     }
 
-    // 3. Scene hit detection strictly within visible timeline canvas
+    // 2. Scene hit detection strictly within visible canvas
     let hitScene: Scene | null = null;
-    if (my > RULER_HEIGHT) {
-      for (let i = scenes.length - 1; i >= 0; i--) {
-        const s = scenes[i], r = getSceneRect(s, tracks, viewport);
-        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-          hitScene = s;
-          break;
-        }
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      const s = scenes[i], r = getSceneRect(s, tracks, viewport);
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+        hitScene = s;
+        break;
       }
     }
 
     if (hitScene && e.button === 0) {
-      onSelectScene(hitScene);
+      // Do NOT select scene immediately on pointer down; wait for pointer up to distinguish click from drag
       dragRef.current = {
         mx,
         my,
@@ -296,7 +310,7 @@ export function DawCanvas({
       panRef.current = { mx, my, px: viewport.panX, py: viewport.panY, verticalOnly: false };
       capturePointerDefensively(e.pointerId);
     }
-  }, [scenes, tracks, viewport, onSelectScene, onToggleMuteTrack, capturePointerDefensively]);
+  }, [scenes, tracks, viewport, onSelectScene, capturePointerDefensively]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -317,7 +331,7 @@ export function DawCanvas({
       const dx = mx - currentDrag.mx, dy = my - currentDrag.my;
       if (Math.hypot(dx, dy) > 3) currentDrag.moved = true;
       const dt = Math.round(dx / (PIXELS_PER_UNIT * viewport.zoom));
-      const relY = my - RULER_HEIGHT - viewport.panY;
+      const relY = my - CANVAS_TOP_PAD - viewport.panY;
       const idx = Math.max(0, Math.min(tracks.length - 1, Math.floor(relY / (TRACK_HEIGHT + TRACK_GAP))));
       const nextTrackId = tracks[idx]?.id || currentDrag.trk0;
 
@@ -335,8 +349,25 @@ export function DawCanvas({
         effectiveMagnet
       );
 
-      const nextTStart = snap.snappedTStart;
-      setMagnetGuideT(snap.isSnapped ? (snap.guideT ?? nextTStart) : null);
+      // Anti-Collision Spatial Guard: strictly prevents cards from overlapping/transposing on the same track
+      const antiCollisionT = resolveSceneAntiCollision(
+        snap.snappedTStart,
+        currentDrag.s.duration,
+        nextTrackId,
+        scenes,
+        currentDrag.s.id,
+        viewport.zoom
+      );
+
+      const nextTStart = antiCollisionT;
+
+      // Auto-pan left if dragged close to the track header boundary
+      if (mx < TRACK_HEADER_WIDTH + 40 && viewport.panX < 0) {
+        setViewport((prev) => ({
+          ...prev,
+          panX: Math.min(0, prev.panX + 12),
+        }));
+      }
 
       currentDrag.previewTrackId = nextTrackId;
       currentDrag.previewTStart = nextTStart;
@@ -350,7 +381,7 @@ export function DawCanvas({
       const isVert = Boolean(verticalOnly);
       const targetPanX = isVert ? null : px + (mx - startMx);
 
-      const maxScrollY = Math.max(0, tracks.length * (TRACK_HEIGHT + TRACK_GAP) + 120 - (rect.height - RULER_HEIGHT));
+      const maxScrollY = Math.max(0, tracks.length * (TRACK_HEIGHT + TRACK_GAP) + 120 - rect.height);
       const targetPanY = Math.max(-maxScrollY, Math.min(0, py + (my - startMy)));
 
       setViewport((prev) => ({
@@ -360,23 +391,19 @@ export function DawCanvas({
       }));
     } else {
       // Hover detection on ports for cursor feedback
-      if (my > RULER_HEIGHT && mx > TRACK_HEADER_WIDTH) {
-        let foundHoverPort: { sceneId: string; port: 'in' | 'out' } | null = null;
-        for (let i = scenes.length - 1; i >= 0; i--) {
-          const s = scenes[i], r = getSceneRect(s, tracks, viewport);
-          if (Math.hypot(mx - r.x, my - (r.y + r.h / 2)) <= PORT_HIT_RADIUS) {
-            foundHoverPort = { sceneId: s.id, port: 'in' };
-            break;
-          }
-          if (Math.hypot(mx - (r.x + r.w), my - (r.y + r.h / 2)) <= PORT_HIT_RADIUS) {
-            foundHoverPort = { sceneId: s.id, port: 'out' };
-            break;
-          }
+      let foundHoverPort: { sceneId: string; port: 'in' | 'out' } | null = null;
+      for (let i = scenes.length - 1; i >= 0; i--) {
+        const s = scenes[i], r = getSceneRect(s, tracks, viewport);
+        if (Math.hypot(mx - r.x, my - (r.y + r.h / 2)) <= PORT_HIT_RADIUS) {
+          foundHoverPort = { sceneId: s.id, port: 'in' };
+          break;
         }
-        setHoveredPort(foundHoverPort);
-      } else {
-        setHoveredPort(null);
+        if (Math.hypot(mx - (r.x + r.w), my - (r.y + r.h / 2)) <= PORT_HIT_RADIUS) {
+          foundHoverPort = { sceneId: s.id, port: 'out' };
+          break;
+        }
       }
+      setHoveredPort(foundHoverPort);
     }
   }, [tracks, scenes, viewport, magnetEnabled]);
 
@@ -413,19 +440,22 @@ export function DawCanvas({
       return;
     }
 
-    // 2. Finalize scene movement
+    // 2. Finalize scene movement or click selection
     if (dragRef.current) {
       const currentDrag = dragRef.current;
       if (currentDrag.moved) {
+        // Drag operation: commit new position, but do NOT open the editor!
         const finalTrackId = currentDrag.previewTrackId ?? currentDrag.trk0;
         const finalTStart = currentDrag.previewTStart ?? currentDrag.t0;
         if (finalTStart !== currentDrag.t0 || finalTrackId !== currentDrag.trk0) {
           onMoveScene(currentDrag.s, finalTrackId, finalTStart);
         }
+      } else {
+        // Pure click without dragging: now open the editor for this scene!
+        onSelectScene(currentDrag.s);
       }
       dragRef.current = null;
       setDragState(null);
-      setMagnetGuideT(null);
     }
 
     if (panRef.current) {
@@ -441,18 +471,16 @@ export function DawCanvas({
     if (!rect) return;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
 
-    if (my > RULER_HEIGHT) {
-      for (let i = scenes.length - 1; i >= 0; i--) {
-        const s = scenes[i], r = getSceneRect(s, tracks, viewport);
-        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-          onSelectScene(s);
-          setContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            scene: s,
-          });
-          return;
-        }
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      const s = scenes[i], r = getSceneRect(s, tracks, viewport);
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+        onSelectScene(s);
+        setContextMenu({
+          x: e.clientX,
+          y: e.clientY,
+          scene: s,
+        });
+        return;
       }
     }
     setContextMenu(null);
@@ -462,15 +490,28 @@ export function DawCanvas({
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    if (mx <= TRACK_HEADER_WIDTH || my <= RULER_HEIGHT) return;
-    const relY = my - RULER_HEIGHT - viewport.panY;
-    const track = tracks[Math.floor(relY / (TRACK_HEIGHT + TRACK_GAP))];
+    if (mx < TRACK_HEADER_WIDTH) return;
+
+    // 1. Double click on existing scene card opens inline title editor!
+    for (let i = scenes.length - 1; i >= 0; i--) {
+      const s = scenes[i];
+      const r = getSceneRect(s, tracks, viewport);
+      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+        onSelectScene(s);
+        setEditingTitleState({ id: s.id, title: s.title });
+        return;
+      }
+    }
+
+    // 2. Double click on empty track canvas creates new scene
+    const relY = my - CANVAS_TOP_PAD - viewport.panY;
+    const track = tracks[Math.floor(relY / (TRACK_HEIGHT + TRACK_GAP))] || tracks[0];
     if (track) {
       const rawT = Math.max(0, Math.round((mx - TRACK_HEADER_WIDTH - viewport.panX) / (PIXELS_PER_UNIT * viewport.zoom)));
       const snap = computeMagneticSnap(rawT, 60, track.id, scenes, '', viewport.zoom, magnetEnabled);
       onCreateScene(track.id, snap.snappedTStart);
     }
-  }, [tracks, scenes, viewport, magnetEnabled, onCreateScene]);
+  }, [tracks, scenes, viewport, magnetEnabled, onCreateScene, onSelectScene]);
 
   // Zoom dock actions
   const handleZoomIn = useCallback(() => {
@@ -491,20 +532,15 @@ export function DawCanvas({
     setViewport((prev) => ({
       ...prev,
       zoom: 1.0,
-      panX: 20,
+      panX: 0,
       panY: 0,
     }));
   }, []);
 
   const handleFitView = useCallback(() => {
-    const fitted = computeFitViewport(scenes, size.width);
+    const fitted = computeFitViewport(scenes, size.width, 40);
     setViewport(fitted);
   }, [scenes, size.width]);
-
-  const totalWords = useMemo(
-    () => scenes.reduce((acc, s) => acc + (s.word_count || 0), 0),
-    [scenes]
-  );
 
   return (
     <div
@@ -529,122 +565,367 @@ export function DawCanvas({
     >
       <canvas ref={canvasRef} style={{ display: 'block', width: size.width, height: size.height }} />
 
-      {/* Floating Bottom Dock: Mount-Inspired Matte Precision Toolbar Dock */}
-      <div
+      {/* Pinned Left Track Headers & Mode Indicator ("Marcando en qué estamos como estaba antes") */}
+      <aside
         style={{
           position: 'absolute',
-          bottom: '16px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '4px 8px',
-          backgroundColor: 'rgba(18, 21, 31, 0.92)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          borderRadius: '10px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.55), 0 2px 6px rgba(0, 0, 0, 0.3)',
-          zIndex: 40,
+          top: 0,
+          left: 0,
+          width: `${TRACK_HEADER_WIDTH}px`,
+          height: '100%',
+          backgroundColor: '#0c0e14',
+          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          boxShadow: '4px 0 20px rgba(0, 0, 0, 0.45)',
+          zIndex: 35,
           pointerEvents: 'auto',
+          overflow: 'hidden',
           userSelect: 'none',
         }}
         onPointerDown={(e) => e.stopPropagation()}
         onPointerUp={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Telemetry Badge (Mount-inspired matte pill) */}
+        {/* Pinned Top Header: SECUENCIA NARRATIVA */}
         <div
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: `${CANVAS_TOP_PAD}px`,
+            padding: '0 14px',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            padding: '2px 8px',
-            borderRadius: '6px',
-            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-            fontSize: '11px',
-            color: 'var(--text-secondary)',
-            border: '1px solid rgba(255, 255, 255, 0.04)',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            backgroundColor: '#0c0e14',
+            zIndex: 10,
           }}
         >
-          <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
-            {scenes.length}
-          </span>
-          <span>escenas</span>
-          <span style={{ color: 'rgba(255, 255, 255, 0.15)' }}>·</span>
-          <span style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-            {totalWords.toLocaleString()}
-          </span>
-          <span>pal.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: '#38bdf8',
+                boxShadow: '0 0 8px rgba(56, 189, 248, 0.7)',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                color: '#f8fafc',
+                fontFamily: 'var(--font-sans)',
+              }}
+            >
+              SECUENCIA NARRATIVA
+            </span>
+          </div>
         </div>
 
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+        {/* Track Lane Cards Container (synced with vertical panY and aligned to track corridor) */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            overflow: 'hidden',
+          }}
+        >
+          {tracks.map((trk, idx) => {
+            const trkScenes = scenes.filter((s) => s.track_id === trk.id);
+            const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
+            const topY = CANVAS_TOP_PAD + viewport.panY + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y;
+            const isMuted = trk.is_muted;
 
-        {/* Zoom Controls (Matte segmented group) */}
+            return (
+              <div
+                key={trk.id}
+                style={{
+                  position: 'absolute',
+                  top: `${topY}px`,
+                  left: '10px',
+                  width: `${TRACK_HEADER_WIDTH - 20}px`,
+                  height: `${CARD_HEIGHT}px`,
+                  backgroundColor: isMuted ? 'rgba(18, 21, 31, 0.5)' : '#0e111a',
+                  backgroundImage: isMuted
+                    ? 'none'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.005) 100%)',
+                  border: isMuted ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                  transition: dragState ? 'none' : 'top 0.05s ease-out',
+                  userSelect: 'none',
+                  minWidth: 0,
+                  boxSizing: 'border-box',
+                }}
+              >
+                {/* Top row: Track Notch + Channel Indicator + Mute Toggle (Zero Container Bloat) */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span
+                      style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        backgroundColor: trk.color_hex || '#6366f1',
+                        boxShadow: `0 0 10px ${trk.color_hex || '#6366f1'}aa`,
+                        flexShrink: 0,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        fontFamily: 'var(--font-sans)',
+                        letterSpacing: '0.04em',
+                        color: isMuted ? '#64748b' : '#94a3b8',
+                        background: 'rgba(255, 255, 255, 0.035)',
+                        padding: '1px 6px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                      }}
+                    >
+                      CH 0{idx + 1}
+                    </span>
+                  </div>
+
+                  {/* Hardware Visibility / Eye Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      _onToggleMuteTrack?.(trk.id);
+                    }}
+                    title={isMuted ? 'Mostrar hilo narrativo' : 'Ocultar hilo narrativo'}
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      borderRadius: '5px',
+                      border: isMuted ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid transparent',
+                      backgroundColor: isMuted ? 'rgba(245, 158, 11, 0.15)' : 'transparent',
+                      color: isMuted ? '#fbbf24' : '#64748b',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {isMuted ? <EyeOff size={13} strokeWidth={1.5} /> : <Eye size={13} strokeWidth={1.5} />}
+                  </button>
+                </div>
+
+                {/* Middle: Track Name (Clean CSS ellipsis truncation) */}
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: isMuted ? '#64748b' : '#ffffff',
+                    fontFamily: 'var(--font-sans)',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    maxWidth: '100%',
+                  }}
+                  title={trk.name}
+                >
+                  {trk.name}
+                </div>
+
+                {/* Bottom: Dynamic Telemetry (Clean CSS ellipsis truncation) */}
+                <div
+                  style={{
+                    fontSize: '10.5px',
+                    fontFamily: 'var(--font-sans)',
+                    fontVariantNumeric: 'tabular-nums',
+                    color: '#64748b',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    width: '100%',
+                    maxWidth: '100%',
+                  }}
+                >
+                  <span>{trkScenes.length} esc</span>
+                  <span style={{ margin: '0 4px', color: 'rgba(255, 255, 255, 0.2)' }}>·</span>
+                  <span>{trkWords.toLocaleString()} pal</span>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Reconstructed "+ Nuevo Hilo" Button in Left Track Column Footer with React Bits DeepThink Glow */}
+          {(() => {
+            const addTrackTopY = CANVAS_TOP_PAD + viewport.panY + tracks.length * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y;
+            return (
+              <GlowButton
+                variant="deepthink"
+                glowRadius="12px"
+                speed="6s"
+                onClick={onCreateTrackClick}
+                title="Crear un nuevo hilo narrativo para subtramas, personajes o tramas paralelas"
+                style={{
+                  position: 'absolute',
+                  top: `${addTrackTopY}px`,
+                  left: '10px',
+                  width: `${TRACK_HEADER_WIDTH - 20}px`,
+                  height: `${CARD_HEIGHT}px`,
+                  userSelect: 'none',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      fontFamily: 'var(--font-sans)',
+                    }}
+                  >
+                    <Plus size={14} strokeWidth={1.5} />
+                    <span>Nuevo Hilo</span>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      color: 'var(--zinc-500)',
+                      fontFamily: 'var(--font-sans)',
+                      fontVariantNumeric: 'tabular-nums',
+                    }}
+                  >
+                    CH 0{tracks.length + 1} · Añadir trama
+                  </span>
+                </div>
+              </GlowButton>
+            );
+          })()}
+        </div>
+      </aside>
+
+      {/* Floating Bottom Right Controls Dock with React Bits Border Glow */}
+      <BorderGlow
+        variant="cyan-violet"
+        borderRadius="9999px"
+        glowSize={160}
+        style={{
+          position: 'absolute',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 40,
+        }}
+      >
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '2px',
-            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-            padding: '2px',
-            borderRadius: '6px',
-            border: '1px solid rgba(255, 255, 255, 0.04)',
+            gap: '8px',
+            padding: '4px 8px',
+            backgroundColor: 'rgba(10, 12, 18, 0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderRadius: '9999px',
+            boxShadow: '0 16px 40px -8px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.10)',
+            pointerEvents: 'auto',
+            userSelect: 'none',
           }}
+          onPointerDown={(e) => e.stopPropagation()}
+          onPointerUp={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
-          <button
-            className="btn-icon"
-            onClick={handleZoomOut}
-            title="Reducir zoom (-)"
-            style={{ width: '20px', height: '20px', fontSize: '12px' }}
-          >
-            -
-          </button>
-
-          <button
-            className="btn btn-ghost"
-            onClick={handleResetZoom}
-            title="Restablecer zoom al 100%"
+          {/* Zoom Controls (Matte segmented group) */}
+          <div
             style={{
-              padding: '0 6px',
-              height: '20px',
-              fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
-              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              padding: '2px',
+              borderRadius: '6px',
+              border: '1px solid rgba(255, 255, 255, 0.04)',
             }}
           >
-            {Math.round(viewport.zoom * 100)}%
-          </button>
+            <button
+              className="btn-icon"
+              onClick={handleZoomOut}
+              title="Reducir zoom (-)"
+              style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Minus size={12} strokeWidth={1.5} />
+            </button>
 
+            <button
+              className="btn btn-ghost"
+              onClick={handleResetZoom}
+              title="Restablecer zoom al 100%"
+              style={{
+                padding: '0 6px',
+                height: '22px',
+                fontSize: '11px',
+                fontFamily: 'var(--font-sans)',
+                fontVariantNumeric: 'tabular-nums',
+                fontWeight: 500,
+              }}
+            >
+              {Math.round(viewport.zoom * 100)}%
+            </button>
+
+            <button
+              className="btn-icon"
+              onClick={handleZoomIn}
+              title="Aumentar zoom (+)"
+              style={{ width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Plus size={12} strokeWidth={1.5} />
+            </button>
+          </div>
+
+          <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+
+          {/* View Fit ("Ajustar" to content) button */}
           <button
-            className="btn-icon"
-            onClick={handleZoomIn}
-            title="Aumentar zoom (+)"
-            style={{ width: '20px', height: '20px', fontSize: '12px' }}
+            className="btn btn-ghost"
+            onClick={handleFitView}
+            title="Centrar y encuadrar todas las escenas literarias"
+            style={{
+              height: '24px',
+              padding: '0 8px',
+              fontSize: '11px',
+              fontWeight: 500,
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+            }}
           >
-            +
+            <Maximize2 size={12} strokeWidth={1.5} />
+            <span>Ajustar</span>
           </button>
         </div>
-
-        <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-
-        {/* View Fit ("Ajustar" to content) button */}
-        <button
-          className="btn btn-ghost"
-          onClick={handleFitView}
-          title="Centrar y encuadrar todas las escenas literarias"
-          style={{
-            height: '24px',
-            padding: '0 8px',
-            fontSize: '11px',
-            fontWeight: 500,
-            borderRadius: '6px',
-          }}
-        >
-          <span style={{ fontSize: '12px', opacity: 0.8 }}>⛶</span> Ajustar
-        </button>
-      </div>
+      </BorderGlow>
 
       {/* Floating Context Menu */}
       {contextMenu && (
@@ -654,6 +935,7 @@ export function DawCanvas({
           scene={contextMenu.scene}
           onClose={() => setContextMenu(null)}
           onOpenEditor={(scene) => onSelectScene(scene)}
+          onRename={(scene) => setEditingTitleState({ id: scene.id, title: scene.title })}
           onStartConnect={(scene) => {
             const r = getSceneRect(scene, tracks, viewport);
             connectingWireRef.current = {
@@ -669,6 +951,75 @@ export function DawCanvas({
           onDelete={(sceneId) => onDeleteScene?.(sceneId)}
         />
       )}
+
+      {/* Inline Scene Card Title Editor Overlay (Direct on Canvas) */}
+      {editingTitleState && (() => {
+        const targetScene = scenes.find((s) => s.id === editingTitleState.id);
+        if (!targetScene) return null;
+        const r = getSceneRect(targetScene, tracks, viewport);
+        if (r.x + r.w < TRACK_HEADER_WIDTH || r.x > size.width || r.y + r.h < CANVAS_TOP_PAD || r.y > size.height) {
+          return null;
+        }
+
+        const commitEdit = () => {
+          const newTitle = editingTitleState.title.trim();
+          if (newTitle && onUpdateSceneTitle) {
+            onUpdateSceneTitle(targetScene.id, newTitle);
+          }
+          setEditingTitleState(null);
+        };
+
+        const inputLeft = Math.max(TRACK_HEADER_WIDTH + 8, r.x + 24);
+        const inputWidth = Math.min(Math.max(160, r.w - 36), size.width - inputLeft - 16);
+
+        return (
+          <input
+            autoFocus
+            ref={(el) => {
+              if (el) {
+                el.focus();
+                el.select();
+              }
+            }}
+            type="text"
+            value={editingTitleState.title}
+            onChange={(e) => setEditingTitleState({ ...editingTitleState, title: e.target.value })}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitEdit();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setEditingTitleState(null);
+              }
+            }}
+            onBlur={commitEdit}
+            onPointerDown={(e) => e.stopPropagation()}
+            onPointerUp={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            aria-label="Editar título de la escena"
+            style={{
+              position: 'absolute',
+              left: `${inputLeft}px`,
+              top: `${r.y + 10}px`,
+              width: `${inputWidth}px`,
+              height: '24px',
+              padding: '2px 8px',
+              backgroundColor: 'rgba(15, 23, 42, 0.96)',
+              border: '1px solid #818cf8',
+              borderRadius: '6px',
+              color: '#ffffff',
+              fontFamily: 'var(--font-sans)',
+              fontSize: '11.5px',
+              fontWeight: 600,
+              outline: 'none',
+              boxShadow: '0 0 14px rgba(99, 102, 241, 0.4), 0 4px 12px rgba(0, 0, 0, 0.7)',
+              zIndex: 60,
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

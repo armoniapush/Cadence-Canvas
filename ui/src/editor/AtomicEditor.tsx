@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { Scene, TonalHistogram } from '../types';
-import { updateSceneContent, computeTonalMetrics } from '../api';
+import { updateSceneContent, computeTonalMetrics, bumpSceneVersion } from '../api';
 import { TonalHud } from './TonalHud';
+import { User, MapPin, Box, Maximize2, Trash2, X, GitCommit, AlertTriangle } from 'lucide-react';
 
 export interface AtomicEditorProps {
   scene: Scene;
@@ -30,27 +31,69 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<TonalHistogram | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectedSentenceIndex, setSelectedSentenceIndex] = useState<number | null>(null);
+
+  // Zen Mode Typing Fade-out Controls
+  const [isTyping, setIsTyping] = useState(false);
+  const [isHoveringToolbar, setIsHoveringToolbar] = useState(false);
+  const typingTimerRef = useRef<number | null>(null);
 
   const saveTimerRef = useRef<number | null>(null);
   const metricsTimerRef = useRef<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const versionRef = useRef<number>(scene.version);
+  const inFlightSaveRef = useRef<boolean>(false);
+  const pendingSaveRef = useRef<{ title: string; text: string } | null>(null);
 
   useEffect(() => {
+    // Clear any timers from previous scene to prevent cross-scene save leaks
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    if (metricsTimerRef.current) {
+      clearTimeout(metricsTimerRef.current);
+      metricsTimerRef.current = null;
+    }
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    pendingSaveRef.current = null;
+    inFlightSaveRef.current = false;
+
     setDraftTitle(scene.title);
     setDraftText(scene.text);
+    versionRef.current = scene.version;
     setExpectedVersion(scene.version);
     setHasConflict(false);
     setConflictError(null);
     setSaveStatus('saved');
     setConfirmDelete(false);
+    setSelectedSentenceIndex(null);
+    setIsTyping(false);
     computeTonalMetrics(scene.text).then(setMetrics).catch(() => {});
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (metricsTimerRef.current) clearTimeout(metricsTimerRef.current);
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
   }, [scene.id]);
 
   const executeSave = useCallback(
-    async (titleToSave: string, textToSave: string, versionToSave: number) => {
+    async (titleToSave: string, textToSave: string) => {
+      if (inFlightSaveRef.current) {
+        // Enqueue latest text to be saved as soon as in-flight promise completes
+        pendingSaveRef.current = { title: titleToSave, text: textToSave };
+        return;
+      }
       try {
+        inFlightSaveRef.current = true;
         setSaveStatus('saving');
-        const updated = await updateSceneContent(projectPath, scene.id, versionToSave, titleToSave, textToSave);
+        const ver = versionRef.current;
+        const updated = await updateSceneContent(projectPath, scene.id, ver, titleToSave, textToSave);
+        versionRef.current = updated.version;
         setExpectedVersion(updated.version);
         setHasConflict(false);
         setConflictError(null);
@@ -58,13 +101,24 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         onSceneUpdated(updated);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        const isConflict = msg.includes('conflict') || msg.includes('version') || msg.includes('StaleMutationConflict') || msg.includes('75');
+        const isConflict =
+          msg.includes('conflict') ||
+          msg.includes('version') ||
+          msg.includes('StaleMutationConflict') ||
+          msg.includes('75');
         if (isConflict) {
           setHasConflict(true);
           setConflictError(msg);
           setSaveStatus('conflict');
         } else {
           setSaveStatus('dirty');
+        }
+      } finally {
+        inFlightSaveRef.current = false;
+        if (pendingSaveRef.current) {
+          const next = pendingSaveRef.current;
+          pendingSaveRef.current = null;
+          executeSave(next.title, next.text);
         }
       }
     },
@@ -75,14 +129,36 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
     (newTitle: string, newText: string) => {
       setSaveStatus('dirty');
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = window.setTimeout(() => executeSave(newTitle, newText, expectedVersion), 600);
+      saveTimerRef.current = window.setTimeout(() => executeSave(newTitle, newText), 600);
     },
-    [executeSave, expectedVersion]
+    [executeSave]
   );
+
+  const resetTypingState = useCallback(() => {
+    setIsTyping(true);
+    if (typingTimerRef.current) {
+      window.clearTimeout(typingTimerRef.current);
+    }
+    typingTimerRef.current = window.setTimeout(() => {
+      setIsTyping(false);
+    }, 1800);
+  }, []);
+
+  const handleMouseMove = useCallback(() => {
+    if (isTyping) {
+      setIsTyping(false);
+      if (typingTimerRef.current) {
+        window.clearTimeout(typingTimerRef.current);
+        typingTimerRef.current = null;
+      }
+    }
+  }, [isTyping]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextText = e.target.value;
     setDraftText(nextText);
+    resetTypingState();
+    setSelectedSentenceIndex(null);
     scheduleSave(draftTitle, nextText);
     if (metricsTimerRef.current) clearTimeout(metricsTimerRef.current);
     metricsTimerRef.current = window.setTimeout(() => {
@@ -92,6 +168,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDraftTitle(e.target.value);
+    resetTypingState();
     scheduleSave(e.target.value, draftText);
   };
 
@@ -99,17 +176,62 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      executeSave(draftTitle, draftText, expectedVersion);
+      executeSave(draftTitle, draftText);
     } else if (e.key === 'F11' || (e.key === 'Escape' && isZen)) {
       e.preventDefault();
       onToggleZen();
     }
   };
 
+  // Jump and highlight clicked Gary Provost sentence bar
+  const jumpToSentence = useCallback(
+    (sentenceIndex: number) => {
+      setSelectedSentenceIndex(sentenceIndex);
+      const el = textareaRef.current;
+      if (!el) return;
+
+      const regex = /[^.!?]+[.!?]*/g;
+      let match: RegExpExecArray | null;
+      let cur = 0;
+      let targetRange: { start: number; end: number } | null = null;
+
+      while ((match = regex.exec(draftText)) !== null) {
+        if (match[0].trim().length > 0) {
+          if (cur === sentenceIndex) {
+            const raw = match[0];
+            const leadingWs = raw.match(/^\s*/)?.[0].length ?? 0;
+            const trailingWs = raw.match(/\s*$/)?.[0].length ?? 0;
+            const start = match.index + leadingWs;
+            const end = match.index + raw.length - trailingWs;
+            targetRange = { start, end };
+            break;
+          }
+          cur++;
+        }
+      }
+
+      if (targetRange) {
+        el.focus();
+        el.setSelectionRange(targetRange.start, targetRange.end);
+
+        const textBefore = draftText.slice(0, targetRange.start);
+        const lineCountBefore = textBefore.split('\n').length;
+        const totalLines = draftText.split('\n').length;
+        if (totalLines > 0 && el.scrollHeight > el.clientHeight) {
+          const approxLineH = 16 * 1.75;
+          const targetScrollTop = Math.max(0, (lineCountBefore - 2) * approxLineH);
+          el.scrollTo({ top: targetScrollTop, behavior: 'smooth' });
+        }
+      }
+    },
+    [draftText]
+  );
+
   const insertMention = (prefix: '@' | '#' | '!') => {
     const el = textareaRef.current;
     if (!el) return;
-    const s = el.selectionStart, end = el.selectionEnd;
+    const s = el.selectionStart,
+      end = el.selectionEnd;
     const tag = prefix === '@' ? '@Personaje ' : prefix === '#' ? '#Lugar ' : '!Objeto ';
     const next = draftText.slice(0, s) + tag + draftText.slice(end);
     setDraftText(next);
@@ -122,8 +244,9 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
 
   const handleForceRebase = () => {
     const nextV = scene.version > expectedVersion ? scene.version : expectedVersion + 1;
+    versionRef.current = nextV;
     setExpectedVersion(nextV);
-    executeSave(draftTitle, draftText, nextV);
+    executeSave(draftTitle, draftText);
   };
 
   const handleDiscardLocal = () => {
@@ -143,19 +266,23 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
     return (
       <div
         onKeyDown={handleKeyDown}
+        onMouseMove={handleMouseMove}
         style={{
           position: 'fixed',
           inset: 0,
           zIndex: 9999,
-          backgroundColor: 'var(--bg-canvas)',
+          backgroundColor: '#11141e',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           padding: '28px 24px',
+          transition: 'background-color 0.25s ease',
         }}
       >
-        {/* Floating Top Pill HUD in Zen Mode */}
+        {/* Floating Top Pill HUD in Zen Mode - Fades out smoothly during active typing */}
         <div
+          onMouseEnter={() => setIsHoveringToolbar(true)}
+          onMouseLeave={() => setIsHoveringToolbar(false)}
           style={{
             position: 'fixed',
             top: '20px',
@@ -163,15 +290,26 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
             alignItems: 'center',
             gap: '14px',
             zIndex: 10000,
+            opacity: isTyping && !isHoveringToolbar ? 0 : 1,
+            transform: isTyping && !isHoveringToolbar ? 'translateY(-10px)' : 'translateY(0)',
+            pointerEvents: isTyping && !isHoveringToolbar ? 'none' : 'auto',
+            transition: 'opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
           }}
         >
-          <TonalHud metrics={metrics} wordCount={wordCount} charCount={charCount} compact />
+          <TonalHud
+            metrics={metrics}
+            wordCount={wordCount}
+            charCount={charCount}
+            compact
+            selectedSentenceIndex={selectedSentenceIndex}
+            onSelectSentence={jumpToSentence}
+          />
           <button
             className="btn"
             onClick={onToggleZen}
             style={{
               padding: '0 12px',
-              height: '30px',
+              height: '26px',
               backgroundColor: 'var(--bg-elevated)',
               fontSize: '11px',
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
@@ -197,15 +335,52 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               alignItems: 'center',
             }}
           >
-            <span style={{ color: '#fca5a5' }}>⚠️ Conflicto OCC: Versión remota v{scene.version} supera v{expectedVersion}.</span>
+            <span style={{ color: '#fca5a5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertTriangle size={14} strokeWidth={1.5} color="#f87171" />
+              <span>Conflicto OCC: Versión remota v{scene.version} supera v{expectedVersion}.</span>
+            </span>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleForceRebase} style={{ padding: '4px 10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: 600 }}>Rebasar y Forzar</button>
-              <button onClick={handleDiscardLocal} style={{ padding: '4px 10px', backgroundColor: 'transparent', color: '#fca5a5', border: '1px solid #ef4444', borderRadius: '6px', fontSize: '11px' }}>Descartar</button>
+              <button
+                onClick={handleForceRebase}
+                style={{
+                  padding: '4px 10px',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                }}
+              >
+                Rebasar y Forzar
+              </button>
+              <button
+                onClick={handleDiscardLocal}
+                style={{
+                  padding: '4px 10px',
+                  backgroundColor: 'transparent',
+                  color: '#fca5a5',
+                  border: '1px solid #ef4444',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                }}
+              >
+                Descartar
+              </button>
             </div>
           </div>
         )}
 
-        <div style={{ width: '100%', maxWidth: '74ch', display: 'flex', flexDirection: 'column', flex: 1, marginTop: hasConflict ? '20px' : '72px' }}>
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '74ch',
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            marginTop: hasConflict ? '20px' : '72px',
+          }}
+        >
           <input
             type="text"
             value={draftTitle}
@@ -234,13 +409,13 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               flex: 1,
               backgroundColor: 'transparent',
               border: 'none',
-              color: '#f1f5f9',
-              fontSize: '19px',
-              lineHeight: 1.9,
-              letterSpacing: '0.008em',
+              color: '#e2e8f0',
+              fontSize: '16px',
+              lineHeight: 1.75,
+              letterSpacing: '0.006em',
               outline: 'none',
               resize: 'none',
-              caretColor: 'var(--text-primary)',
+              caretColor: 'var(--accent-cyan)',
               fontFamily: 'var(--font-editorial)',
             }}
           />
@@ -271,16 +446,40 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
           type="text"
           value={draftTitle}
           onChange={handleTitleChange}
+          className="title-input-ghost"
           style={{
-            backgroundColor: 'var(--bg-rack)',
-            border: '1px solid var(--border-specular)',
-            borderRadius: '8px',
-            color: 'var(--text-primary)',
-            fontSize: '13px',
+            fontSize: '15px',
             fontWeight: 600,
-            padding: '6px 10px',
+            color: 'var(--zinc-100, #f4f4f5)',
+            backgroundColor: 'transparent',
+            border: '1px solid transparent',
+            borderRadius: '4px',
+            padding: '2px 6px',
             flex: 1,
             outline: 'none',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (document.activeElement !== e.currentTarget) {
+              e.currentTarget.style.backgroundColor = 'rgba(39, 39, 42, 0.3)';
+              e.currentTarget.style.borderColor = 'rgba(63, 63, 70, 0.4)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (document.activeElement !== e.currentTarget) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+            }
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(39, 39, 42, 0.5)';
+            e.currentTarget.style.borderColor = 'rgba(63, 63, 70, 0.7)';
+            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(63, 63, 70, 0.4)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         />
 
@@ -289,7 +488,9 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
           <span
             style={{
               fontSize: '11px',
-              fontFamily: 'var(--font-mono)',
+              fontFamily: 'var(--font-sans)',
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 600,
               padding: '3px 7px',
               borderRadius: '9999px',
               backgroundColor: 'rgba(255, 255, 255, 0.04)',
@@ -312,8 +513,39 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               : `v${expectedVersion}`}
           </span>
 
-          {/* Zen Toggle Button */}
+          {/* Manual Version Revision Bump (Author-controlled draft progression) */}
           <button
+            type="button"
+            className="btn btn-secondary"
+            title={`Promover manualmente a la siguiente revisión editorial (v${expectedVersion + 1})`}
+            onClick={async () => {
+              try {
+                const bumped = await bumpSceneVersion(projectPath, scene.id, expectedVersion);
+                setExpectedVersion(bumped.version);
+                onSceneUpdated(bumped);
+              } catch (err) {
+                console.error('[AtomicEditor] Error bumping version:', err);
+              }
+            }}
+            style={{
+              fontSize: '11px',
+              fontFamily: 'var(--font-sans)',
+              fontVariantNumeric: 'tabular-nums',
+              fontWeight: 500,
+              padding: '2px 8px',
+              height: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            <GitCommit size={13} strokeWidth={1.5} />
+            <span>v{expectedVersion + 1}</span>
+          </button>
+
+          {/* Zen Toggle Button (Ghost Tier) */}
+          <button
+            type="button"
             className="btn btn-ghost"
             onClick={onToggleZen}
             title="Modo Zen inmersivo (F11)"
@@ -321,12 +553,16 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               padding: '0 8px',
               height: '24px',
               fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
             }}
           >
-            <span>🗖</span> Zen
+            <Maximize2 size={13} strokeWidth={1.5} />
+            <span>Zen</span>
           </button>
 
-          {/* Deletion Safeguard Button */}
+          {/* Deletion Safeguard Button (Destructive Tier: Ghost default, red on hover) */}
           {onDeleteScene &&
             (confirmDelete ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -337,13 +573,14 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
                   }}
                   title="Confirmar eliminación permanente"
                   style={{
-                    padding: '4px 8px',
+                    padding: '3px 8px',
                     backgroundColor: '#ef4444',
                     color: '#fff',
                     borderRadius: '6px',
                     fontSize: '11px',
                     fontWeight: 600,
                     cursor: 'pointer',
+                    border: '1px solid #ef4444',
                   }}
                 >
                   ¿Borrar?
@@ -352,53 +589,66 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
                   onClick={() => setConfirmDelete(false)}
                   title="Cancelar"
                   style={{
-                    padding: '4px 7px',
+                    padding: '3px 7px',
                     backgroundColor: 'transparent',
-                    color: 'var(--text-secondary)',
-                    border: '1px solid var(--border-specular)',
+                    color: 'var(--zinc-400, #a1a1aa)',
+                    border: '1px solid rgba(63, 63, 70, 0.5)',
                     borderRadius: '6px',
                     fontSize: '11px',
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
                 >
-                  ✕
+                  <X size={12} strokeWidth={1.5} />
                 </button>
               </div>
             ) : (
               <button
+                type="button"
+                className="btn-destructive"
                 onClick={() => setConfirmDelete(true)}
                 title="Eliminar escena"
                 style={{
-                  padding: '4px 8px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                  border: '1px solid rgba(239, 68, 68, 0.25)',
-                  borderRadius: '6px',
-                  color: '#f87171',
+                  padding: '3px 8px',
+                  height: '24px',
                   fontSize: '11px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
+                  cursor: 'pointer',
                 }}
               >
-                <span>✕</span> Borrar
+                <Trash2 size={13} strokeWidth={1.5} />
+                <span>Borrar</span>
               </button>
             ))}
 
-          {/* Close Panel Button */}
+          {/* Vertical Divider before Close Button */}
+          {onClose && (
+            <div style={{ width: '1px', height: '14px', backgroundColor: 'rgba(63, 63, 70, 0.5)', margin: '0 2px' }} />
+          )}
+
+          {/* Close Panel Button (Ghost Tier) */}
           {onClose && (
             <button
+              type="button"
+              className="btn btn-ghost"
               onClick={onClose}
+              aria-label="Cerrar editor lateral"
               title="Cerrar editor lateral"
               style={{
-                padding: '4px 8px',
-                borderRadius: '6px',
-                color: 'var(--text-muted)',
-                fontSize: '14px',
-                cursor: 'pointer',
+                width: '26px',
+                height: '26px',
+                padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
               }}
             >
-              ✕
+              <X size={15} strokeWidth={1.5} />
             </button>
           )}
         </div>
@@ -452,59 +702,50 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         </div>
       )}
 
-      {/* Unified Horizontal Chromatic Spectral Wave / Rhythm Bar */}
-      <TonalHud metrics={metrics} wordCount={wordCount} charCount={charCount} />
+      {/* Sleek Progressive Disclosure Tonal HUD */}
+      <TonalHud
+        metrics={metrics}
+        wordCount={wordCount}
+        charCount={charCount}
+        selectedSentenceIndex={selectedSentenceIndex}
+        onSelectSentence={jumpToSentence}
+      />
 
       {/* Entity Mention Quick Badges */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px' }}>
+        <span style={{ color: 'var(--zinc-500, #71717a)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
           Menciones:
         </span>
         <button
-          className="pill-btn"
+          type="button"
+          className="badge-mention-character"
           onClick={() => insertMention('@')}
-          style={{
-            padding: '3px 8px',
-            backgroundColor: 'rgba(56, 189, 248, 0.08)',
-            color: 'var(--accent-cyan)',
-            borderColor: 'rgba(56, 189, 248, 0.25)',
-            fontSize: '10px',
-            fontWeight: 500,
-          }}
+          title="Mencionar Personaje"
         >
-          @ Personaje
+          <User size={12} strokeWidth={1.5} />
+          <span>Personaje</span>
         </button>
         <button
-          className="pill-btn"
+          type="button"
+          className="badge-mention-location"
           onClick={() => insertMention('#')}
-          style={{
-            padding: '3px 8px',
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            color: 'var(--accent-emerald)',
-            borderColor: 'rgba(16, 185, 129, 0.25)',
-            fontSize: '10px',
-            fontWeight: 500,
-          }}
+          title="Mencionar Lugar"
         >
-          # Lugar
+          <MapPin size={12} strokeWidth={1.5} />
+          <span>Lugar</span>
         </button>
         <button
-          className="pill-btn"
+          type="button"
+          className="badge-mention-object"
           onClick={() => insertMention('!')}
-          style={{
-            padding: '3px 8px',
-            backgroundColor: 'rgba(245, 158, 11, 0.08)',
-            color: 'var(--accent-amber)',
-            borderColor: 'rgba(245, 158, 11, 0.25)',
-            fontSize: '10px',
-            fontWeight: 500,
-          }}
+          title="Mencionar Objeto"
         >
-          ! Objeto
+          <Box size={12} strokeWidth={1.5} />
+          <span>Objeto</span>
         </button>
       </div>
 
-      {/* Primary Drafting Textarea */}
+      {/* Primary Drafting Textarea: Comfortable, distraction-free matte typography */}
       <textarea
         ref={textareaRef}
         value={draftText}
@@ -512,18 +753,19 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         placeholder="Redacta el contenido de la escena literaria..."
         style={{
           flex: 1,
-          backgroundColor: 'var(--bg-canvas)',
+          backgroundColor: '#11141e',
           border: '1px solid var(--border-specular)',
           borderRadius: '10px',
-          color: '#f1f5f9',
-          fontSize: '14.5px',
-          lineHeight: 1.82,
+          color: '#e2e8f0',
+          fontSize: '16px',
+          lineHeight: 1.75,
           letterSpacing: '0.004em',
-          padding: '14px',
+          padding: '16px',
           outline: 'none',
           resize: 'none',
           caretColor: 'var(--accent-cyan)',
           fontFamily: 'var(--font-editorial)',
+          boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.3)',
         }}
       />
     </div>

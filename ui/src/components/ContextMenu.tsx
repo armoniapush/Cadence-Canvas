@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { FileEdit, Type, Link2, Copy, Scissors, Trash2 } from 'lucide-react';
 import type { Scene } from '../types';
 
 export interface ContextMenuProps {
@@ -7,6 +8,7 @@ export interface ContextMenuProps {
   scene: Scene;
   onClose: () => void;
   onOpenEditor: (scene: Scene) => void;
+  onRename?: (scene: Scene) => void;
   onStartConnect: (scene: Scene) => void;
   onDuplicate: (scene: Scene) => void;
   onSplit: (scene: Scene) => void;
@@ -19,6 +21,7 @@ export function ContextMenu({
   scene,
   onClose,
   onOpenEditor,
+  onRename,
   onStartConnect,
   onDuplicate,
   onSplit,
@@ -104,11 +107,28 @@ export function ContextMenu({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✎</span>
+          <FileEdit size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
           <span>Abrir en Editor</span>
         </span>
         <span className="kbd-shortcut">↵</span>
       </button>
+
+      {/* Rename Scene Inline */}
+      {onRename && (
+        <button
+          className="menu-item-btn"
+          onClick={() => {
+            onRename(scene);
+            onClose();
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Type size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
+            <span>Editar Título en Canvas</span>
+          </span>
+          <span className="kbd-shortcut">2x Clic</span>
+        </button>
+      )}
 
       {/* 2. Connect Causally */}
       <button
@@ -119,7 +139,7 @@ export function ContextMenu({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>☍</span>
+          <Link2 size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
           <span>Conectar Causalmente</span>
         </span>
         <span className="kbd-shortcut">⌘L</span>
@@ -134,7 +154,7 @@ export function ContextMenu({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>❐</span>
+          <Copy size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
           <span>Duplicar Escena</span>
         </span>
         <span className="kbd-shortcut">⌘D</span>
@@ -149,7 +169,7 @@ export function ContextMenu({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✂</span>
+          <Scissors size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
           <span>Dividir en Dos</span>
         </span>
         <span className="kbd-shortcut">⌥⇧S</span>
@@ -166,7 +186,7 @@ export function ContextMenu({
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ opacity: 0.7, width: '14px', textAlign: 'center', fontSize: '13px' }}>✕</span>
+          <Trash2 size={14} strokeWidth={1.5} style={{ opacity: 0.8 }} />
           <span>Eliminar Escena</span>
         </span>
         <span className="kbd-shortcut">⌫</span>

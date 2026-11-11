@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Network, AlertTriangle, X, CheckCircle2, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Scene, EgoGraph, GraphNode, LoreEntity, AnachronismIssue } from '../types';
 import { listEntities, getEgoGraph, auditTimeline } from '../api';
 
@@ -137,9 +138,10 @@ export function RadialConstellation({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: 'var(--accent-cyan)', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
-            ◈ RED DE PERSONAJES & LUGARES
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '13px', fontWeight: 600, letterSpacing: '0.02em' }}>
+            <Network size={14} strokeWidth={1.5} />
+            <span>RED DE PERSONAJES & LUGARES</span>
+          </div>
           <span
             style={{
               fontSize: '10px',
@@ -187,10 +189,14 @@ export function RadialConstellation({
               backgroundColor: anachronisms.length > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(31, 154, 115, 0.1)',
               color: anachronisms.length > 0 ? '#f87171' : '#34d399',
               fontSize: '11px',
-              fontWeight: 600,
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
             }}
           >
-            ⚠ Auditoría ({anachronisms.length})
+            <AlertTriangle size={12} strokeWidth={1.5} />
+            <span>Auditoría ({anachronisms.length})</span>
           </button>
 
           {onClose && (
@@ -201,9 +207,13 @@ export function RadialConstellation({
                 height: '24px',
                 padding: '0 10px',
                 fontSize: '11px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
               }}
             >
-              ✕ Cerrar
+              <X size={12} strokeWidth={1.5} />
+              <span>Cerrar</span>
             </button>
           )}
         </div>
@@ -244,7 +254,7 @@ export function RadialConstellation({
                     y={oy + 2}
                     fill="#64748b"
                     fontSize="8"
-                    fontFamily="var(--font-mono)"
+                    fontFamily="var(--font-sans)"
                   >
                     {label}
                   </text>
@@ -266,7 +276,7 @@ export function RadialConstellation({
               return (
                 <g key={`edge-${neighbor.id}`}>
                   <line x1="0" y1="0" x2={nx} y2={ny} stroke={isHov ? '#38bdf8' : neighbor.color_hex || '#818cf8'} strokeWidth={Math.max(1.5, Math.min(5, weight * 1.5))} strokeOpacity={opacity} strokeDasharray={ls.isAttenuated ? '3 3' : undefined} />
-                  <text x={nx * 0.55} y={ny * 0.55 - 4} fill={ls.isAttenuated ? '#64748b' : '#38bdf8'} fontSize="9" fontWeight="700" textAnchor="middle" opacity={ls.isAttenuated ? 0.3 : 0.9} fontFamily="var(--font-mono)">
+                  <text x={nx * 0.55} y={ny * 0.55 - 4} fill={ls.isAttenuated ? '#64748b' : '#38bdf8'} fontSize="9" fontWeight="700" textAnchor="middle" opacity={ls.isAttenuated ? 0.3 : 0.9} fontFamily="var(--font-sans)">
                     w:{weight.toFixed(1)}
                   </text>
                 </g>
@@ -322,10 +332,10 @@ export function RadialConstellation({
                   <circle cx="0" cy="0" r="40" fill="none" stroke={style.color} strokeWidth="1.5" strokeDasharray="4 4" opacity="0.8" />
                   <circle cx="0" cy="0" r="30" fill="#0f172a" stroke={style.color} strokeWidth="2.5" />
                   <text textAnchor="middle" dy="5" fill={style.color} fontSize="14" fontWeight="700">{style.prefix}</text>
-                  <text textAnchor="middle" y="-46" fill="#38bdf8" fontSize="9" letterSpacing="0.05em" fontWeight="700" fontFamily="var(--font-mono)">[ EGO CENTRAL ]</text>
+                  <text textAnchor="middle" y="-46" fill="#38bdf8" fontSize="9" letterSpacing="0.05em" fontWeight="700" fontFamily="var(--font-sans)">[ EGO CENTRAL ]</text>
                   <text textAnchor="middle" y="54" fill="#ffffff" fontSize="12" fontWeight="700">{centerNode.name}</text>
-                  <text textAnchor="middle" y="68" fill="#94a3b8" fontSize="9" fontFamily="var(--font-mono)">[ {centerNode.mention_count} menciones ]</text>
-                  {ls.isAttenuated && <text textAnchor="middle" y="80" fill="#f87171" fontSize="9" fontWeight="600">⚠ {ls.reason}</text>}
+                  <text textAnchor="middle" y="68" fill="#94a3b8" fontSize="9" fontFamily="var(--font-sans)">[ {centerNode.mention_count} menciones ]</text>
+                  {ls.isAttenuated && <text textAnchor="middle" y="80" fill="#f87171" fontSize="9" fontWeight="600">{ls.reason}</text>}
                 </g>
               );
             })()}
@@ -353,8 +363,9 @@ export function RadialConstellation({
               <span style={{ fontSize: '10px' }}>({anachronisms.length} alertas)</span>
             </div>
             {anachronisms.length === 0 ? (
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5, backgroundColor: 'rgba(16, 185, 129, 0.08)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                ✓ Cero violaciones causales detectadas. Línea diegética coherente con fechas born_at y died_at.
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5, backgroundColor: 'rgba(16, 185, 129, 0.08)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(16, 185, 129, 0.2)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={13} strokeWidth={1.5} color="#34d399" />
+                <span>Cero violaciones causales detectadas. Línea diegética coherente con fechas born_at y died_at.</span>
               </div>
             ) : (
               anachronisms.map((issue, idx) => {
@@ -376,7 +387,7 @@ export function RadialConstellation({
                       <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 5px', borderRadius: '4px', backgroundColor: isPost ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)', color: isPost ? '#fca5a5' : '#fde047' }}>
                         {isPost ? 'POST-MORTEM' : 'PRE-BIRTH'}
                       </span>
-                      <span style={{ fontSize: '10px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>T: {issue.scene_time}s</span>
+                      <span style={{ fontSize: '10px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>T: {issue.scene_time}s</span>
                     </div>
                     <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{issue.entity_name} en &quot;{issue.scene_title}&quot;</div>
                     <div style={{ fontSize: '10px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{issue.message}</div>
@@ -392,9 +403,13 @@ export function RadialConstellation({
                         fontSize: '10px',
                         fontWeight: 600,
                         cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
                       }}
                     >
-                      ➜ Saltar a Escena Infractora
+                      <ArrowRight size={12} strokeWidth={1.5} />
+                      <span>Saltar a Escena Infractora</span>
                     </button>
                   </div>
                 );
@@ -419,7 +434,7 @@ export function RadialConstellation({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent-cyan)' }}>TIEMPO DIEGÉTICO:</span>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', padding: '2px 8px', backgroundColor: 'var(--bg-rack)', borderRadius: '4px', border: '1px solid var(--border-specular)', fontFamily: 'var(--font-mono)' }}>{tStory}s</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', padding: '2px 8px', backgroundColor: 'var(--bg-rack)', borderRadius: '4px', border: '1px solid var(--border-specular)', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums' }}>{tStory}s</span>
             {activeSceneAtCursor && (
               <span onClick={() => onSelectScene(activeSceneAtCursor.id)} style={{ fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', textDecoration: 'underline' }}>
                 Escena activa: &quot;{activeSceneAtCursor.title}&quot; [T: {activeSceneAtCursor.t_start} - {activeSceneAtCursor.t_start + activeSceneAtCursor.duration}s]
@@ -427,8 +442,14 @@ export function RadialConstellation({
             )}
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
-            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px' }}>◄ -10s</button>
-            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px' }}>+10s ►</button>
+            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.max(tMin, p - 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <ChevronLeft size={11} strokeWidth={1.5} />
+              <span>-10s</span>
+            </button>
+            <button className="btn btn-ghost" onClick={() => setTStory((p) => Math.min(tMax, p + 10))} style={{ height: '22px', padding: '0 8px', fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+              <span>+10s</span>
+              <ChevronRight size={11} strokeWidth={1.5} />
+            </button>
           </div>
         </div>
         <input type="range" min={tMin} max={tMax} value={tStory} step={5} onChange={(e) => setTStory(Number(e.target.value))} style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer', height: '4px', backgroundColor: 'var(--bg-rack)', borderRadius: '9999px' }} />

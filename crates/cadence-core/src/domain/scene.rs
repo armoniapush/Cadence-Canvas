@@ -194,6 +194,7 @@ impl Scene {
     }
 
     /// Moves scene coordinates (track_id, t_start, duration) under optimistic concurrency control (OCC).
+    /// Spatial repositioning on the canvas DOES NOT increment the literary draft version.
     /// Validates spatial invariants before updating.
     pub fn move_coordinates(
         conn: &Connection,
@@ -207,9 +208,29 @@ impl Scene {
         let now = chrono::Utc::now().timestamp();
 
         let rows = conn.execute(
-            "UPDATE scenes SET track_id = ?1, t_start = ?2, duration = ?3, version = version + 1, updated_at = ?4 \
+            "UPDATE scenes SET track_id = ?1, t_start = ?2, duration = ?3, updated_at = ?4 \
              WHERE id = ?5 AND version = ?6",
             rusqlite::params![new_track_id, new_t_start, new_duration, now, id, expected_version],
+        )?;
+
+        if rows == 0 {
+            return check_conflict_or_not_found(conn, id, expected_version);
+        }
+
+        Self::get_by_id(conn, id)
+    }
+
+    /// Explicitly creates a new draft revision (bumps version by 1) on demand.
+    pub fn bump_version(
+        conn: &Connection,
+        id: &str,
+        expected_version: i64,
+    ) -> Result<Self, CadenceError> {
+        let now = chrono::Utc::now().timestamp();
+        let rows = conn.execute(
+            "UPDATE scenes SET version = version + 1, updated_at = ?1 \
+             WHERE id = ?2 AND version = ?3",
+            rusqlite::params![now, id, expected_version],
         )?;
 
         if rows == 0 {

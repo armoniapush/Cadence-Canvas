@@ -63,8 +63,8 @@ const mockState = {
     {
       id: 'mock-scene-2',
       track_id: 'mock-track-2',
-      t_start: 140,
-      duration: 150,
+      t_start: 220,
+      duration: 120,
       z_index: 0,
       title: 'Infiltración en el Búnker',
       text: 'El equipo secundario intercepta la señal de transmisión enemiga.',
@@ -77,8 +77,8 @@ const mockState = {
     {
       id: 'mock-scene-3',
       track_id: 'mock-track-1',
-      t_start: 310,
-      duration: 130,
+      t_start: 440,
+      duration: 120,
       z_index: 0,
       title: 'Convergencia Causal',
       text: 'Ambos hilos se unen en el núcleo de la estación narrativa.',
@@ -199,7 +199,7 @@ export async function listTracks(path: string, projectId: string): Promise<Track
   if (isTauri()) {
     return invoke<Track[]>('list_tracks', { path, projectId });
   }
-  return mockState.tracks.filter((t) => t.project_id === projectId || true);
+  return mockState.tracks.map((t) => ({ ...t }));
 }
 
 export async function createTrack(
@@ -213,7 +213,7 @@ export async function createTrack(
     return invoke<Track>('create_track', { path, projectId, name, color, order });
   }
   const newTrack: Track = {
-    id: `track-${Date.now()}`,
+    id: `track-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     project_id: projectId,
     name,
     color_hex: color,
@@ -221,8 +221,8 @@ export async function createTrack(
     is_muted: false,
     created_at: Date.now(),
   };
-  mockState.tracks.push(newTrack);
-  return newTrack;
+  mockState.tracks.push({ ...newTrack });
+  return { ...newTrack };
 }
 
 export async function setTrackMuted(
@@ -243,7 +243,7 @@ export async function listScenes(path: string, projectId: string): Promise<Scene
   if (isTauri()) {
     return invoke<Scene[]>('list_scenes', { path, projectId });
   }
-  return mockState.scenes;
+  return mockState.scenes.map((s) => ({ ...s }));
 }
 
 export async function createScene(
@@ -265,7 +265,7 @@ export async function createScene(
     });
   }
   const newScene: Scene = {
-    id: `scene-${Date.now()}`,
+    id: `scene-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     track_id: trackId,
     t_start: tStart,
     duration,
@@ -278,8 +278,8 @@ export async function createScene(
     created_at: Date.now(),
     updated_at: Date.now(),
   };
-  mockState.scenes.push(newScene);
-  return newScene;
+  mockState.scenes.push({ ...newScene });
+  return { ...newScene };
 }
 
 export async function updateSceneContent(
@@ -337,6 +337,21 @@ export async function moveScene(
   target.track_id = trackId;
   target.t_start = tStart;
   target.duration = duration;
+  // Spatial dragging on the canvas does NOT increment the literary draft version
+  target.updated_at = Date.now();
+  return { ...target };
+}
+
+export async function bumpSceneVersion(
+  path: string,
+  id: string,
+  version: number,
+): Promise<Scene> {
+  if (isTauri()) {
+    return invoke<Scene>('bump_scene_version', { path, id, version });
+  }
+  const target = mockState.scenes.find((s) => s.id === id);
+  if (!target) throw new Error(`Scene '${id}' not found in mock store`);
   target.version += 1;
   target.updated_at = Date.now();
   return { ...target };
@@ -356,7 +371,7 @@ export async function listAnchors(path: string, projectId: string): Promise<Read
   if (isTauri()) {
     return invoke<ReadingAnchor[]>('list_anchors', { path, projectId });
   }
-  return mockState.anchors.filter((a) => a.project_id === projectId || true);
+  return mockState.anchors.map((a) => ({ ...a }));
 }
 
 export async function createAnchor(

@@ -1,29 +1,42 @@
 :root {
+  /* Linear / Raycast / Figma Neutral Dark Zinc Architecture */
+  --zinc-950: #09090b;
+  --zinc-900: #18181b;
+  --zinc-800: #27272a;
+  --zinc-700: #3f3f46;
+  --zinc-600: #52525b;
+  --zinc-500: #71717a;
+  --zinc-400: #a1a1aa;
+  --zinc-300: #d4d4d8;
+  --zinc-200: #e4e4e7;
+  --zinc-100: #f4f4f5;
+  --zinc-50:  #fafafa;
+
   /* Matte Obsidian & Graphite Architecture */
-  --bg-canvas: #090b10;
-  --bg-station: #090b10;
-  --bg-surface: #0e1118;
-  --bg-elevated: #141722;
-  --bg-header: #0d0f16;
-  --bg-dock: #12151f;
-  --bg-rack: #121520;
-  --bg-panel: #141722;
-  --bg-glass: rgba(13, 15, 22, 0.88);
-  --bg-glass-elevated: rgba(18, 21, 31, 0.92);
+  --bg-canvas: #09090b;
+  --bg-station: #09090b;
+  --bg-surface: #18181b;
+  --bg-elevated: #27272a;
+  --bg-header: #121215;
+  --bg-dock: #18181b;
+  --bg-rack: #18181b;
+  --bg-panel: #18181b;
+  --bg-glass: rgba(18, 18, 21, 0.88);
+  --bg-glass-elevated: rgba(24, 24, 27, 0.92);
 
   /* Hairline Precision Borders (Zero Slop) */
   --border-subtle: rgba(255, 255, 255, 0.04);
   --border-specular: rgba(255, 255, 255, 0.07);
-  --border-default: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(255, 255, 255, 0.14);
+  --border-default: rgba(63, 63, 70, 0.5); /* border-zinc-700/50 */
+  --border-hover: rgba(63, 63, 70, 0.8);
   --border-active: rgba(255, 255, 255, 0.22);
 
   /* Editorial Typographic Hierarchy */
-  --text-primary: #f8fafc;
-  --text-main: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-faint: #475569;
+  --text-primary: #f4f4f5;
+  --text-main: #f4f4f5;
+  --text-secondary: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-faint: #71717a;
 
   /* Editorial Pure Matte Color Palette (No Radioactive Glows) */
   --accent-cobalt: #4361ee;
@@ -50,8 +63,29 @@
   --color-monologue: #a855f7;
 
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: 'JetBrains Mono', "SF Mono", Menlo, Consolas, monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-editorial: 'Newsreader', 'Lora', Georgia, Cambria, "Times New Roman", serif;
+
+  /* Google Stitch Material 3 Expressive Motion Tokens */
+  --m3-easing-emphasized: cubic-bezier(.2, 0, 0, 1);
+  --m3-easing-emphasized-decelerate: cubic-bezier(.05, .7, .1, 1);
+  --m3-easing-emphasized-accelerate: cubic-bezier(.3, 0, .8, .15);
+  --m3-easing-standard: cubic-bezier(.2, 0, 0, 1);
+  --m3-expressive-fast-spatial: cubic-bezier(.42, 1.67, .21, .9);
+  --m3-expressive-default-spatial: cubic-bezier(.38, 1.21, .22, 1);
+  --m3-expressive-slow-spatial: cubic-bezier(.39, 1.29, .35, .98);
+  --m3-expressive-fast-effects: cubic-bezier(.31, .94, .34, 1);
+  --m3-expressive-default-effects: cubic-bezier(.34, .8, .34, 1);
+  --m3-duration-short1: 50ms;
+  --m3-duration-short2: 100ms;
+  --m3-duration-short3: 150ms;
+  --m3-duration-short4: 200ms;
+  --m3-duration-medium1: 250ms;
+  --m3-duration-medium2: 300ms;
+  --m3-duration-medium3: 350ms;
+  --m3-duration-medium4: 400ms;
+  --m3-duration-long1: 450ms;
+  --m3-duration-long2: 500ms;
 }
 
 * {
@@ -83,6 +117,40 @@ body {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabular monospace typography for numbers, timestamps (e.g. T: 120s), and version badges */
+.badge-mono,
+.version-badge,
+.time-badge,
+.telemetry-badge,
+.timestamp,
+.font-tabular,
+[data-tabular] {
+  font-variant-numeric: tabular-nums;
+}
+
+code, kbd, samp {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Text Truncation Utilities */
+.truncate-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .font-editorial {
@@ -144,19 +212,35 @@ button:active {
   background-color: rgba(255, 255, 255, 0.11);
 }
 
+/* 4-Tier Button Hierarchy (Linear / Raycast Standard) */
 .btn-primary {
-  background-color: #f1f5f9;
-  border: 1px solid #f1f5f9;
-  color: #0b0d13;
-  font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  background-color: var(--zinc-100);
+  border: 1px solid var(--zinc-100);
+  color: var(--zinc-900);
+  font-weight: 500;
+  border-radius: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .btn-primary:hover {
   background-color: #ffffff;
   border-color: #ffffff;
   color: #000000;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.btn-secondary {
+  background-color: rgba(39, 39, 42, 0.6); /* bg-zinc-800/60 */
+  border: 1px solid rgba(63, 63, 70, 0.5); /* border-zinc-700/50 */
+  color: var(--zinc-300);
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background-color: rgba(63, 63, 70, 0.6); /* bg-zinc-700/60 */
+  border-color: rgba(82, 82, 91, 0.7);
+  color: var(--zinc-100);
 }
 
 .btn-accent {
@@ -176,14 +260,140 @@ button:active {
 .btn-ghost {
   background-color: transparent;
   border: 1px solid transparent;
-  color: var(--text-secondary);
+  color: var(--zinc-400);
+  border-radius: 6px;
   box-shadow: none;
 }
 
 .btn-ghost:hover {
-  background-color: rgba(255, 255, 255, 0.06);
-  border-color: var(--border-subtle);
-  color: var(--text-primary);
+  background-color: rgba(39, 39, 42, 0.5); /* hover:bg-zinc-800/50 */
+  border-color: transparent;
+  color: var(--zinc-200);
+}
+
+.btn-destructive {
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--zinc-400);
+  border-radius: 6px;
+  box-shadow: none;
+  transition: all 0.15s ease;
+}
+
+.btn-destructive:hover {
+  background-color: rgba(239, 68, 68, 0.1); /* hover:bg-red-500/10 */
+  border: 1px solid rgba(239, 68, 68, 0.2); /* hover:border-red-500/20 */
+  color: #f87171; /* hover:text-red-400 */
+}
+
+/* Extended Ghost Action Button ("Nuevo Hilo", "Nueva Escena") */
+.btn-ghost-extended {
+  border: 1px solid rgba(39, 39, 42, 0.8); /* border-zinc-800/80 */
+  background-color: rgba(24, 24, 27, 0.3); /* bg-zinc-900/30 */
+  color: var(--zinc-400);
+  border-radius: 8px; /* rounded-lg */
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-ghost-extended:hover {
+  background-color: rgba(39, 39, 42, 0.5); /* hover:bg-zinc-800/50 */
+  border-color: rgba(63, 63, 70, 0.8); /* hover:border-zinc-700 */
+  color: var(--zinc-200); /* hover:text-zinc-200 */
+}
+
+/* Semantic Mention Badges (Lucide Icon + 10% Background + 20% Border) */
+.badge-mention-character {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: rgba(14, 165, 233, 0.1); /* bg-sky-500/10 */
+  color: #38bdf8; /* text-sky-400 */
+  border: 1px solid rgba(14, 165, 233, 0.2); /* border-sky-500/20 */
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.badge-mention-character:hover {
+  background-color: rgba(14, 165, 233, 0.2);
+  color: #7dd3fc;
+}
+
+.badge-mention-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: rgba(16, 185, 129, 0.1); /* bg-emerald-500/10 */
+  color: #34d399; /* text-emerald-400 */
+  border: 1px solid rgba(16, 185, 129, 0.2); /* border-emerald-500/20 */
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.badge-mention-location:hover {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.badge-mention-object {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+  background-color: rgba(245, 158, 11, 0.1); /* bg-amber-500/10 */
+  color: #fbbf24; /* text-amber-400 */
+  border: 1px solid rgba(245, 158, 11, 0.2); /* border-amber-500/20 */
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.badge-mention-object:hover {
+  background-color: rgba(245, 158, 11, 0.2);
+  color: #fde68a;
+}
+
+/* Borderless Clean Editable Scene Title */
+.title-input-ghost {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--zinc-100);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  transition: all 0.15s ease;
+  outline: none;
+  width: 100%;
+}
+
+.title-input-ghost:hover {
+  background-color: rgba(39, 39, 42, 0.3); /* hover:bg-zinc-800/30 */
+  border-color: rgba(63, 63, 70, 0.3);
+}
+
+.title-input-ghost:focus {
+  background-color: rgba(39, 39, 42, 0.5); /* focus:bg-zinc-800/50 */
+  border-color: rgba(63, 63, 70, 0.7); /* border-zinc-700/70 */
+  box-shadow: 0 0 0 1px rgba(63, 63, 70, 0.4);
 }
 
 .btn-icon {
@@ -328,6 +538,63 @@ input, textarea {
   }
 }
 
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes dashdraw {
+  0% {
+    stroke-dashoffset: 16px;
+  }
+  100% {
+    stroke-dashoffset: 0px;
+  }
+}
+
+@keyframes working-dash {
+  100% {
+    stroke-dashoffset: -100px;
+  }
+}
+
+@keyframes m3-menu-item-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes agent-thinking-dot {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-2.5px);
+  }
+}
+
+@keyframes stitch-traveler {
+  0% {
+    offset-distance: 0%;
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0.2;
+  }
+}
+
 /* Tactical Ultra-Slim Scrollbars */
 ::-webkit-scrollbar {
   width: 5px;
@@ -390,12 +657,13 @@ input, textarea {
 
 .kbd-shortcut {
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, monospace;
-  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
   background: rgba(255, 255, 255, 0.04);
-  padding: 1px 4px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   transition: all 0.12s ease;
 }
 
@@ -404,3 +672,89 @@ input, textarea {
   background: rgba(255, 255, 255, 0.09);
   border-color: rgba(255, 255, 255, 0.14);
 }
+
+/* Google Stitch Material 3 Expressive Utilities */
+.m3-spring-fast {
+  transition: all var(--m3-duration-medium3, 350ms) var(--m3-expressive-fast-spatial, cubic-bezier(.42, 1.67, .21, .9));
+}
+
+.m3-spring-default {
+  transition: all var(--m3-duration-long2, 500ms) var(--m3-expressive-default-spatial, cubic-bezier(.38, 1.21, .22, 1));
+}
+
+.m3-card {
+  background-color: #181b20;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  transition: transform var(--m3-duration-medium3, 350ms) var(--m3-expressive-fast-spatial, cubic-bezier(.42, 1.67, .21, .9)),
+              border-color var(--m3-duration-short4, 200ms) var(--m3-easing-standard, cubic-bezier(.2, 0, 0, 1)),
+              box-shadow var(--m3-duration-short4, 200ms) var(--m3-easing-standard, cubic-bezier(.2, 0, 0, 1));
+}
+
+.m3-card:hover {
+  transform: scale(1.02);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+}
+
+.m3-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  line-height: 1rem;
+  padding: 2px 10px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-default, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary, #94a3b8);
+  transition: background-color var(--m3-duration-short2, 100ms) var(--m3-easing-standard, cubic-bezier(.2, 0, 0, 1)),
+              border-color var(--m3-duration-short2, 100ms) var(--m3-easing-standard, cubic-bezier(.2, 0, 0, 1)),
+              color var(--m3-duration-short2, 100ms) var(--m3-easing-standard, cubic-bezier(.2, 0, 0, 1));
+}
+
+.stitch-glow-iris {
+  box-shadow: 0 4px 20px -2px rgba(129, 140, 248, 0.25);
+}
+
+.stitch-glow-mint {
+  box-shadow: 0 4px 20px -2px rgba(52, 211, 153, 0.25);
+}
+
+/* =====================================================================
+   React Bits & Multi-Spectral Neon Glow Button System (Google AI / DeepThink / Aurora)
+   ===================================================================== */
+@keyframes star-movement-linear {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aurora-wave {
+  0% {
+    transform: translateX(-15%) translateY(0) scaleY(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(10%) translateY(-2px) scaleY(1.25);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateX(-15%) translateY(0) scaleY(1);
+    opacity: 0.6;
+  }
+}
+
+.glow-btn-wrapper:hover {
+  transform: translateY(-1px);
+}
+
+.glow-btn-wrapper:active {
+  transform: translateY(0) scale(0.98);
+}
+

@@ -87,6 +87,12 @@ pub fn move_scene(
 }
 
 #[tauri::command]
+pub fn bump_scene_version(path: String, id: String, version: i64) -> Result<Scene, String> {
+    let db = Database::open(&path).map_err(|e| e.to_string())?;
+    Scene::bump_version(db.conn(), &id, version).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn delete_scene(path: String, id: String) -> Result<(), String> {
     let db = Database::open(&path).map_err(|e| e.to_string())?;
     Scene::delete(db.conn(), &id).map_err(|e| e.to_string())
@@ -255,7 +261,7 @@ mod tests {
             150,
         )
         .expect("move_scene");
-        assert_eq!(moved.version, 3);
+        assert_eq!(moved.version, 2);
         assert_eq!(moved.t_start, 10);
         assert_eq!(moved.duration, 150);
 

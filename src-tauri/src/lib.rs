@@ -12,6 +12,7 @@ pub fn run() {
             commands::create_scene,
             commands::update_scene_content,
             commands::move_scene,
+            commands::bump_scene_version,
             commands::delete_scene,
             commands::list_anchors,
             commands::create_anchor,

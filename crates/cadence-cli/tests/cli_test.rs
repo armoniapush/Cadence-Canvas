@@ -198,16 +198,16 @@ fn test_cli_scene_lifecycle_and_occ() {
         .assert()
         .success();
     let moved: Value = serde_json::from_slice(&assert.get_output().stdout).unwrap();
-    assert_eq!(moved["version"], 3);
+    assert_eq!(moved["version"], 2);
     assert_eq!(moved["t_start"], 5);
     assert_eq!(moved["duration"], 15);
 
-    // 8. Try to move scene with old version = 2 (must fail with OCC conflict, exit code 75)
+    // 8. Try to move scene with stale version = 1 (must fail with OCC conflict, exit code 75)
     let mut cmd = Command::cargo_bin("cadence").unwrap();
     cmd.args([
         "--json", "scene", "move", db_str,
         "--id", scene_id,
-        "--version", "2",
+        "--version", "1",
         "--track", track_id,
         "--time", "10",
         "--duration", "20",
