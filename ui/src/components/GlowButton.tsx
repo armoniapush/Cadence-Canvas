@@ -20,7 +20,7 @@ export interface GlowButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 export const GlowButton: React.FC<GlowButtonProps> = ({
   variant = 'iridescent',
   active = false,
-  speed = '5s',
+  speed = '4.5s',
   glowRadius = '8px',
   glowOpacity,
   innerClassName = '',
@@ -43,28 +43,30 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
     containerRef.current.style.setProperty('--mouse-y', `${y}px`);
   };
 
-  // Conic gradients for variants
+  // Conic gradients for variants with dual harmonic cycles for uniform perimeter presence
   const getBorderGradient = () => {
     switch (variant) {
       case 'iridescent':
-        // Google Ask AI Mode multi-color neon spectrum (amber -> emerald -> cyan -> cobalt -> violet)
-        return 'conic-gradient(from 0deg, #f59e0b 0%, #10b981 25%, #06b6d4 50%, #6366f1 75%, #ec4899 90%, #f59e0b 100%)';
+        // Authentic Google Gemini / Ask AI multi-spectral spectrum:
+        // Google Blue (#4285f4), Gemini Purple (#9b72cb), Coral Red (#ea4335), Warm Amber (#fbbc04), Emerald (#34a853)
+        return 'conic-gradient(from 0deg at 50% 50%, #4285f4 0%, #9b72cb 12%, #ea4335 25%, #fbbc04 38%, #34a853 50%, #4285f4 62%, #9b72cb 75%, #ea4335 88%, #34a853 95%, #4285f4 100%)';
       case 'deepthink':
-        // DeepThink AI warm amber & radiant violet / blue
-        return 'conic-gradient(from 0deg, #f97316 0%, #818cf8 35%, #ec4899 70%, #f97316 100%)';
+        // DeepThink AI warm amber, radiant magenta & electric violet
+        return 'conic-gradient(from 0deg at 50% 50%, #f97316 0%, #ec4899 25%, #818cf8 50%, #f97316 75%, #ec4899 90%, #f97316 100%)';
       case 'aurora':
         // Apple Intelligence / Aurora northern lights
         return 'linear-gradient(90deg, #38bdf8 0%, #818cf8 30%, #ec4899 60%, #34d399 100%)';
       case 'specular':
       case 'subtle':
       default:
-        return 'conic-gradient(from 0deg, rgba(255, 255, 255, 0.4) 0%, rgba(129, 140, 248, 0.8) 50%, rgba(255, 255, 255, 0.4) 100%)';
+        return 'conic-gradient(from 0deg at 50% 50%, rgba(255, 255, 255, 0.4) 0%, rgba(129, 140, 248, 0.8) 50%, rgba(255, 255, 255, 0.4) 100%)';
     }
   };
 
   // Base opacity
-  const baseBorderOpacity = active ? 0.95 : isHovered ? 0.85 : 0.35;
+  const baseBorderOpacity = active ? 1.0 : isHovered ? 0.95 : 0.65;
   const currentOpacity = glowOpacity !== undefined ? glowOpacity : baseBorderOpacity;
+  void currentOpacity;
 
   return (
     <button
@@ -80,47 +82,75 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '1px',
+        padding: '0',
         borderRadius: glowRadius,
-        border: 'none',
-        background: 'transparent',
+        border: isHovered ? '1px solid rgba(63, 63, 70, 0.7)' : '1px solid rgba(39, 39, 42, 0.8)',
+        background: isHovered ? 'rgba(39, 39, 42, 0.4)' : 'rgba(24, 24, 27, 0.4)',
+        color: isHovered ? 'var(--zinc-200, #e4e4e7)' : 'var(--zinc-400, #a1a1aa)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         overflow: 'hidden',
         boxSizing: 'border-box',
         transform: 'translateZ(0)',
-        transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease',
-        boxShadow: active
-          ? variant === 'deepthink'
-            ? '0 0 16px rgba(249, 115, 22, 0.28), 0 0 32px rgba(129, 140, 248, 0.18)'
-            : '0 0 16px rgba(56, 189, 248, 0.28), 0 0 32px rgba(99, 102, 241, 0.18)'
-          : isHovered
-          ? '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 12px rgba(129, 140, 248, 0.2)'
-          : '0 1px 3px rgba(0, 0, 0, 0.3)',
+        transition: 'all 0.15s ease',
+        boxShadow: 'none',
         ...style,
       }}
       {...rest}
     >
-      {/* 1. Animated Conic or Fluid Rotating Gradient Border Layer */}
+      {/* 1. Ambient Diffuse Aura Layer: Disabled for clean 2D matte */}
       {(variant === 'iridescent' || variant === 'deepthink') && (
         <div
-          className="glow-star-border-spinner"
           style={{
             position: 'absolute',
-            inset: '-100%',
-            width: '300%',
-            height: '300%',
-            left: '-100%',
-            top: '-100%',
-            background: getBorderGradient(),
-            animation: `star-movement-linear ${speed} linear infinite`,
-            opacity: currentOpacity,
-            transition: 'opacity 0.25s ease',
+            top: '50%',
+            left: '50%',
+            width: '260%',
+            aspectRatio: '1 / 1',
+            transform: 'translate(-50%, -50%)',
             pointerEvents: 'none',
+            filter: 'none',
+            opacity: 0,
+            zIndex: 0,
           }}
-        />
+        >
+          <div
+            className="glow-star-border-spinner"
+            style={{
+              width: '100%',
+              height: '100%',
+              background: getBorderGradient(),
+            }}
+          />
+        </div>
       )}
 
-      {/* 2. Fluid Aurora Underglow Wave (Apple Intelligence / Siri style) */}
+      {/* 2. Precision Aspect-Ratio Corrected Rotating Perimeter Border: Disabled for clean 2D matte */}
+      {(variant === 'iridescent' || variant === 'deepthink') && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '260%',
+            aspectRatio: '1 / 1',
+            transform: 'translate(-50%, -50%)',
+            pointerEvents: 'none',
+            opacity: 0,
+            zIndex: 1,
+          }}
+        >
+          <div
+            className="glow-star-border-spinner"
+            style={{
+              width: '100%',
+              height: '100%',
+              background: getBorderGradient(),
+            }}
+          />
+        </div>
+      )}
+
+      {/* 3. Fluid Aurora Underglow Wave (Apple Intelligence / Northern Lights) */}
       {variant === 'aurora' && (
         <div
           style={{
@@ -129,6 +159,7 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
             overflow: 'hidden',
             borderRadius: glowRadius,
             pointerEvents: 'none',
+            zIndex: 1,
           }}
         >
           <div
@@ -140,16 +171,16 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
               width: '140%',
               height: '24px',
               background: getBorderGradient(),
-              filter: 'blur(8px)',
-              opacity: active ? 0.9 : isHovered ? 0.75 : 0.4,
-              animation: 'aurora-wave 6s ease-in-out infinite alternate',
+              filter: 'none',
+              opacity: 0,
+              animation: 'none',
               transition: 'opacity 0.3s ease',
             }}
           />
         </div>
       )}
 
-      {/* 3. Cursor-Following Specular Radial Glow (React Bits Border Glow pattern) */}
+      {/* 4. Cursor-Following Specular Radial Highlight: Disabled for clean 2D matte */}
       <div
         className="glow-specular-overlay"
         style={{
@@ -157,33 +188,35 @@ export const GlowButton: React.FC<GlowButtonProps> = ({
           inset: 0,
           borderRadius: glowRadius,
           pointerEvents: 'none',
-          opacity: isHovered ? 1 : 0,
+          opacity: 0,
           transition: 'opacity 0.2s ease',
-          background: `radial-gradient(110px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.28), transparent 70%)`,
+          zIndex: 2,
+          background: `radial-gradient(110px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.22), transparent 70%)`,
         }}
       />
 
-      {/* 4. Dark Matte Inner Core Container */}
+      {/* 5. Dark Matte Obsidian Core with Top Specular Sheen */}
       <div
         className={`glow-btn-core ${innerClassName}`}
         style={{
           position: 'relative',
-          zIndex: 2,
+          zIndex: 3,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '6px',
+          gap: '7px',
           width: '100%',
           height: '100%',
-          backgroundColor: active ? '#161922' : '#0d1017',
-          borderRadius: `calc(${glowRadius} - 1px)`,
-          padding: '6px 12px',
-          color: active ? '#ffffff' : '#cbd5e1',
+          background: 'transparent',
+          borderRadius: `calc(${glowRadius} - 1.2px)`,
+          padding: '7px 14px',
+          color: isHovered ? 'var(--zinc-200, #e4e4e7)' : 'var(--zinc-400, #a1a1aa)',
           fontSize: '12px',
           fontWeight: 500,
           fontFamily: 'var(--font-sans)',
-          transition: 'background-color 0.15s ease, color 0.15s ease',
-          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+          letterSpacing: 'normal',
+          transition: 'all 0.15s ease',
+          boxShadow: 'none',
         }}
       >
         {children}

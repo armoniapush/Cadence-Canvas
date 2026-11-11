@@ -1,8 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { BookOpen, Columns3, Target, ListOrdered, GitMerge, Plus, X } from 'lucide-react';
-import { GlowButton } from './GlowButton';
+import { BookOpen, Columns3, Target, ListOrdered, GitMerge, Plus, X, Search } from 'lucide-react';
 import type { Scene, Track } from '../types';
 import { computeActMetrics, type ActMetric, type DynamicMetricsResult } from '../actMetrics';
+import SpotlightCard from './SpotlightCard';
 
 export { computeActMetrics, type ActMetric, type DynamicMetricsResult };
 export type LeftNavTab = 'binder' | 'structure' | 'goals';
@@ -25,6 +25,7 @@ export interface ManuscriptBinderProps {
   };
   onOpenSettings?: () => void;
   onShowAnalytics?: () => void;
+  width?: number;
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -40,6 +41,7 @@ function hexToRgba(hex: string, alpha: number): string {
   const b = parseInt(clean.substring(4, 6), 16) || 241;
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
+void hexToRgba;
 
 export function ManuscriptBinder({
   scenes,
@@ -55,6 +57,7 @@ export function ManuscriptBinder({
   projectSettings,
   onOpenSettings,
   onShowAnalytics,
+  width,
 }: ManuscriptBinderProps) {
   const [internalTab, setInternalTab] = useState<LeftNavTab>(activeTab);
   const currentTab = onTabChange ? activeTab : internalTab;
@@ -119,16 +122,19 @@ export function ManuscriptBinder({
     <aside
       aria-label="Navegador Unificado"
       style={{
-        width: '320px',
-        maxWidth: '320px',
-        minWidth: '320px',
-        backgroundColor: '#0c0e14',
+        width: width ? `${width}px` : '320px', // width: '320px'
+        maxWidth: width ? `${width}px` : '320px', // maxWidth: '320px'
+        minWidth: '220px',
+        backgroundColor: 'rgba(15, 17, 24, 0.8)',
+        backdropFilter: 'blur(24px) saturate(1.35)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.35)',
         border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: '10px',
+        borderRadius: '12px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.55)',
+        boxShadow:
+          'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 10px 30px -10px rgba(0, 0, 0, 0.8)',
         zIndex: 25,
         flexShrink: 0,
         animation: 'slideInLeft 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -142,7 +148,7 @@ export function ManuscriptBinder({
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
-          backgroundColor: '#0c0e14',
+          backgroundColor: 'var(--bg-surface, #111215)',
           flexShrink: 0,
         }}
       >
@@ -153,50 +159,18 @@ export function ManuscriptBinder({
                 width: '26px',
                 height: '26px',
                 borderRadius: '6px',
-                backgroundColor:
-                  currentTab === 'binder'
-                    ? 'rgba(129, 140, 248, 0.12)'
-                    : currentTab === 'structure'
-                    ? 'rgba(16, 185, 129, 0.12)'
-                    : 'rgba(245, 158, 11, 0.12)',
-                border:
-                  currentTab === 'binder'
-                    ? '1px solid rgba(129, 140, 248, 0.28)'
-                    : currentTab === 'structure'
-                    ? '1px solid rgba(16, 185, 129, 0.28)'
-                    : '1px solid rgba(245, 158, 11, 0.28)',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color:
-                  currentTab === 'binder'
-                    ? '#818cf8'
-                    : currentTab === 'structure'
-                    ? '#10b981'
-                    : '#f59e0b',
-                transition: 'all 0.15s ease',
+                color: '#a1a1aa',
+                flexShrink: 0,
               }}
             >
-              {currentTab === 'binder' && (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
-                  <path d="M6 6h10" />
-                  <path d="M6 10h10" />
-                </svg>
-              )}
-              {currentTab === 'structure' && (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
-                </svg>
-              )}
-              {currentTab === 'goals' && (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-              )}
+              {currentTab === 'binder' && <BookOpen size={14} strokeWidth={1.5} />}
+              {currentTab === 'structure' && <Columns3 size={14} strokeWidth={1.5} />}
+              {currentTab === 'goals' && <Target size={14} strokeWidth={1.5} />}
             </div>
             <h2
               style={{
@@ -244,43 +218,22 @@ export function ManuscriptBinder({
           </button>
         </div>
 
-        {/* Unified Segmented Tabs: Binder · Estructura · Metas */}
+        {/* Unified Segmented Pills: Binder · Estructura · Metas */}
         <div
           role="tablist"
           aria-label="Pestañas de Navegación"
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr 1fr',
-            gap: '3px',
-            backgroundColor: '#080a0f',
-            padding: '3px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-          }}
+          className="pill-segment"
+          style={{ width: '100%', display: 'flex' }}
         >
           <button
             type="button"
             role="tab"
             aria-selected={currentTab === 'binder'}
             onClick={() => setTab('binder')}
-            style={{
-              padding: '6px 0',
-              fontSize: '11px',
-              fontWeight: currentTab === 'binder' ? 600 : 500,
-              backgroundColor: currentTab === 'binder' ? '#1a1e2b' : 'transparent',
-              color: currentTab === 'binder' ? '#ffffff' : '#8e95a5',
-              border: currentTab === 'binder' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '5px',
-              boxShadow: currentTab === 'binder' ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
+            className="pill-tab"
+            style={{ flex: 1 }}
           >
-            <BookOpen size={13} strokeWidth={1.5} color={currentTab === 'binder' ? '#818cf8' : '#64748b'} />
+            <BookOpen size={14} strokeWidth={1.5} />
             <span>Binder</span>
           </button>
 
@@ -289,24 +242,10 @@ export function ManuscriptBinder({
             role="tab"
             aria-selected={currentTab === 'structure'}
             onClick={() => setTab('structure')}
-            style={{
-              padding: '6px 0',
-              fontSize: '11px',
-              fontWeight: currentTab === 'structure' ? 600 : 500,
-              backgroundColor: currentTab === 'structure' ? '#1a1e2b' : 'transparent',
-              color: currentTab === 'structure' ? '#ffffff' : '#8e95a5',
-              border: currentTab === 'structure' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '5px',
-              boxShadow: currentTab === 'structure' ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
+            className="pill-tab"
+            style={{ flex: 1 }}
           >
-            <Columns3 size={13} strokeWidth={1.5} color={currentTab === 'structure' ? '#10b981' : '#64748b'} />
+            <Columns3 size={14} strokeWidth={1.5} />
             <span>Estructura</span>
           </button>
 
@@ -315,24 +254,10 @@ export function ManuscriptBinder({
             role="tab"
             aria-selected={currentTab === 'goals'}
             onClick={() => setTab('goals')}
-            style={{
-              padding: '6px 0',
-              fontSize: '11px',
-              fontWeight: currentTab === 'goals' ? 600 : 500,
-              backgroundColor: currentTab === 'goals' ? '#1a1e2b' : 'transparent',
-              color: currentTab === 'goals' ? '#ffffff' : '#8e95a5',
-              border: currentTab === 'goals' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '5px',
-              boxShadow: currentTab === 'goals' ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
+            className="pill-tab"
+            style={{ flex: 1 }}
           >
-            <Target size={13} strokeWidth={1.5} color={currentTab === 'goals' ? '#f59e0b' : '#64748b'} />
+            <Target size={14} strokeWidth={1.5} />
             <span>Metas</span>
           </button>
         </div>
@@ -355,18 +280,7 @@ export function ManuscriptBinder({
                 padding: '2px 4px',
               }}
             >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    backgroundColor: '#818cf8',
-                    boxShadow: '0 0 6px rgba(129, 140, 248, 0.8)',
-                  }}
-                />
-                <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{scenes.length} escenas</span>
-              </span>
+              <span style={{ color: '#e2e8f0', fontWeight: 500 }}>{scenes.length} escenas</span>
               <span style={{ color: 'rgba(255, 255, 255, 0.15)' }}>•</span>
               <span>{totalWords.toLocaleString()} pal</span>
               <span style={{ color: 'rgba(255, 255, 255, 0.15)' }}>•</span>
@@ -390,17 +304,14 @@ export function ManuscriptBinder({
               <div
                 style={{
                   position: 'absolute',
-                  left: '9px',
+                  left: '10px',
                   display: 'flex',
                   alignItems: 'center',
                   pointerEvents: 'none',
-                  color: '#787f8d',
+                  color: '#71717a',
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <Search size={14} strokeWidth={1.5} />
               </div>
               <input
                 ref={searchInputRef}
@@ -408,41 +319,20 @@ export function ManuscriptBinder({
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar escena, nodo o tag..."
-                style={{
-                  width: '100%',
-                  height: '30px',
-                  backgroundColor: '#141722',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '6px',
-                  paddingLeft: '28px',
-                  paddingRight: '40px',
-                  fontSize: '11px',
-                  color: '#eceef8',
-                  outline: 'none',
-                  boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.25)',
-                  transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#818cf8';
-                  e.target.style.backgroundColor = '#181b28';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  e.target.style.backgroundColor = '#141722';
-                }}
+                className="binder-search"
               />
               <kbd
                 style={{
                   position: 'absolute',
-                  right: '6px',
+                  right: '8px',
                   fontSize: '10px',
-                  fontFamily: 'var(--font-sans)',
-                  fontWeight: 600,
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 500,
                   padding: '1px 5px',
-                  borderRadius: '4px',
-                  backgroundColor: '#0c0e14',
-                  color: '#787f8d',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  color: '#71717a',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   pointerEvents: 'none',
                   userSelect: 'none',
                 }}
@@ -452,61 +342,27 @@ export function ManuscriptBinder({
             </div>
 
             {/* Segment Switcher: 'Secuencia 1D' vs 'Por Hilos' */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '3px',
-                backgroundColor: '#080a0f',
-                padding: '3px',
-                borderRadius: '7px',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-              }}
-            >
+            <div className="pill-segment" style={{ width: '100%', display: 'flex' }}>
               <button
                 type="button"
+                aria-selected={viewMode === 'chronological'}
+                role="tab"
                 onClick={() => setViewMode('chronological')}
-                style={{
-                  padding: '5px 0',
-                  fontSize: '11px',
-                  fontWeight: viewMode === 'chronological' ? 600 : 500,
-                  backgroundColor: viewMode === 'chronological' ? '#1a1e2b' : 'transparent',
-                  color: viewMode === 'chronological' ? '#ffffff' : '#787f8d',
-                  border: viewMode === 'chronological' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  boxShadow: viewMode === 'chronological' ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
+                className="pill-tab"
+                style={{ flex: 1, padding: '4px 0' }}
               >
-                <ListOrdered size={12} strokeWidth={1.5} color={viewMode === 'chronological' ? '#818cf8' : '#64748b'} />
+                <ListOrdered size={14} strokeWidth={1.5} />
                 <span>Secuencia 1D</span>
               </button>
               <button
                 type="button"
+                aria-selected={viewMode === 'tracks'}
+                role="tab"
                 onClick={() => setViewMode('tracks')}
-                style={{
-                  padding: '5px 0',
-                  fontSize: '11px',
-                  fontWeight: viewMode === 'tracks' ? 600 : 500,
-                  backgroundColor: viewMode === 'tracks' ? '#1a1e2b' : 'transparent',
-                  color: viewMode === 'tracks' ? '#ffffff' : '#787f8d',
-                  border: viewMode === 'tracks' ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                  borderRadius: '5px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  boxShadow: viewMode === 'tracks' ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
+                className="pill-tab"
+                style={{ flex: 1, padding: '4px 0' }}
               >
-                <GitMerge size={12} strokeWidth={1.5} color={viewMode === 'tracks' ? '#34d399' : '#64748b'} />
+                <GitMerge size={14} strokeWidth={1.5} />
                 <span>Por Hilos</span>
               </button>
             </div>
@@ -543,85 +399,80 @@ export function ManuscriptBinder({
                 chronologicalScenes.map((s, idx) => {
                   const isSel = s.id === selectedSceneId;
                   const trk = trkMap.get(s.track_id);
-                  const col = trk?.color_hex || '#818cf8';
+                  const col = trk?.color_hex || '#38bdf8';
                   const words = s.word_count || 0;
                   const formattedIndex = String(idx + 1).padStart(2, '0');
 
                   return (
-                    <div
+                    <SpotlightCard
                       key={s.id}
                       onClick={() => onSelectScene(s)}
+                      spotlightColor="rgba(56, 189, 248, 0.15)"
+                      className="group"
                       style={{
                         position: 'relative',
                         display: 'flex',
                         alignItems: 'flex-start',
-                        gap: '12px',
-                        padding: '11px 12px',
-                        borderRadius: '9px',
-                        backgroundColor: isSel ? 'rgba(30, 36, 54, 0.95)' : 'rgba(17, 20, 29, 0.7)',
+                        gap: '10px',
+                        padding: '9px 10px',
+                        borderRadius: '8px',
+                        backgroundColor: isSel ? '#15171f' : '#12141d',
+                        // S2 — ascending color wash tinted by the narrative thread
+                        backgroundImage: `linear-gradient(to top, ${col}1f, ${col}08 45%, rgba(15, 17, 24, 0.9) 100%)`,
                         border: isSel
-                          ? '1px solid rgba(129, 140, 248, 0.45)'
-                          : '1px solid rgba(255, 255, 255, 0.05)',
+                          ? '1px solid rgba(56, 189, 248, 0.8)'
+                          : '1px solid rgba(255, 255, 255, 0.06)',
+                        // S5 — the selected card lifts and glows
+                        transform: isSel ? 'translateY(-2px)' : 'translateY(0)',
                         boxShadow: isSel
-                          ? `0 4px 16px rgba(0, 0, 0, 0.45), inset 3px 0 0 ${col}`
-                          : '0 1px 3px rgba(0, 0, 0, 0.18)',
+                          ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 0 20px rgba(56, 189, 248, 0.25)'
+                          : 'inset 0 1px 0 0 rgba(255, 255, 255, 0.06)',
                         cursor: 'pointer',
-                        transition: 'all 0.16s cubic-bezier(0.16, 1, 0.3, 1)',
+                        transition:
+                          'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.14s ease',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-1px)';
-                        if (!isSel) {
-                          e.currentTarget.style.backgroundColor = 'rgba(23, 27, 40, 0.95)';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                        }
+                        if (!isSel) e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.35)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        if (!isSel) {
-                          e.currentTarget.style.backgroundColor = 'rgba(17, 20, 29, 0.7)';
-                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                        }
+                        if (!isSel) e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
                       }}
                     >
-                      {/* Left Column: Stylized Large Chapter Numeral Block */}
+                      {/* Order badge: w-5 h-5 rounded-full bg-zinc-800 font-mono text-[10px] */}
                       <div
                         style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '9999px',
+                          backgroundColor: '#27272a',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
                           display: 'flex',
-                          flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '7px',
-                          backgroundColor: isSel ? hexToRgba(col, 0.24) : 'rgba(255, 255, 255, 0.04)',
-                          border: isSel ? `1px solid ${hexToRgba(col, 0.5)}` : '1px solid rgba(255, 255, 255, 0.06)',
+                          fontFamily: 'var(--font-mono)',
+                          fontSize: '10px',
+                          color: isSel ? '#e4e4e7' : '#a1a1aa',
                           flexShrink: 0,
                           marginTop: '1px',
                         }}
                       >
-                        <span
-                          style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: isSel ? '#ffffff' : col,
-                            letterSpacing: '-0.02em',
-                          }}
-                        >
-                          {formattedIndex}
-                        </span>
+                        {formattedIndex}
                       </div>
 
-                      {/* Right Column: Title, Telemetry, Excerpt, Track */}
-                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        {/* Title & Word count */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      {/* Right Column: Title, excerpt, track meta */}
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                           <span
                             style={{
-                              fontSize: '12.5px',
+                              fontSize: '12px',
                               fontWeight: 600,
-                              color: isSel ? '#ffffff' : '#f1f5f9',
                               letterSpacing: '-0.01em',
+                              // S2 — glass title: pure white → zinc-300 gradient
+                              backgroundImage: 'linear-gradient(to bottom, #ffffff, #d4d4d8)',
+                              WebkitBackgroundClip: 'text',
+                              backgroundClip: 'text',
+                              color: 'transparent',
+                              WebkitTextFillColor: 'transparent',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -631,14 +482,10 @@ export function ManuscriptBinder({
                           </span>
                           <span
                             style={{
-                              fontSize: '9.5px',
+                              fontSize: '10px',
                               fontFamily: 'var(--font-mono)',
                               fontVariantNumeric: 'tabular-nums',
-                              color: isSel ? '#c7d2fe' : '#94a3b8',
-                              backgroundColor: isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.035)',
-                              border: isSel ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(255, 255, 255, 0.05)',
-                              padding: '1px 6px',
-                              borderRadius: '9999px',
+                              color: '#71717a',
                               flexShrink: 0,
                             }}
                           >
@@ -646,62 +493,64 @@ export function ManuscriptBinder({
                           </span>
                         </div>
 
-                        {/* Excerpt preview text */}
                         {s.text && (
                           <div
+                            className="line-clamp-2"
                             style={{
                               fontSize: '11px',
-                              color: isSel ? '#94a3b8' : '#64748b',
-                              lineHeight: '1.35',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              color: '#71717a',
+                              lineHeight: '1.45',
+                              marginTop: '3px',
                             }}
                           >
                             {s.text}
                           </div>
                         )}
 
-                        {/* Bottom Meta: Track with luminous dot and version */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
                           <span
                             style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '5px',
                               fontSize: '10px',
-                              color: isSel ? '#cbd5e1' : '#787f8d',
-                              fontWeight: 500,
+                              color: '#a1a1aa',
+                              minWidth: 0,
                             }}
                           >
                             <span
                               style={{
                                 width: '5px',
                                 height: '5px',
-                                borderRadius: '50%',
+                                borderRadius: '9999px',
                                 backgroundColor: col,
-                                boxShadow: `0 0 5px ${col}88`,
+                                flexShrink: 0,
                               }}
                             />
-                            <span>{trk?.name || 'Trama Principal'}</span>
+                            <span
+                              style={{
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {trk?.name || 'Trama Principal'}
+                            </span>
                           </span>
 
                           <span
                             style={{
                               fontSize: '9px',
                               fontFamily: 'var(--font-mono)',
-                              color: '#64748b',
-                              backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                              padding: '0 4px',
-                              borderRadius: '3px',
-                              border: '1px solid rgba(255, 255, 255, 0.05)',
+                              color: '#52525b',
+                              flexShrink: 0,
                             }}
                           >
                             v{s.version || 1}
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </SpotlightCard>
                   );
                 })
               )
@@ -713,10 +562,10 @@ export function ManuscriptBinder({
                   <div
                     key={trk.id}
                     style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                      backgroundColor: '#12141d',
                       borderRadius: '8px',
                       padding: '8px',
-                      border: '1px solid rgba(255, 255, 255, 0.04)',
+                      border: '1px solid rgba(255, 255, 255, 0.06)',
                     }}
                   >
                     <div
@@ -727,72 +576,84 @@ export function ManuscriptBinder({
                         padding: '2px 4px 6px 4px',
                         fontSize: '11px',
                         fontWeight: 600,
-                        color: '#b0b6c3',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                        color: '#a1a1aa',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
                         marginBottom: '6px',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span
                           style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
+                            width: '5px',
+                            height: '5px',
+                            borderRadius: '9999px',
                             backgroundColor: trk.color_hex,
                           }}
                         />
-                        <span>{trk.name}</span>
+                        <span style={{ color: '#d4d4d8', fontWeight: 500 }}>{trk.name}</span>
                       </div>
-                      <span style={{ fontSize: '10px', fontFamily: 'var(--font-sans)', fontVariantNumeric: 'tabular-nums', color: '#64748b' }}>
+                      <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#52525b' }}>
                         {trkScenes.length} esc.
                       </span>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                       {trkScenes.map((s, idx) => {
                         const isSel = s.id === selectedSceneId;
                         return (
-                          <div
+                          <SpotlightCard
                             key={s.id}
                             onClick={() => onSelectScene(s)}
+                            spotlightColor="rgba(56, 189, 248, 0.15)"
                             style={{
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'space-between',
                               gap: '6px',
-                              padding: '6px 8px',
+                              padding: '5px 8px',
                               borderRadius: '6px',
-                              backgroundColor: isSel ? '#1a1e2d' : '#121520',
-                              border: isSel ? '1px solid #4361ee' : '1px solid rgba(255, 255, 255, 0.04)',
+                              backgroundColor: isSel ? '#15171f' : 'transparent',
+                              // S2 — ascending color wash tinted by the narrative thread
+                              backgroundImage: `linear-gradient(to top, ${trk.color_hex || '#38bdf8'}1a, rgba(15, 17, 24, 0.9) 100%)`,
+                              border: isSel
+                                ? '1px solid rgba(56, 189, 248, 0.8)'
+                                : '1px solid transparent',
+                              // S5 — selection lifts and glows
+                              transform: isSel ? 'translateY(-1px)' : 'translateY(0)',
+                              boxShadow: isSel
+                                ? 'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 0 20px rgba(56, 189, 248, 0.25)'
+                                : 'none',
                               cursor: 'pointer',
-                              transition: 'all 0.15s ease',
+                              transition:
+                                'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.14s ease',
                             }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translateX(2px)';
-                              if (!isSel) e.currentTarget.style.backgroundColor = '#181c2a';
+                              if (!isSel) e.currentTarget.style.borderColor = 'rgba(56, 189, 248, 0.3)';
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translateX(0)';
-                              if (!isSel) e.currentTarget.style.backgroundColor = '#121520';
+                              if (!isSel) e.currentTarget.style.borderColor = 'transparent';
                             }}
                           >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '7px', minWidth: 0 }}>
                               <span
                                 style={{
                                   fontSize: '10px',
-                                  fontFamily: 'var(--font-sans)',
-                                  letterSpacing: '0.02em',
-                                  fontWeight: 600,
-                                  color: trk.color_hex,
+                                  fontFamily: 'var(--font-mono)',
+                                  color: '#52525b',
                                 }}
                               >
-                                #{String(idx + 1).padStart(2, '0')}
+                                {String(idx + 1).padStart(2, '0')}
                               </span>
                               <span
                                 style={{
                                   fontSize: '11px',
                                   fontWeight: isSel ? 600 : 500,
-                                  color: isSel ? '#ffffff' : '#cbd5e1',
+                                  // S2 — glass title gradient
+                                  backgroundImage: 'linear-gradient(to bottom, #ffffff, #d4d4d8)',
+                                  WebkitBackgroundClip: 'text',
+                                  backgroundClip: 'text',
+                                  color: 'transparent',
+                                  WebkitTextFillColor: 'transparent',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
                                   textOverflow: 'ellipsis',
@@ -804,15 +665,14 @@ export function ManuscriptBinder({
                             <span
                               style={{
                                 fontSize: '10px',
-                                fontFamily: 'var(--font-sans)',
-                                fontVariantNumeric: 'tabular-nums',
-                                color: '#787f8d',
+                                fontFamily: 'var(--font-mono)',
+                                color: '#52525b',
                                 flexShrink: 0,
                               }}
                             >
                               {s.word_count || 0}p
                             </span>
-                          </div>
+                          </SpotlightCard>
                         );
                       })}
                     </div>
@@ -828,23 +688,19 @@ export function ManuscriptBinder({
               style={{
                 padding: '10px 12px 12px 12px',
                 borderTop: '1px solid rgba(255, 255, 255, 0.06)',
-                backgroundColor: '#0c0e14',
+                backgroundColor: '#0c0d14',
                 flexShrink: 0,
               }}
             >
-              <GlowButton
-                variant="iridescent"
-                glowRadius="8px"
-                speed="6s"
+              <button
+                type="button"
                 onClick={onCreateScene}
                 title="Crear una nueva escena literaria en el manuscrito"
-                style={{
-                  width: '100%',
-                }}
+                className="w-full py-2.5 px-4 rounded-xl bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-xs font-medium transition-colors flex items-center justify-center gap-2"
               >
                 <Plus size={14} strokeWidth={1.5} />
                 <span>Nueva Escena</span>
-              </GlowButton>
+              </button>
             </div>
           )}
         </div>
@@ -909,7 +765,7 @@ export function ManuscriptBinder({
                     gap: '5px',
                     padding: '10px 12px',
                     borderRadius: '8px',
-                    backgroundColor: isActive ? '#181b26' : '#121520',
+                    backgroundColor: isActive ? '#1e2029' : '#14151a',
                     border: isActive
                       ? `1px solid ${accentColor}66`
                       : '1px solid rgba(255, 255, 255, 0.06)',
@@ -919,13 +775,13 @@ export function ManuscriptBinder({
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.backgroundColor = '#181b24';
+                      e.currentTarget.style.backgroundColor = '#1c1d24';
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.12)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
-                      e.currentTarget.style.backgroundColor = '#121520';
+                      e.currentTarget.style.backgroundColor = '#14151a';
                       e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
                     }
                   }}
@@ -1089,7 +945,7 @@ export function ManuscriptBinder({
           {/* Main Progress Card */}
           <div
             style={{
-              backgroundColor: '#0c0e11',
+              backgroundColor: 'var(--bg-canvas, #090a0d)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
               borderRadius: '10px',
               padding: '14px',
@@ -1244,7 +1100,7 @@ export function ManuscriptBinder({
           {/* Act Distribution Progress */}
           <div
             style={{
-              backgroundColor: '#0c0e11',
+              backgroundColor: 'var(--bg-canvas, #090a0d)',
               border: '1px solid rgba(255, 255, 255, 0.06)',
               borderRadius: '10px',
               padding: '12px',

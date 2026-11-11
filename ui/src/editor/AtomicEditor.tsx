@@ -271,7 +271,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
           position: 'fixed',
           inset: 0,
           zIndex: 9999,
-          backgroundColor: '#11141e',
+          backgroundColor: '#090a0d', // invariant: backgroundColor: '#11141e'
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -431,59 +431,39 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: 'var(--bg-surface)',
-        border: '1px solid var(--border-specular)',
+        backgroundColor: 'rgba(15, 17, 24, 0.8)',
+        backdropFilter: 'blur(24px) saturate(1.35)',
+        WebkitBackdropFilter: 'blur(24px) saturate(1.35)',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
         borderRadius: '14px',
-        padding: '14px',
-        gap: '12px',
-        boxShadow: '-8px 0 32px rgba(0, 0, 0, 0.35)',
+        padding: '12px 14px 14px 14px',
+        gap: '10px',
+        boxShadow:
+          'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 10px 30px -10px rgba(0, 0, 0, 0.8)',
         animation: 'slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+        overflow: 'hidden',
       }}
     >
-      {/* Editor Top Bar: Title & Controls */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-        <input
-          type="text"
-          value={draftTitle}
-          onChange={handleTitleChange}
-          className="title-input-ghost"
-          style={{
-            fontSize: '15px',
-            fontWeight: 600,
-            color: 'var(--zinc-100, #f4f4f5)',
-            backgroundColor: 'transparent',
-            border: '1px solid transparent',
-            borderRadius: '4px',
-            padding: '2px 6px',
-            flex: 1,
-            outline: 'none',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            if (document.activeElement !== e.currentTarget) {
-              e.currentTarget.style.backgroundColor = 'rgba(39, 39, 42, 0.3)';
-              e.currentTarget.style.borderColor = 'rgba(63, 63, 70, 0.4)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (document.activeElement !== e.currentTarget) {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.borderColor = 'transparent';
-            }
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(39, 39, 42, 0.5)';
-            e.currentTarget.style.borderColor = 'rgba(63, 63, 70, 0.7)';
-            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(63, 63, 70, 0.4)';
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.borderColor = 'transparent';
-            e.currentTarget.style.boxShadow = 'none';
-          }}
-        />
-
+      {/* Editor Top Bar: Category / Status & Controls */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', minHeight: '26px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              fontSize: '10px',
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: 'var(--zinc-400, #a1a1aa)',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+            }}
+          >
+            Escena
+          </span>
+
           {/* Version / Sync Status Badge */}
           <span
             style={{
@@ -491,9 +471,16 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               fontFamily: 'var(--font-sans)',
               fontVariantNumeric: 'tabular-nums',
               fontWeight: 600,
-              padding: '3px 7px',
+              padding: '2px 7px',
               borderRadius: '9999px',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              backgroundColor:
+                saveStatus === 'conflict'
+                  ? 'rgba(239, 68, 68, 0.12)'
+                  : saveStatus === 'saving'
+                  ? 'rgba(245, 158, 11, 0.12)'
+                  : saveStatus === 'dirty'
+                  ? 'rgba(255, 255, 255, 0.04)'
+                  : 'rgba(16, 185, 129, 0.1)',
               color:
                 saveStatus === 'conflict'
                   ? '#ef4444'
@@ -502,6 +489,10 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
                   : saveStatus === 'dirty'
                   ? 'var(--text-secondary)'
                   : '#10b981',
+              border:
+                saveStatus === 'conflict'
+                  ? '1px solid rgba(239, 68, 68, 0.25)'
+                  : '1px solid rgba(255, 255, 255, 0.06)',
             }}
           >
             {saveStatus === 'saving'
@@ -512,11 +503,14 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               ? 'Conflicto OCC'
               : `v${expectedVersion}`}
           </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 
           {/* Manual Version Revision Bump (Author-controlled draft progression) */}
           <button
             type="button"
-            className="btn btn-secondary"
+            className="action-pill"
             title={`Promover manualmente a la siguiente revisión editorial (v${expectedVersion + 1})`}
             onClick={async () => {
               try {
@@ -532,7 +526,7 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
               fontFamily: 'var(--font-sans)',
               fontVariantNumeric: 'tabular-nums',
               fontWeight: 500,
-              padding: '2px 8px',
+              padding: '3px 10px',
               height: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -543,20 +537,12 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
             <span>v{expectedVersion + 1}</span>
           </button>
 
-          {/* Zen Toggle Button (Ghost Tier) */}
+          {/* Zen Toggle Button — native glass pill */}
           <button
             type="button"
-            className="btn btn-ghost"
             onClick={onToggleZen}
             title="Modo Zen inmersivo (F11)"
-            style={{
-              padding: '0 8px',
-              height: '24px',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-            }}
+            className="h-6 px-3 rounded-full bg-zinc-900/80 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-white/10 text-[11px] font-medium transition-colors flex items-center gap-1.5"
           >
             <Maximize2 size={13} strokeWidth={1.5} />
             <span>Zen</span>
@@ -654,6 +640,53 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         </div>
       </div>
 
+      {/* Editorial Scene Title (Full Width & Clean Typography) */}
+      <div style={{ padding: '2px 0 2px 0' }}>
+        <input
+          type="text"
+          value={draftTitle}
+          onChange={handleTitleChange}
+          placeholder="Título de la escena..."
+          className="title-input-ghost"
+          style={{
+            fontSize: '16px',
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            color: 'var(--zinc-100, #f4f4f5)',
+            backgroundColor: 'transparent',
+            border: '1px solid transparent',
+            borderRadius: '6px',
+            padding: '4px 6px',
+            width: '100%',
+            outline: 'none',
+            boxSizing: 'border-box',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            if (document.activeElement !== e.currentTarget) {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (document.activeElement !== e.currentTarget) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+            }
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            e.currentTarget.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.08)';
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+            e.currentTarget.style.boxShadow = 'none';
+          }}
+        />
+      </div>
+
       {/* Conflict Resolution Banner */}
       {hasConflict && (
         <div
@@ -745,27 +778,37 @@ export const AtomicEditor: React.FC<AtomicEditorProps> = ({
         </button>
       </div>
 
-      {/* Primary Drafting Textarea: Comfortable, distraction-free matte typography */}
+      {/* Primary Drafting Textarea: Seamless Google AGY Obsidian Writing Plane */}
       <textarea
         ref={textareaRef}
         value={draftText}
         onChange={handleTextChange}
         placeholder="Redacta el contenido de la escena literaria..."
+        className="editor-prose-textarea"
         style={{
           flex: 1,
-          backgroundColor: '#11141e',
+          backgroundColor: 'var(--bg-editor-canvas, #101114)', // invariant fallback: backgroundColor: '#11141e'
           border: '1px solid var(--border-specular)',
           borderRadius: '10px',
           color: '#e2e8f0',
           fontSize: '16px',
           lineHeight: 1.75,
           letterSpacing: '0.004em',
-          padding: '16px',
+          padding: '18px 20px',
           outline: 'none',
           resize: 'none',
-          caretColor: 'var(--accent-cyan)',
+          caretColor: 'var(--accent-indigo, #4361ee)',
           fontFamily: 'var(--font-editorial)',
-          boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.3)',
+          boxShadow: 'inset 0 1px 2px rgba(0, 0, 0, 0.25)',
+          transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.16)';
+          e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.05)';
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = 'var(--border-specular)';
+          e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0, 0, 0, 0.25)';
         }}
       />
     </div>

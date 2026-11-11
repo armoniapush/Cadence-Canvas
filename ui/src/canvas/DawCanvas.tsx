@@ -12,8 +12,6 @@ import {
   CANVAS_TOP_PAD,
   TRACK_HEIGHT,
   TRACK_GAP,
-  CARD_HEIGHT,
-  CARD_PAD_Y,
   TRACK_HEADER_WIDTH,
   PIXELS_PER_UNIT,
   PORT_HIT_RADIUS,
@@ -61,7 +59,7 @@ export function DawCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<DawCanvasRenderer | null>(null);
-  const [viewport, setViewport] = useState<Viewport>({ panX: 0, panY: 20, zoom: 1.0 });
+  const [viewport, setViewport] = useState<Viewport>({ panX: 32, panY: 0, zoom: 1.0 });
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [size, setSize] = useState({ width: 800, height: 600, dpr: 1 });
 
@@ -532,7 +530,7 @@ export function DawCanvas({
     setViewport((prev) => ({
       ...prev,
       zoom: 1.0,
-      panX: 0,
+      panX: 32,
       panY: 0,
     }));
   }, []);
@@ -573,7 +571,7 @@ export function DawCanvas({
           left: 0,
           width: `${TRACK_HEADER_WIDTH}px`,
           height: '100%',
-          backgroundColor: '#0c0e14',
+          backgroundColor: 'var(--bg-panel, #111215)',
           borderRight: '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: '4px 0 20px rgba(0, 0, 0, 0.45)',
           zIndex: 35,
@@ -598,20 +596,11 @@ export function DawCanvas({
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            backgroundColor: '#0c0e14',
+            backgroundColor: 'var(--bg-panel, #111215)',
             zIndex: 10,
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                backgroundColor: '#38bdf8',
-                boxShadow: '0 0 8px rgba(56, 189, 248, 0.7)',
-              }}
-            />
             <span
               style={{
                 fontSize: '11px',
@@ -640,62 +629,78 @@ export function DawCanvas({
           {tracks.map((trk, idx) => {
             const trkScenes = scenes.filter((s) => s.track_id === trk.id);
             const trkWords = trkScenes.reduce((sum, s) => sum + (s.word_count || 0), 0);
-            const topY = CANVAS_TOP_PAD + viewport.panY + idx * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y;
+            // Lane header sits exactly on the swimlane it governs (same top, same height)
+            const laneTopY = CANVAS_TOP_PAD + viewport.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
             const isMuted = trk.is_muted;
+            const isTrackPrincipal = idx === 0 || trk.name.toLowerCase().includes('principal');
+            const isTrackSubB = idx === 1 || trk.name.toLowerCase().includes('b') || trk.name.toLowerCase().includes('subtrama');
+
+            const rimBorderColor = isMuted
+              ? 'rgba(255, 255, 255, 0.06)'
+              : isTrackPrincipal
+              ? 'rgba(14, 165, 233, 0.7)' /* border-b-sky-500/70 */
+              : isTrackSubB
+              ? 'rgba(16, 185, 129, 0.7)' /* border-b-emerald-500/70 */
+              : `${trk.color_hex || '#38bdf8'}B3`;
 
             return (
               <div
                 key={trk.id}
                 style={{
                   position: 'absolute',
-                  top: `${topY}px`,
+                  top: `${laneTopY}px`,
                   left: '10px',
                   width: `${TRACK_HEADER_WIDTH - 20}px`,
-                  height: `${CARD_HEIGHT}px`,
-                  backgroundColor: isMuted ? 'rgba(18, 21, 31, 0.5)' : '#0e111a',
-                  backgroundImage: isMuted
-                    ? 'none'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.005) 100%)',
-                  border: isMuted ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: '14px',
+                  height: `${TRACK_HEIGHT}px`,
+                  backgroundColor: isMuted ? 'rgba(18, 20, 29, 0.55)' : 'var(--bg-surface, #12141d)',
+                  borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderLeft: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderRight: '1px solid rgba(255, 255, 255, 0.06)',
+                  borderBottom: `2px solid ${rimBorderColor}`, /* Rim light, integrated */
+                  borderRadius: '10px',
                   padding: '12px 14px',
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  boxShadow: '0 8px 24px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
                   transition: dragState ? 'none' : 'top 0.05s ease-out',
                   userSelect: 'none',
                   minWidth: 0,
                   boxSizing: 'border-box',
                 }}
               >
-                {/* Top row: Track Notch + Channel Indicator + Mute Toggle (Zero Container Bloat) */}
+                {/* Top row: Thread channel index + visibility toggle */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <span
+                    {/* Order badge: w-5 h-5 rounded-full bg-zinc-800 border border-white/10 */}
+                    <div
                       style={{
-                        width: '7px',
-                        height: '7px',
-                        borderRadius: '50%',
-                        backgroundColor: trk.color_hex || '#6366f1',
-                        boxShadow: `0 0 10px ${trk.color_hex || '#6366f1'}aa`,
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#27272a',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: '10px',
+                        fontWeight: 500,
+                        color: isMuted ? '#71717a' : '#d4d4d8',
                         flexShrink: 0,
                       }}
-                    />
+                    >
+                      {String(idx + 1).padStart(2, '0')}
+                    </div>
                     <span
                       style={{
                         fontSize: '10px',
-                        fontWeight: 700,
-                        fontFamily: 'var(--font-sans)',
+                        fontWeight: 500,
+                        fontFamily: 'var(--font-mono)',
                         letterSpacing: '0.04em',
-                        color: isMuted ? '#64748b' : '#94a3b8',
-                        background: 'rgba(255, 255, 255, 0.035)',
-                        padding: '1px 6px',
-                        borderRadius: '4px',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        color: 'var(--zinc-500)',
                       }}
                     >
-                      CH 0{idx + 1}
+                      CH {String(idx + 1).padStart(2, '0')}
                     </span>
                   </div>
 
@@ -729,9 +734,10 @@ export function DawCanvas({
                 {/* Middle: Track Name (Clean CSS ellipsis truncation) */}
                 <div
                   style={{
-                    fontSize: '13px',
+                    fontSize: '12px',
                     fontWeight: 600,
-                    color: isMuted ? '#64748b' : '#ffffff',
+                    letterSpacing: '-0.01em',
+                    color: isMuted ? '#64748b' : '#f4f4f5',
                     fontFamily: 'var(--font-sans)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -747,10 +753,10 @@ export function DawCanvas({
                 {/* Bottom: Dynamic Telemetry (Clean CSS ellipsis truncation) */}
                 <div
                   style={{
-                    fontSize: '10.5px',
-                    fontFamily: 'var(--font-sans)',
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
                     fontVariantNumeric: 'tabular-nums',
-                    color: '#64748b',
+                    color: 'var(--zinc-500)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -768,7 +774,7 @@ export function DawCanvas({
 
           {/* Reconstructed "+ Nuevo Hilo" Button in Left Track Column Footer with React Bits DeepThink Glow */}
           {(() => {
-            const addTrackTopY = CANVAS_TOP_PAD + viewport.panY + tracks.length * (TRACK_HEIGHT + TRACK_GAP) + CARD_PAD_Y;
+            const addTrackTopY = CANVAS_TOP_PAD + viewport.panY + tracks.length * (TRACK_HEIGHT + TRACK_GAP);
             return (
               <GlowButton
                 variant="deepthink"
@@ -781,7 +787,7 @@ export function DawCanvas({
                   top: `${addTrackTopY}px`,
                   left: '10px',
                   width: `${TRACK_HEADER_WIDTH - 20}px`,
-                  height: `${CARD_HEIGHT}px`,
+                  height: `${TRACK_HEIGHT}px`,
                   userSelect: 'none',
                 }}
               >

@@ -543,8 +543,11 @@ describe('Phase 1 Core Fixes & Enhancements Verification', () => {
     assert.ok(!dawCanvasSrc.includes('Imantación</span>'), 'DawCanvas must not contain the manual Imantación button in bottom dock');
     assert.ok(dawCanvasSrc.includes('const magnetEnabled = true;'), 'DawCanvas must set magnetEnabled permanently true');
 
-    // 2. Full leftward dragging: panX defaults to 0 flush with track header
-    assert.ok(dawCanvasSrc.includes('panX: 0'), 'DawCanvas must initialize panX to 0 flush with track header');
+    // 2. Initial breathing margin: panX defaults to 32 (pl-8) so the first card is never clipped
+    assert.ok(
+      dawCanvasSrc.includes('panX: 32'),
+      'DawCanvas must initialize panX to 32px so the first lane card keeps its pl-8 breathing margin'
+    );
 
     // 3. Clean ruler: no cryptic "Xu" numbers rendered
     assert.ok(!rendererSrc.includes('ctx.fillText(`${t}u`'), 'renderer.ts must not render cryptic unit numbers on timeline ruler');
@@ -558,74 +561,146 @@ describe('Phase 1 Core Fixes & Enhancements Verification', () => {
     );
   });
 
-  it('Hero Chapter Numeral Prominence & Small Header Badge Elimination', () => {
+  it('Giant Card Numeral Elimination & 20px Order Badge Anatomy', () => {
     const rendererPath = resolve(__dirname, '../src/canvas/renderer.ts');
     const rendererSrc = readFileSync(rendererPath, 'utf8');
 
-    // 1. Small badge eliminated from canvas header line (title gets full horizontal width)
+    // 1. The giant transparent 36px numeral ("01", "02", "03") is fully eliminated
+    assert.ok(
+      !rendererSrc.includes("ctx.font = '800 36px ' + FONT_SANS;"),
+      'renderer.ts must not scale a hero chapter numeral to 800 36px'
+    );
+    assert.ok(
+      !rendererSrc.includes('isSel ? 0.48 : 0.32'),
+      'renderer.ts must not paint the superseded luminous hero numeral opacity'
+    );
+    assert.ok(
+      !rendererSrc.includes('x + scnW - 14, y + scnH - 14'),
+      'renderer.ts must not anchor a hero numeral in the bottom-right corner'
+    );
+
+    // 2. Order badge: w-5 h-5 rounded-full bg-zinc-800 border border-white/10, mono 10px
+    assert.ok(
+      rendererSrc.includes('const badgeRadius = 10; // w-5 h-5'),
+      'renderer.ts must size the order badge to a 20px circle'
+    );
+    assert.ok(
+      rendererSrc.includes('ctx.arc(badgeCx, badgeCy, badgeRadius, 0, Math.PI * 2);'),
+      'renderer.ts must draw the order badge as a circle'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.fillStyle = '#27272a';"),
+      'renderer.ts must fill the order badge with bg-zinc-800'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.font = '500 10px ' + FONT_MONO;"),
+      'renderer.ts must render the order number in 10px mono'
+    );
+
+    // 3. No small number pill badge in the header row (title keeps full width)
     assert.ok(
       !rendererSrc.includes('ctx.fillText(headerLayout.numStr'),
       'renderer.ts must not render the small number pill badge in the header row'
     );
-
-    // 2. Hero architectural chapter numeral is prominent and vivid
-    assert.ok(
-      rendererSrc.includes("ctx.font = '800 36px ' + FONT_SANS;"),
-      'renderer.ts must scale hero chapter numeral to 800 36px'
-    );
-    assert.ok(
-      rendererSrc.includes('isSel ? 0.48 : 0.32'),
-      'renderer.ts must render hero chapter numeral with luminous high visibility (0.32 unselected, 0.48 selected)'
-    );
-    assert.ok(
-      rendererSrc.includes('x + scnW - 14, y + scnH - 14'),
-      'renderer.ts must anchor hero numeral at bottom-right corner'
-    );
   });
 
-  it('Pinterest & Orion High-Craft Art Direction & UI Technique Verification', () => {
+  it('Definitive Vector Wires, Continuous Swimlanes & Integrated Rim Light', () => {
     const rendererPath = resolve(__dirname, '../src/canvas/renderer.ts');
     const rendererSrc = readFileSync(rendererPath, 'utf8');
     const dawCanvasPath = resolve(__dirname, '../src/canvas/DawCanvas.tsx');
     const dawCanvasSrc = readFileSync(dawCanvasPath, 'utf8');
 
-    // 1. Pinterest Diffuse Chromatic Aurora Bloom behind selected/active card
+    // 1. A single 1.5px Bézier wire per relation, never dashed
     assert.ok(
-      rendererSrc.includes('// Diffuse Ambient Chromatic Aurora Bloom (Pinterest SaaS Card Reveal & Orion)'),
-      'renderer.ts must render diffuse chromatic aura bloom behind active card'
+      rendererSrc.includes('ctx.bezierCurveTo(c1x, y1, c2x, y2, baseX + 1, y2);'),
+      'renderer.ts must connect scenes with a single cubic Bézier wire'
     );
     assert.ok(
-      rendererSrc.includes("rgba(56, 189, 248, 0.12)"),
-      'renderer.ts must feature radiant cyan chromatic aura step'
+      rendererSrc.includes("cableGrad.addColorStop(0, 'rgba(56, 189, 248, 1)');"),
+      'renderer.ts must stroke wires with the cyan → indigo fiber-optic gradient'
     );
     assert.ok(
-      rendererSrc.includes("rgba(168, 85, 247, 0.08)"),
-      'renderer.ts must feature electric violet chromatic aura step'
+      rendererSrc.includes("cableGrad.addColorStop(1, 'rgba(129, 140, 248, 1)');"),
+      'renderer.ts must end the wire gradient in indigo (#818cf8)'
+    );
+    assert.ok(
+      rendererSrc.includes('ctx.lineWidth = isConnectedToSel ? 2.5 : 2;'),
+      'renderer.ts must stroke wires at 2px weight'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.shadowColor = isConnectedToSel ? 'rgba(56, 189, 248, 0.75)' : 'rgba(56, 189, 248, 0.6)';"),
+      'renderer.ts must add a 6px drop-shadow halo to the fiber-optic wire'
+    );
+    assert.ok(rendererSrc.includes('ctx.setLineDash([]);'), 'renderer.ts must never dash the causal wires');
+
+    // 2. Directional arrowhead into the destination port
+    assert.ok(
+      rendererSrc.includes('// Directional arrow into the destination port'),
+      'renderer.ts must render a directional arrow toward the destination node'
+    );
+    assert.ok(
+      rendererSrc.includes('ctx.lineTo(baseX, y2 - 3.2);'),
+      'renderer.ts must close the arrowhead with a 3.2px half-width base'
     );
 
-    // 2. High-precision 1px Top Edge Inset Specular Highlight (Apple / Vercel / Pinterest technique)
+    // 3. Superseded aurora bloom and iridescent ribbon gradient are gone
     assert.ok(
-      rendererSrc.includes('// Razor-sharp 1px Top Edge Inset Specular Highlight (Apple / Vercel / Pinterest technique)'),
-      'renderer.ts must render razor-sharp top edge inset specular highlight'
+      !rendererSrc.includes('Diffuse Ambient Chromatic Aurora Bloom'),
+      'renderer.ts must not paint a diffuse chromatic aurora bloom behind the selected card'
+    );
+    assert.ok(
+      !rendererSrc.includes('rgba(168, 85, 247, 0.08)'),
+      'renderer.ts must not paint an electric violet aura step'
     );
 
-    // 3. Workflow Plan High-Contrast Telemetry Capsule Pill
+    // 4. Continuous swimlanes: each lane band spans TRACK_HEIGHT + TRACK_GAP with a 1px bottom rule
     assert.ok(
-      rendererSrc.includes('// Right-aligned High-Contrast Telemetry Capsule (Workflow Plan Pill Technique)'),
-      'renderer.ts must encase reading telemetry in a sculpted capsule pill'
+      rendererSrc.includes('const LANE_HEIGHT = TRACK_HEIGHT + TRACK_GAP;'),
+      'renderer.ts must lay lanes out as touching rows of TRACK_HEIGHT + TRACK_GAP'
     );
     assert.ok(
-      rendererSrc.includes('ctx.roundRect(pillX, pillY, pillW, pillH, 9999)'),
-      'renderer.ts must render 9999px capsule pill for telemetry'
-    );
-
-    // 4. Orion Multi-Color Iridescent Flow Ribbons
-    assert.ok(
-      rendererSrc.includes('#38bdf8') && rendererSrc.includes('#a855f7'),
-      'renderer.ts must render multi-stop iridescent gradients (cyan to violet) along ribbons'
+      rendererSrc.includes(
+        'ctx.fillRect(TRACK_HEADER_WIDTH, ly + LANE_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);'
+      ),
+      'renderer.ts must delimit each lane with a 1px hairline bottom rule'
     );
 
-    // 5. Executive Floating Pill Dock
+    // 5. Card base light wash with a colored bloom, plus crystal bevel and selection aura
+    assert.ok(
+      rendererSrc.includes('ctx.roundRect(x + 0.5, y + scnH - 2, scnW - 1, 2, 1)'),
+      'renderer.ts must integrate the 2px colored base bar into the card'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.shadowColor = hexToRgba(cardLight, isMuted ? 0 : 0.3);"),
+      'renderer.ts must bloom the card base into an ascending ambient light wash'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';"),
+      'renderer.ts must paint the 1px inset crystal bevel on the card top edge'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.shadowColor = isSel ? 'rgba(56, 189, 248, 0.25)' : 'rgba(0, 0, 0, 0.8)';"),
+      'renderer.ts must light a selected card with a cyan aura and deeper shadow otherwise'
+    );
+    assert.ok(
+      rendererSrc.includes("ctx.strokeStyle = isSel ? 'rgba(56, 189, 248, 0.8)' : 'rgba(255, 255, 255, 0.08)';"),
+      'renderer.ts must sharpen a selected card border to border-sky-400/80'
+    );
+    // 5b. Stitch aurora orbs and the radially masked dot grid
+    assert.ok(
+      rendererSrc.includes("orbAGrad.addColorStop(0, 'rgba(79, 70, 229, 0.20)');"),
+      'renderer.ts must paint the indigo aurora orb'
+    );
+    assert.ok(
+      rendererSrc.includes("orbBGrad.addColorStop(0, 'rgba(6, 182, 212, 0.16)');"),
+      'renderer.ts must paint the cyan aurora orb'
+    );
+    assert.ok(
+      rendererSrc.includes('const gridMask = ctx.createRadialGradient('),
+      'renderer.ts must fade the dot grid with a radial mask'
+    );
+
+    // 6. Executive floating pill dock preserved
     assert.ok(
       dawCanvasSrc.includes("borderRadius: '9999px'"),
       'DawCanvas must style bottom floating dock as executive capsule pill'
@@ -741,9 +816,29 @@ describe('Phase 1 Core Fixes & Enhancements Verification', () => {
     assert.ok(borderGlowSrc.includes('--glow-y'), 'BorderGlow must dynamically set --glow-y for cursor tracking');
 
     // 4. Integrated into primary application controls
-    assert.ok(appSrc.includes('<BorderGlow variant="rainbow"'), 'App.tsx must encase top capsule switcher in BorderGlow');
+    assert.ok(
+      appSrc.includes('<PillNav'),
+      'App.tsx must use the React Bits PillNav glass selector for workspace views'
+    );
+    assert.ok(appSrc.includes('<Aurora'), 'App.tsx must layer the React Bits Aurora atmosphere');
+    assert.ok(appSrc.includes('<DotGrid'), 'App.tsx must layer the React Bits DotGrid atmosphere');
+    assert.ok(
+      appSrc.includes('from "./components/Aurora"') || appSrc.includes("from './components/Aurora'"),
+      'App.tsx must import Aurora from the installed React Bits component'
+    );
+    assert.ok(
+      !appSrc.includes('<BorderGlow variant="rainbow"'),
+      'App.tsx must not wrap the navigation selector in BorderGlow'
+    );
     assert.ok(dawCanvasSrc.includes('<GlowButton'), 'DawCanvas must feature GlowButton for Nuevo Hilo action slot');
     assert.ok(dawCanvasSrc.includes('<BorderGlow'), 'DawCanvas must wrap bottom dock in BorderGlow');
-    assert.ok(binderSrc.includes('<GlowButton'), 'ManuscriptBinder must feature GlowButton for Nueva Escena action slot');
+    assert.ok(
+      binderSrc.includes('<SpotlightCard'),
+      'ManuscriptBinder must wrap scene rows in the React Bits SpotlightCard'
+    );
+    assert.ok(
+      binderSrc.includes('<SpecularButton'),
+      'ManuscriptBinder must use the React Bits SpecularButton for Nueva Escena'
+    );
   });
 });

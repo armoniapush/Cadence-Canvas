@@ -1,6 +1,6 @@
 import type { Track, Scene, ReadingAnchor } from '../types';
 
-export const FONT_SANS = '"Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+export const FONT_SANS = '"Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 export const FONT_MONO = FONT_SANS; // Unified with senior sans: quita fuentes de código mono
 export const FONT_EDITORIAL = '"Newsreader", Georgia, Cambria, serif';
 
@@ -15,8 +15,8 @@ export const PIXELS_PER_UNIT = 1.3;
 export const MUTE_BTN_W = 28;
 export const MUTE_BTN_H = 24;
 export const CARD_BORDER_RADIUS = 16;
-export const PORT_RADIUS = 4;
-export const PORT_HOVER_RADIUS = 6;
+export const PORT_RADIUS = 2.5;
+export const PORT_HOVER_RADIUS = 3.5;
 export const PORT_HIT_RADIUS = 14;
 export const CARD_MIN_WIDTH = 250;
 export const CARD_MIN_GAP_PX = 24;
@@ -207,6 +207,54 @@ export function computeCardHeaderLayout(
   };
 }
 
+/**
+ * Wraps a scene excerpt into at most `maxLines` lines that fit `maxWidth`,
+ * appending an ellipsis when the text is truncated (line-clamp-2 equivalent).
+ */
+export function wrapSceneExcerpt(
+  measure: (text: string) => number,
+  text: string,
+  maxWidth: number,
+  maxLines: number
+): string[] {
+  const clean = (text || '').replace(/\s+/g, ' ').trim();
+  if (!clean) return ['(Sin contenido redactado)'];
+
+  const words = clean.split(' ');
+  const lines: string[] = [];
+  let line = '';
+  let consumed = 0;
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && measure(candidate) > maxWidth) {
+      lines.push(line);
+      line = word;
+      consumed = i + 1;
+      if (lines.length === maxLines) break;
+    } else {
+      line = candidate;
+      consumed = i + 1;
+    }
+  }
+
+  if (lines.length < maxLines && line) {
+    lines.push(line);
+    consumed = words.length;
+  }
+
+  if (consumed < words.length && lines.length > 0) {
+    let last = lines[lines.length - 1];
+    while (last.length > 1 && measure(last + '…') > maxWidth) {
+      last = last.slice(0, -1);
+    }
+    lines[lines.length - 1] = last + '…';
+  }
+
+  return lines.slice(0, maxLines);
+}
+
 export interface SnapResult {
   snappedTStart: number;
   isSnapped: boolean;
@@ -376,32 +424,33 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
   ctx.save();
   ctx.scale(dpr, dpr);
 
-  // 1. Base Canvas Void Background (Deep Pitch Obsidian)
-  ctx.fillStyle = '#040508';
+  // 1. Base Canvas Void Background — never a flat #000, always a tinted obsidian
+  ctx.fillStyle = '#0a0b12';
   ctx.fillRect(0, 0, w, h);
 
-  // 2. Google Stitch Multi-Stop Atmospheric Nebula Glows (Senior Ambient Bloom)
-  // Primary soft luminous indigo-violet aura centered on the canvas
-  const auraX = w * 0.46;
-  const auraY = h * 0.38;
-  const auraR = Math.max(w, h) * 0.72;
-  const auraGrad = ctx.createRadialGradient(auraX, auraY, 30, auraX, auraY, auraR);
-  auraGrad.addColorStop(0, 'rgba(99, 102, 241, 0.08)');
-  auraGrad.addColorStop(0.35, 'rgba(139, 92, 246, 0.04)');
-  auraGrad.addColorStop(0.7, 'rgba(14, 165, 233, 0.015)');
-  auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = auraGrad;
+  // 2. Google Stitch Aurora Orbs — two fixed ambient light sources
+  // Orb 1 (indigo): top / center-left, roughly top-[-10%] left-[20%]
+  const orbAX = w * 0.32;
+  const orbAY = -h * 0.05;
+  const orbAR = Math.max(320, Math.min(w * 0.52, 620));
+  const orbAGrad = ctx.createRadialGradient(orbAX, orbAY, 0, orbAX, orbAY, orbAR);
+  orbAGrad.addColorStop(0, 'rgba(79, 70, 229, 0.20)');
+  orbAGrad.addColorStop(0.45, 'rgba(99, 102, 241, 0.09)');
+  orbAGrad.addColorStop(0.75, 'rgba(99, 102, 241, 0.025)');
+  orbAGrad.addColorStop(1, 'rgba(99, 102, 241, 0)');
+  ctx.fillStyle = orbAGrad;
   ctx.fillRect(0, 0, w, h);
 
-  // Secondary subtle cyan ambient highlight (bottom-right depth)
-  const cyanX = w * 0.75;
-  const cyanY = h * 0.65;
-  const cyanR = Math.max(w, h) * 0.45;
-  const cyanGrad = ctx.createRadialGradient(cyanX, cyanY, 20, cyanX, cyanY, cyanR);
-  cyanGrad.addColorStop(0, 'rgba(6, 182, 212, 0.045)');
-  cyanGrad.addColorStop(0.55, 'rgba(6, 182, 212, 0.01)');
-  cyanGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-  ctx.fillStyle = cyanGrad;
+  // Orb 2 (cyan): right side, roughly top-[30%] right-[10%]
+  const orbBX = w * 0.92;
+  const orbBY = h * 0.42;
+  const orbBR = Math.max(300, Math.min(w * 0.46, 540));
+  const orbBGrad = ctx.createRadialGradient(orbBX, orbBY, 0, orbBX, orbBY, orbBR);
+  orbBGrad.addColorStop(0, 'rgba(6, 182, 212, 0.16)');
+  orbBGrad.addColorStop(0.45, 'rgba(6, 182, 212, 0.07)');
+  orbBGrad.addColorStop(0.75, 'rgba(6, 182, 212, 0.02)');
+  orbBGrad.addColorStop(1, 'rgba(6, 182, 212, 0)');
+  ctx.fillStyle = orbBGrad;
   ctx.fillRect(0, 0, w, h);
 
   // 3. Subtle Infinite Dot Grid (Stitch / Material 3 node grid)
@@ -421,44 +470,57 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.arc(gx, gy, 0.85, 0, Math.PI * 2);
     }
   }
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.045)';
+  // Radial mask: dots dissolve softly toward the edges (Stitch atmospheric falloff)
+  const gridMaskCx = (TRACK_HEADER_WIDTH + w) / 2;
+  const gridMaskCy = (RULER_HEIGHT + h) / 2;
+  const gridMaskR = Math.hypot(w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT) * 0.5;
+  const gridMask = ctx.createRadialGradient(
+    gridMaskCx,
+    gridMaskCy,
+    gridMaskR * 0.3,
+    gridMaskCx,
+    gridMaskCy,
+    gridMaskR * 0.95
+  );
+  gridMask.addColorStop(0, 'rgba(255, 255, 255, 0.085)');
+  gridMask.addColorStop(0.55, 'rgba(255, 255, 255, 0.045)');
+  gridMask.addColorStop(1, 'rgba(255, 255, 255, 0)');
+  ctx.fillStyle = gridMask;
   ctx.fill();
   ctx.restore();
 
-  // 3.5. Subtle Track Lane Corridors (Horizontally aligned with Left Track Headers)
+  // 3.5. Continuous Swimlanes: one uninterrupted row per narrative track,
+  // separated only by a hairline (border-b border-white/[0.04]).
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
   ctx.clip();
 
+  const LANE_HEIGHT = TRACK_HEIGHT + TRACK_GAP;
+
   tracks.forEach((trk, idx) => {
-    const ly = CANVAS_TOP_PAD + vp.panY + idx * (TRACK_HEIGHT + TRACK_GAP);
-    if (ly + TRACK_HEIGHT < 0 || ly > h) return;
+    const ly = CANVAS_TOP_PAD + vp.panY + idx * LANE_HEIGHT;
+    if (ly + LANE_HEIGHT < RULER_HEIGHT || ly > h) return;
 
-    // Subtle track corridor ambient tint
+    // Lane band: rows touch, so the lane reads as one continuous track
     ctx.fillStyle = 'rgba(255, 255, 255, 0.012)';
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, TRACK_HEIGHT);
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly, w - TRACK_HEADER_WIDTH, LANE_HEIGHT);
 
-    // Track lane boundary separator lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.032)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(TRACK_HEADER_WIDTH, ly + 0.5);
-    ctx.lineTo(w, ly + 0.5);
-    ctx.moveTo(TRACK_HEADER_WIDTH, ly + TRACK_HEIGHT - 0.5);
-    ctx.lineTo(w, ly + TRACK_HEIGHT - 0.5);
-    ctx.stroke();
+    // Hairline lane separator
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + LANE_HEIGHT - 1, w - TRACK_HEADER_WIDTH, 1);
 
-    // Subtle track color entrance indicator
-    ctx.fillStyle = hexToRgba(trk.color_hex || '#6366f1', 0.25);
-    ctx.fillRect(TRACK_HEADER_WIDTH, ly + 1, 3, TRACK_HEIGHT - 2);
+    // Track accent tick at the lane entrance
+    ctx.fillStyle = hexToRgba(trk.color_hex || '#38bdf8', 0.3);
+    ctx.fillRect(TRACK_HEADER_WIDTH, ly + 1, 2, LANE_HEIGHT - 2);
   });
   ctx.restore();
 
   const trkMap = new Map(tracks.map((t) => [t.id, t]));
   const scnMap = new Map(scenes.map((s) => [s.id, s]));
 
-  // 4. Organic Fluid Bézier Ribbons with Animated Glowing Energy Pulses (Beloved Ribbon Shape)
+  // 4. Causal Vector Wires: a single 1.5px Bézier from out-port to in-port,
+  // with a directional arrow into the destination node.
   ctx.save();
   ctx.beginPath();
   ctx.rect(TRACK_HEADER_WIDTH, RULER_HEIGHT, w - TRACK_HEADER_WIDTH, h - RULER_HEIGHT);
@@ -468,107 +530,62 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
     ? anchors.map((a) => ({ src: scnMap.get(a.source_scene_id), dst: scnMap.get(a.target_scene_id), wt: a.weight || 1 }))
     : [...scenes].sort((a, b) => a.t_start - b.t_start).slice(0, -1).map((s, i) => ({ src: s, dst: scenes[i + 1], wt: 1 }));
 
-  cables.forEach(({ src, dst, wt = 1 }, cableIdx) => {
+  const ARROW_TIP_GAP = 5; // clears the 8px destination port
+  const ARROW_LENGTH = 6;
+
+  cables.forEach(({ src, dst }) => {
     if (!src || !dst) return;
     const sR = getSceneRect(src, tracks, vp, dragState);
     const dR = getSceneRect(dst, tracks, vp, dragState);
-    // Out-socket of source
+
+    // Out-port of the source → in-port of the destination
     const x1 = sR.x + sR.w;
     const y1 = sR.y + sR.h / 2;
-    // In-socket of destination
     const x2 = dR.x;
     const y2 = dR.y + dR.h / 2;
 
-    const isConnectedToSel = selectedSceneId && (src.id === selectedSceneId || dst.id === selectedSceneId);
+    const isConnectedToSel = Boolean(selectedSceneId && (src.id === selectedSceneId || dst.id === selectedSceneId));
+
     const dx = x2 - x1;
-    const dy = y2 - y1;
-    // Smooth sigmoid control point distance: curves gracefully across tracks
+    // Sigmoid control distance: graceful curve even when the destination sits behind
     const dist = dx > 0
-      ? Math.max(25, Math.min(dx * 0.48, 100)) + Math.abs(dy) * 0.15
-      : Math.max(50, Math.abs(dx) * 0.45) + Math.abs(dy) * 0.2;
+      ? Math.max(28, Math.min(dx * 0.5, 96))
+      : Math.max(56, Math.abs(dx) * 0.5);
     const c1x = x1 + dist;
     const c2x = x2 - dist;
 
-    const colSrc = trkMap.get(src.track_id)?.color_hex || '#6366f1';
-    const colDst = trkMap.get(dst.track_id)?.color_hex || '#38bdf8';
+    const tipX = x2 - ARROW_TIP_GAP;
+    const baseX = tipX - ARROW_LENGTH;
 
-    const rh = Math.max(10, Math.min(18, 13 * wt));
+    // Fiber-optic vector wire: cyan (#38bdf8) → indigo (#818cf8) with a luminous halo
+    const cableGrad = ctx.createLinearGradient(x1, y1, x2, y2);
+    cableGrad.addColorStop(0, 'rgba(56, 189, 248, 1)');
+    cableGrad.addColorStop(0.55, 'rgba(96, 165, 250, 0.95)');
+    cableGrad.addColorStop(1, 'rgba(129, 140, 248, 1)');
 
-    // 1. Organic Fluid Ribbon Stream Body (Translucent filled band)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x1, y1 - rh / 2);
-    ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
-    ctx.lineTo(x2, y2 + rh / 2);
-    ctx.bezierCurveTo(c2x, y2 + rh / 2, c1x, y1 + rh / 2, x1, y1 + rh / 2);
-    ctx.closePath();
-
-    const g = ctx.createLinearGradient(x1, y1, x2, y2);
-    const alphaBase = isConnectedToSel ? 0.40 : 0.24;
-    const alphaMid = isConnectedToSel ? 0.22 : 0.12;
-    g.addColorStop(0, hexToRgba(colSrc, alphaBase));
-    g.addColorStop(0.35, hexToRgba('#38bdf8', alphaMid)); // Radiant cyan bridge
-    g.addColorStop(0.70, hexToRgba('#a855f7', alphaMid)); // Electric violet bridge
-    g.addColorStop(1, hexToRgba(colDst, alphaBase));
-    ctx.fillStyle = g;
-    ctx.fill();
-
-    // Specular contour boundary edges on top and bottom of the ribbon
-    const contourGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    contourGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.90 : 0.55));
-    contourGrad.addColorStop(0.5, isConnectedToSel ? 'rgba(56, 189, 248, 0.75)' : 'rgba(56, 189, 248, 0.45)');
-    contourGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.90 : 0.55));
-    ctx.strokeStyle = contourGrad;
-    ctx.lineWidth = isConnectedToSel ? 1.6 : 1.15;
-
-    // Top edge curve
-    ctx.beginPath();
-    ctx.moveTo(x1, y1 - rh / 2);
-    ctx.bezierCurveTo(c1x, y1 - rh / 2, c2x, y2 - rh / 2, x2, y2 - rh / 2);
-    ctx.stroke();
-
-    // Bottom edge curve
-    ctx.beginPath();
-    ctx.moveTo(x1, y1 + rh / 2);
-    ctx.bezierCurveTo(c1x, y1 + rh / 2, c2x, y2 + rh / 2, x2, y2 + rh / 2);
-    ctx.stroke();
-    ctx.restore();
-
-    // 2. Central Luminescent Flow Core Wire with chromatic aura
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x1, y1);
-    ctx.bezierCurveTo(c1x, y1, c2x, y2, x2, y2);
-    const centerGrad = ctx.createLinearGradient(x1, y1, x2, y2);
-    centerGrad.addColorStop(0, hexToRgba(colSrc, isConnectedToSel ? 0.95 : 0.75));
-    centerGrad.addColorStop(0.5, isConnectedToSel ? '#38bdf8' : 'rgba(56, 189, 248, 0.85)');
-    centerGrad.addColorStop(1, hexToRgba(colDst, isConnectedToSel ? 0.95 : 0.75));
-    ctx.strokeStyle = centerGrad;
-    ctx.lineWidth = isConnectedToSel ? 2.2 : 1.4;
-    ctx.shadowColor = isConnectedToSel ? '#38bdf8' : colDst;
-    ctx.shadowBlur = isConnectedToSel ? 10 : 5;
+    ctx.bezierCurveTo(c1x, y1, c2x, y2, baseX + 1, y2);
+    ctx.strokeStyle = cableGrad;
+    ctx.lineWidth = isConnectedToSel ? 2.5 : 2;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([]);
+    ctx.globalAlpha = isConnectedToSel ? 1 : 0.5;
+    // style={{ filter: 'drop-shadow(0 0 6px rgba(56, 189, 248, 0.6))' }}
+    ctx.shadowColor = isConnectedToSel ? 'rgba(56, 189, 248, 0.75)' : 'rgba(56, 189, 248, 0.6)';
+    ctx.shadowBlur = 6;
     ctx.stroke();
     ctx.restore();
 
-    // 3. Flowing Electric Energy Pulse traveling from Cause to Effect
-    const time = performance.now() / 1600;
-    const tPulse = (time + cableIdx * 0.42) % 1;
-    const u = 1 - tPulse;
-    const px = u * u * u * x1 + 3 * u * u * tPulse * c1x + 3 * u * tPulse * tPulse * c2x + tPulse * tPulse * tPulse * x2;
-    const py = u * u * u * y1 + 3 * u * u * tPulse * y1 + 3 * u * tPulse * tPulse * y2 + tPulse * tPulse * tPulse * y2;
-
+    // Directional arrow into the destination port
     ctx.save();
     ctx.beginPath();
-    ctx.arc(px, py, isConnectedToSel ? 4.5 : 3.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = '#38bdf8';
-    ctx.shadowBlur = isConnectedToSel ? 12 : 8;
-    ctx.fill();
-
-    // Pulse core gem
-    ctx.beginPath();
-    ctx.arc(px, py, isConnectedToSel ? 2.2 : 1.6, 0, Math.PI * 2);
-    ctx.fillStyle = colDst;
+    ctx.moveTo(tipX, y2);
+    ctx.lineTo(baseX, y2 - 3.2);
+    ctx.lineTo(baseX, y2 + 3.2);
+    ctx.closePath();
+    ctx.fillStyle = isConnectedToSel ? 'rgba(129, 140, 248, 0.95)' : 'rgba(129, 140, 248, 0.6)';
     ctx.fill();
     ctx.restore();
   });
@@ -586,7 +603,7 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     const isSel = s.id === selectedSceneId;
     const track = trkMap.get(isD && dragState ? dragState.previewTrackId : s.track_id);
-    const col = track?.color_hex || '#6366f1';
+    const col = track?.color_hex || '#38bdf8';
     const isMuted = track?.is_muted ?? false;
 
     ctx.save();
@@ -594,94 +611,62 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       ctx.globalAlpha = 0.35;
     }
 
-    // Diffuse Ambient Chromatic Aurora Bloom (Pinterest SaaS Card Reveal & Orion)
-    if (isSel || isD) {
-      const cx = x + scnW / 2;
-      const cy = y + scnH / 2;
-      ctx.save();
-      const auraGrad = ctx.createRadialGradient(
-        cx,
-        cy,
-        Math.min(scnW, scnH) * 0.25,
-        cx,
-        cy,
-        Math.max(scnW, scnH) * 0.95
-      );
-      auraGrad.addColorStop(0, hexToRgba(col, isD ? 0.36 : 0.26));
-      auraGrad.addColorStop(0.45, 'rgba(56, 189, 248, 0.12)'); // Radiant cyan
-      auraGrad.addColorStop(0.75, 'rgba(168, 85, 247, 0.08)'); // Electric violet
-      auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = auraGrad;
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(x - 24, y - 24, scnW + 48, scnH + 48, CARD_BORDER_RADIUS + 14);
-      else ctx.rect(x - 24, y - 24, scnW + 48, scnH + 48);
-      ctx.fill();
-      ctx.restore();
-    }
+    const cardLight = isMuted ? '#3f3f46' : col;
 
-    // Physical Card Lift Shadow
+    // S2 — ascending ambient color wash: bg-[#10121A]/95 with a restrained thread tint
+    const washGrad = ctx.createLinearGradient(0, y + scnH, 0, y);
+    washGrad.addColorStop(0, hexToRgba(cardLight, isMuted ? 0.04 : 0.10));
+    washGrad.addColorStop(0.45, hexToRgba(cardLight, isMuted ? 0.015 : 0.025));
+    washGrad.addColorStop(1, 'rgba(16, 18, 26, 0.95)');
+
+    // S5 — selection: the active card lifts off the surface and gains a cyan aura
     ctx.save();
-    if (isSel || isD) {
-      ctx.shadowColor = hexToRgba(col, 0.45);
-      ctx.shadowBlur = isD ? 28 : 20;
-      ctx.shadowOffsetY = isD ? 8 : 4;
-    } else {
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.55)';
-      ctx.shadowBlur = 14;
-      ctx.shadowOffsetY = 4;
-    }
-
-    // Card Container (Frosted Obsidian Glass - Ultra Minimalist Senior Surface)
-    const cardGrad = ctx.createLinearGradient(x, y, x, y + scnH);
-    if (isD) {
-      cardGrad.addColorStop(0, '#1c2236');
-      cardGrad.addColorStop(0.4, '#131828');
-      cardGrad.addColorStop(1, '#0c0f18');
-    } else if (isSel) {
-      cardGrad.addColorStop(0, '#161d30');
-      cardGrad.addColorStop(0.4, '#111524');
-      cardGrad.addColorStop(1, '#090c14');
-    } else {
-      cardGrad.addColorStop(0, '#111420');
-      cardGrad.addColorStop(0.5, '#0d0f17');
-      cardGrad.addColorStop(1, '#08090f');
-    }
-    ctx.fillStyle = cardGrad;
+    ctx.shadowColor = isSel ? 'rgba(56, 189, 248, 0.25)' : 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = isSel ? 20 : 30;
+    ctx.shadowOffsetY = isSel ? 6 : 10;
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
     else ctx.rect(x, y, scnW, scnH);
+    ctx.fillStyle = washGrad;
     ctx.fill();
     ctx.restore();
 
-    // Razor-sharp 1px Top Edge Inset Specular Highlight (Apple / Vercel / Pinterest technique)
-    const rimGrad = ctx.createLinearGradient(x, y, x + scnW, y);
-    rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.03)');
-    rimGrad.addColorStop(0.2, isSel ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.12)');
-    rimGrad.addColorStop(0.8, isSel ? 'rgba(255, 255, 255, 0.28)' : 'rgba(255, 255, 255, 0.12)');
-    rimGrad.addColorStop(1, 'rgba(255, 255, 255, 0.03)');
-    ctx.fillStyle = rimGrad;
-    ctx.fillRect(x + CARD_BORDER_RADIUS, y + 1, Math.max(0, scnW - CARD_BORDER_RADIUS * 2), 1);
-
-    // Card Outer Border (Crisp 1px hair-line catching the track color)
-    ctx.lineWidth = isD ? 2 : isSel ? 1.5 : 1;
-    if (isSel) {
-      const borderGrad = ctx.createLinearGradient(x, y, x + scnW, y + scnH);
-      borderGrad.addColorStop(0, col);
-      borderGrad.addColorStop(0.5, '#38bdf8');
-      borderGrad.addColorStop(1, col);
-      ctx.strokeStyle = borderGrad;
-    } else {
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
-    }
+    // S1 — crystal bevel: 1px inset highlight along the top edge only
+    ctx.save();
     ctx.beginPath();
-    if (ctx.roundRect) ctx.roundRect(x - 0.5, y - 0.5, scnW + 1, scnH + 1, CARD_BORDER_RADIUS);
+    if (ctx.roundRect) ctx.roundRect(x, y, scnW, scnH, CARD_BORDER_RADIUS);
+    else ctx.rect(x, y, scnW, scnH);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(x + 1, y + 1, scnW - 2, 1);
+    ctx.restore();
+
+    // border-white/[0.08], sharpening to border-sky-400/80 when selected
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = isSel ? 'rgba(56, 189, 248, 0.8)' : 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x + 0.5, y + 0.5, scnW - 1, scnH - 1, CARD_BORDER_RADIUS - 1);
     else ctx.strokeRect(x, y, scnW, scnH);
     ctx.stroke();
 
-    // 1. Senior Minimalist Header Row (Anti-collision: Scene Title, index, telemetry)
-    // Left: Luminous Thread Pip + Editable Scene Title + Scene Index
-    const words = s.word_count || 0;
+    // S4 — only a subtle bottom accent: border-b border-b-sky-500/40, no thick neon edge
+    ctx.save();
+    ctx.shadowColor = hexToRgba(cardLight, isMuted ? 0 : 0.18);
+    ctx.shadowBlur = 14;
+    ctx.shadowOffsetY = 4;
+    ctx.fillStyle = hexToRgba(cardLight, isMuted ? 0.05 : 0.4);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x + 0.5, y + scnH - 1.5, scnW - 1, 1.5, 1);
+    else ctx.rect(x, y + scnH - 1.5, scnW, 1.5);
+    ctx.fill();
+    ctx.restore();
 
+    const padX = 14;
+    const badgeRadius = 10; // w-5 h-5
+    const badgeCx = x + padX + badgeRadius;
+    const badgeCy = y + padX + badgeRadius;
+
+    const words = s.word_count || 0;
     const headerLayout = computeCardHeaderLayout(
       scnW,
       s.title,
@@ -693,93 +678,99 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       }
     );
 
-    // 0. Hero Architectural Chapter Numeral: Prominent, high-visibility landmark
-    const sceneNum = String(sceneIdx + 1).padStart(2, '0');
-    ctx.save();
-    ctx.font = '800 36px ' + FONT_SANS;
-    ctx.fillStyle = hexToRgba(col, isSel ? 0.48 : 0.32);
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(sceneNum, x + scnW - 14, y + scnH - 14);
-    ctx.restore();
-
-    ctx.save();
-    // Luminous thread accent pip (clean 3px dot with soft aura)
+    // Order badge: w-5 h-5 rounded-full bg-zinc-800 border border-white/10
     ctx.beginPath();
-    ctx.arc(x + 18, y + 20, 3, 0, Math.PI * 2);
-    ctx.fillStyle = col;
-    ctx.shadowColor = col;
-    ctx.shadowBlur = 6;
+    ctx.arc(badgeCx, badgeCy, badgeRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#27272a';
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
 
-    // Scene Title (Clean 11.5px bold with collision-free truncation)
-    // Only render canvas title text if not currently active in inline edit overlay
+    ctx.font = '500 10px ' + FONT_MONO;
+    ctx.fillStyle = '#d4d4d8';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(sceneIdx + 1).padStart(2, '0'), badgeCx, badgeCy + 0.5);
+
+    // Header metrics (right): text-[10px] font-mono text-zinc-500
+    const metaFont = '500 10px ' + FONT_MONO;
+    const titleX = badgeCx + badgeRadius + 8;
+    ctx.font = metaFont;
+    const metaStr = headerLayout.showMeta ? headerLayout.metaStr : '';
+    const metaW = metaStr ? ctx.measureText(metaStr).width : 0;
+    if (metaStr) {
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = '#71717a';
+      ctx.fillText(metaStr, x + scnW - padX, y + 28);
+    }
+
+    // Scene title: text-xs font-semibold tracking-tight truncate
     if (data.editingSceneId !== s.id) {
-      ctx.font = '600 11.5px ' + FONT_SANS;
-      ctx.fillStyle = isSel ? '#ffffff' : '#e2e8f0';
-      ctx.fillText(headerLayout.displayTitle, x + 27, y + 23);
-    }
-
-    // Right-aligned High-Contrast Telemetry Capsule (Workflow Plan Pill Technique)
-    if (headerLayout.showMeta) {
-      const metaFont = '600 10px ' + FONT_SANS;
-      ctx.font = metaFont;
-      const textW = ctx.measureText(headerLayout.metaStr).width;
-      const pillPadX = 8;
-      const pillH = 18;
-      const pillW = textW + pillPadX * 2;
-      const pillX = x + scnW - 14 - pillW;
-      const pillY = y + 11;
-
-      // Pill capsule surface
-      ctx.save();
-      ctx.beginPath();
-      if (ctx.roundRect) ctx.roundRect(pillX, pillY, pillW, pillH, 9999);
-      else ctx.rect(pillX, pillY, pillW, pillH);
-      ctx.fillStyle = isSel ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.04)';
-      ctx.fill();
-      ctx.strokeStyle = isSel ? 'rgba(255, 255, 255, 0.16)' : 'rgba(255, 255, 255, 0.08)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Tabular text inside capsule
-      ctx.fillStyle = isSel ? '#e2e8f0' : '#94a3b8';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(headerLayout.metaStr, pillX + pillW / 2, pillY + pillH / 2 + 0.5);
-      ctx.restore();
-    }
-    ctx.restore();
-
-    // 2. Card Body: Excerpt prose text (Clean 11.5px subtle prose in slate)
-    ctx.font = '400 11.5px ' + FONT_SANS;
-    ctx.fillStyle = '#94a3b8';
-    const rawText = (s.text || '').replace(/\s+/g, ' ').trim();
-    let excerpt = rawText.length > 0 ? rawText : '(Sin contenido redactado)';
-    const maxExcerptW = Math.max(20, scnW - 32);
-    if (ctx.measureText(excerpt).width > maxExcerptW) {
-      while (excerpt.length > 2 && ctx.measureText(excerpt + '…').width > maxExcerptW) {
-        excerpt = excerpt.slice(0, -1);
+      const titleFont = '600 12px ' + FONT_SANS;
+      const availTitleW = Math.max(20, x + scnW - padX - (metaW > 0 ? metaW + 10 : 0) - titleX);
+      let displayTitle = s.title;
+      ctx.font = titleFont;
+      if (ctx.measureText(displayTitle).width > availTitleW) {
+        while (displayTitle.length > 1 && ctx.measureText(displayTitle + '…').width > availTitleW) {
+          displayTitle = displayTitle.slice(0, -1);
+        }
+        displayTitle += '…';
       }
-      excerpt += '…';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      // S2 — title reads as glass: pure white down to zinc-300
+      const titleGrad = ctx.createLinearGradient(0, y + 15, 0, y + 30);
+      titleGrad.addColorStop(0, '#ffffff');
+      titleGrad.addColorStop(1, '#d4d4d8');
+      ctx.fillStyle = isSel ? '#ffffff' : titleGrad;
+      ctx.fillText(displayTitle, titleX, y + 28);
     }
-    ctx.fillText(excerpt, x + 16, y + 47);
 
-    // 3. Subtle Track lane indicator badge at bottom of card
-    const trkName = track?.name || 'Hilo';
-    ctx.font = '500 10px ' + FONT_SANS;
-    ctx.fillStyle = '#475569';
-    let displayTrkBadge = trkName;
-    if (ctx.measureText(displayTrkBadge).width > maxExcerptW) {
-      while (displayTrkBadge.length > 2 && ctx.measureText(displayTrkBadge + '…').width > maxExcerptW) {
-        displayTrkBadge = displayTrkBadge.slice(0, -1);
+    // Body: text-[11px] text-zinc-400 leading-relaxed line-clamp-2
+    ctx.font = '400 11px ' + FONT_SANS;
+    ctx.fillStyle = '#a1a1aa';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    const bodyMaxW = Math.max(20, scnW - padX * 2);
+    const excerptLines = wrapSceneExcerpt(
+      (text) => {
+        ctx.font = '400 11px ' + FONT_SANS;
+        return ctx.measureText(text).width;
+      },
+      s.text || '',
+      bodyMaxW,
+      2
+    );
+    excerptLines.forEach((line, lineIdx) => {
+      ctx.fillText(line, x + padX, y + 52 + lineIdx * 14.5);
+    });
+
+    // Footer: thread identity + scene time, quiet tabular metadata
+    const footerY = y + scnH - 14;
+    ctx.font = '500 9.5px ' + FONT_SANS;
+    let displayTrk = track?.name || 'Hilo';
+    const footerRight = `T ${Math.round(s.t_start)}`;
+    ctx.font = '500 9.5px ' + FONT_MONO;
+    const footerRightW = ctx.measureText(footerRight).width;
+    ctx.font = '500 9.5px ' + FONT_SANS;
+    const footerLeftMax = Math.max(20, bodyMaxW - footerRightW - 12);
+    if (ctx.measureText(displayTrk).width > footerLeftMax) {
+      while (displayTrk.length > 1 && ctx.measureText(displayTrk + '…').width > footerLeftMax) {
+        displayTrk = displayTrk.slice(0, -1);
       }
-      displayTrkBadge += '…';
+      displayTrk += '…';
     }
-    ctx.fillText(displayTrkBadge, x + 16, y + 67);
+    ctx.fillStyle = isMuted ? '#3f3f46' : hexToRgba(col, 0.75);
+    ctx.fillText(displayTrk, x + padX, footerY);
 
-    // Concentric Physical In/Out Sockets
+    ctx.font = '500 9.5px ' + FONT_MONO;
+    ctx.fillStyle = '#52525b';
+    ctx.textAlign = 'right';
+    ctx.fillText(footerRight, x + scnW - padX, footerY);
+
+    // Discrete 6px connection ports on the lateral edges
     const inPortX = x;
     const inPortY = y + scnH / 2;
     const outPortX = x + scnW;
@@ -787,52 +778,32 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
 
     const isInHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'in';
     const isOutHover = data.hoveredPort?.sceneId === s.id && data.hoveredPort.port === 'out';
-    const isConnecting = Boolean(data.connectingWire);
 
-    // In-Port (Left Concentric Physical Socket)
+    const drawPort = (px: number, py: number, hovered: boolean) => {
+      const r = hovered ? PORT_HOVER_RADIUS : PORT_RADIUS;
+
+      // Anchored to the card edge: a 1px dark cut-out, a faint ring and a small glow
+      ctx.beginPath();
+      ctx.arc(px, py, r + 1.25, 0, Math.PI * 2);
+      ctx.strokeStyle = hovered ? 'rgba(125, 211, 252, 0.7)' : 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fillStyle = hovered ? '#7dd3fc' : '#38bdf8';
+      // shadow-[0_0_6px_rgba(56,189,248,0.8)]
+      ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+      ctx.shadowBlur = hovered ? 6 : 4;
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
+    };
+
     ctx.save();
-    const inR = isInHover ? PORT_HOVER_RADIUS + 2 : isSel || isConnecting ? 6.5 : 5.5;
-    ctx.beginPath();
-    ctx.arc(inPortX, inPortY, inR, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0d14';
-    ctx.strokeStyle = isInHover ? '#ffffff' : 'rgba(255, 255, 255, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(inPortX, inPortY, inR - 1.8, 0, Math.PI * 2);
-    ctx.strokeStyle = isInHover ? '#a5b4fc' : '#818cf8';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(inPortX, inPortY, 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = isInHover ? '#ffffff' : '#a5b4fc';
-    ctx.fill();
-    ctx.restore();
-
-    // Out-Port (Right Concentric Physical Socket)
-    ctx.save();
-    const outR = isOutHover ? PORT_HOVER_RADIUS + 2 : isSel || isConnecting ? 6.5 : 5.5;
-    ctx.beginPath();
-    ctx.arc(outPortX, outPortY, outR, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a0d14';
-    ctx.strokeStyle = isOutHover ? '#ffffff' : 'rgba(255, 255, 255, 0.22)';
-    ctx.lineWidth = 1;
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(outPortX, outPortY, outR - 1.8, 0, Math.PI * 2);
-    ctx.strokeStyle = isOutHover ? '#a5b4fc' : '#818cf8';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(outPortX, outPortY, 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = isOutHover ? '#ffffff' : '#a5b4fc';
-    ctx.fill();
+    drawPort(inPortX, inPortY, isInHover);
+    drawPort(outPortX, outPortY, isOutHover);
     ctx.restore();
 
     ctx.restore();
@@ -852,31 +823,20 @@ export function renderDawCanvas(ctx: CanvasRenderingContext2D, data: CanvasRende
       const c2x = toX > startX ? toX - dist : toX + dist;
 
       ctx.save();
-      // Flowing electric pulse micro-animation along causal cable
-      const dashOffset = -(performance.now() / 35) % 10;
-      ctx.lineDashOffset = dashOffset;
-      ctx.setLineDash([5, 5]);
-
-      // Subtle ambient glow
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.28)';
-      ctx.lineWidth = 6;
+      // Solid in-progress wire (no dashes, no glow)
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.bezierCurveTo(c1x, startY, c2x, toY, toX, toY);
       ctx.stroke();
 
-      // Sharp core wire
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Magnetic cable tip with glowing halo
-      ctx.setLineDash([]);
-      ctx.shadowColor = 'rgba(56, 189, 248, 0.85)';
-      ctx.shadowBlur = 8;
-      ctx.fillStyle = '#ffffff';
+      // Cable tip marker
+      ctx.fillStyle = '#38bdf8';
       ctx.beginPath();
-      ctx.arc(toX, toY, 3.5, 0, Math.PI * 2);
+      ctx.arc(toX, toY, 2.5, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }

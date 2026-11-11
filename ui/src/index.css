@@ -12,17 +12,23 @@
   --zinc-100: #f4f4f5;
   --zinc-50:  #fafafa;
 
-  /* Matte Obsidian & Graphite Architecture */
-  --bg-canvas: #09090b;
-  --bg-station: #09090b;
-  --bg-surface: #18181b;
-  --bg-elevated: #27272a;
-  --bg-header: #121215;
-  --bg-dock: #18181b;
-  --bg-rack: #18181b;
-  --bg-panel: #18181b;
-  --bg-glass: rgba(18, 18, 21, 0.88);
-  --bg-glass-elevated: rgba(24, 24, 27, 0.92);
+  /* Google Stitch definitive surfaces: #090A0F void, #12141D surface */
+  --bg-canvas: #090a0f;
+  --bg-station: #090a0f;
+  --bg-surface: #12141d;
+  --bg-elevated: #171922;
+  --bg-header: #0b0c12;
+  --bg-dock: #12141d;
+  --bg-rack: #12141d;
+  --bg-panel: #12141d;
+  --bg-glass: rgba(18, 20, 29, 0.88);
+  --bg-glass-elevated: rgba(23, 25, 34, 0.92);
+  --bg-editor-canvas: #0e1017;
+
+  /* Segmented pill control (Google Stitch) */
+  --bg-segment: #12131a;
+  --bg-segment-active: #1f222e;
+  --border-hairline: rgba(255, 255, 255, 0.1);
 
   /* Hairline Precision Borders (Zero Slop) */
   --border-subtle: rgba(255, 255, 255, 0.04);
@@ -62,7 +68,7 @@
   --color-lore: #10b981;
   --color-monologue: #a855f7;
 
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   --font-editorial: 'Newsreader', 'Lora', Georgia, Cambria, "Times New Roman", serif;
 
@@ -92,13 +98,14 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
   background-color: var(--bg-canvas);
   color: var(--text-main);
   font-family: var(--font-sans);
-  letter-spacing: -0.015em;
+  font-weight: 400;
+  letter-spacing: -0.011em;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   user-select: none;
   overflow: hidden;
@@ -106,6 +113,21 @@ body {
   width: 100vw;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+*, *::before, *::after {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.tracking-tight {
+  letter-spacing: -0.02em;
+}
+
+.tracking-normal {
+  letter-spacing: 0em;
 }
 
 .font-sans {
@@ -310,65 +332,196 @@ button:active {
   color: var(--zinc-200); /* hover:text-zinc-200 */
 }
 
-/* Semantic Mention Badges (Lucide Icon + 10% Background + 20% Border) */
+/* Action Pills & Secondary Badges (Sci-Fi Glassmorphism Pill Technique) */
+.action-pill {
+  border-radius: 9999px;
+  padding: 4px 12px;
+  background-color: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  color: var(--zinc-300, #d4d4d8);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.action-pill:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+/* =====================================================================
+   Google Stitch Segmented Pill Control (Navbar + Binder parity)
+   ===================================================================== */
+.pill-segment {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: 9999px;
+  background-color: var(--bg-segment);
+  border: 1px solid var(--border-hairline);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  gap: 2px;
+}
+
+.pill-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+  color: var(--zinc-400);
+  background-color: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.pill-tab:hover {
+  color: var(--zinc-200);
+}
+
+.pill-tab[aria-selected='true'],
+.pill-tab[data-active='true'] {
+  background-color: var(--bg-segment-active);
+  color: #ffffff;
+  border-color: var(--border-hairline);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Ghost action pill: Exportar / Ajustes */
+.btn-ghost-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: var(--zinc-400);
+  background-color: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-ghost-pill:hover {
+  color: var(--zinc-100);
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-hairline);
+}
+
+/* Binder search field: rounded-full hairline input */
+.binder-search {
+  width: 100%;
+  height: 30px;
+  padding: 0 44px 0 30px;
+  border-radius: 9999px;
+  background-color: var(--bg-segment);
+  border: 1px solid var(--border-hairline);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--zinc-200);
+  outline: none;
+  box-shadow: none;
+  transition: border-color 0.15s ease;
+}
+
+.binder-search::placeholder {
+  color: var(--zinc-500);
+}
+
+.binder-search:focus {
+  border-color: rgba(255, 255, 255, 0.25);
+  outline: none;
+  box-shadow: none;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Semantic Mention Badges (Pills: rounded-full px-3 py-1 bg-white/[0.04] border border-white/10) */
 .badge-mention-character {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  background-color: rgba(14, 165, 233, 0.1); /* bg-sky-500/10 */
-  color: #38bdf8; /* text-sky-400 */
-  border: 1px solid rgba(14, 165, 233, 0.2); /* border-sky-500/20 */
+  font-family: var(--font-sans);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--zinc-300, #d4d4d8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .badge-mention-character:hover {
-  background-color: rgba(14, 165, 233, 0.2);
-  color: #7dd3fc;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(14, 165, 233, 0.4);
+  color: #38bdf8;
 }
 
 .badge-mention-location {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  background-color: rgba(16, 185, 129, 0.1); /* bg-emerald-500/10 */
-  color: #34d399; /* text-emerald-400 */
-  border: 1px solid rgba(16, 185, 129, 0.2); /* border-emerald-500/20 */
+  font-family: var(--font-sans);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--zinc-300, #d4d4d8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .badge-mention-location:hover {
-  background-color: rgba(16, 185, 129, 0.2);
-  color: #6ee7b7;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
 }
 
 .badge-mention-object {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 9999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-  background-color: rgba(245, 158, 11, 0.1); /* bg-amber-500/10 */
-  color: #fbbf24; /* text-amber-400 */
-  border: 1px solid rgba(245, 158, 11, 0.2); /* border-amber-500/20 */
+  font-family: var(--font-sans);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--zinc-300, #d4d4d8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.15s ease;
   cursor: pointer;
 }
 
 .badge-mention-object:hover {
-  background-color: rgba(245, 158, 11, 0.2);
-  color: #fde68a;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
 }
 
 /* Borderless Clean Editable Scene Title */
@@ -394,6 +547,25 @@ button:active {
   background-color: rgba(39, 39, 42, 0.5); /* focus:bg-zinc-800/50 */
   border-color: rgba(63, 63, 70, 0.7); /* border-zinc-700/70 */
   box-shadow: 0 0 0 1px rgba(63, 63, 70, 0.4);
+}
+
+/* Google AGY Obsidian Editorial Textarea & Scrollbar */
+.editor-prose-textarea::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.editor-prose-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.editor-prose-textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.editor-prose-textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .btn-icon {
@@ -757,4 +929,14 @@ input, textarea {
 .glow-btn-wrapper:active {
   transform: translateY(0) scale(0.98);
 }
+
+/* =====================================================================
+   Pro-Grade Resizable Drawers Splitter Styles
+   ===================================================================== */
+.binder-resize-splitter:hover > div,
+.editor-resize-splitter:hover > div {
+  background-color: var(--accent-indigo) !important;
+  height: 64px !important;
+}
+
 

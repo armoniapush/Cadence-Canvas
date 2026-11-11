@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Layers, Network, BookOpen, Download, Settings, X } from 'lucide-react';
-import { BorderGlow } from './components/BorderGlow';
-import { GlowButton } from './components/GlowButton';
+import { Layers, BookOpen, Download, Settings, X } from 'lucide-react';
 import type { Project, Track, Scene, ReadingAnchor } from './types';
 import {
   openProject,
@@ -19,7 +17,6 @@ import {
 } from './api';
 import { DawCanvas } from './canvas/DawCanvas';
 import { AtomicEditor } from './editor/AtomicEditor';
-import { RadialConstellation } from './constellation/RadialConstellation';
 import { ManuscriptBinder, type LeftNavTab } from './components/ManuscriptBinder';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { SettingsModal, type ProjectSettings } from './components/SettingsModal';
@@ -195,7 +192,6 @@ export function App() {
   }, []);
   const [error, setError] = useState<string | null>(null);
   const [isZen, setIsZen] = useState<boolean>(false);
-  const [showConstellation, setShowConstellation] = useState<boolean>(false);
   const [isCreateTrackOpen, setIsCreateTrackOpen] = useState<boolean>(false);
   const [isLeftNavOpen, setIsLeftNavOpen] = useState<boolean>(true);
   const [leftNavTab, setLeftNavTab] = useState<LeftNavTab>('binder');
@@ -212,6 +208,128 @@ export function App() {
     editorFontSize: 16,
     defaultMagnet: true,
   });
+
+  // Resizable Binders & Panels State
+  const [binderWidth, setBinderWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cadence_binder_width');
+        if (saved) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed) && parsed >= 220 && parsed <= 600) return parsed;
+        }
+      } catch {}
+    }
+    return 320;
+  });
+
+  const [editorWidth, setEditorWidth] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('cadence_editor_width');
+        if (saved) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed) && parsed >= 320 && parsed <= 800) return parsed;
+        }
+      } catch {}
+    }
+    return 420;
+  });
+
+  const [isResizingBinder, setIsResizingBinder] = useState(false);
+  const [isResizingEditor, setIsResizingEditor] = useState(false);
+
+  // Resize handler for Left Binder
+  const handleBinderMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizingBinder(true);
+      const startX = e.clientX;
+      const startWidth = binderWidth;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        moveEvent.preventDefault();
+        const delta = moveEvent.clientX - startX;
+        const maxAllowed = Math.max(260, window.innerWidth - (selectedSceneId ? editorWidth : 0) - 500);
+        const newWidth = Math.max(220, Math.min(Math.min(550, maxAllowed), startWidth + delta));
+        setBinderWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        setIsResizingBinder(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        try {
+          setBinderWidth((current) => {
+            localStorage.setItem('cadence_binder_width', current.toString());
+            return current;
+          });
+        } catch {}
+      };
+
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [binderWidth, editorWidth, selectedSceneId]
+  );
+
+  // Resize handler for Right Editor
+  const handleEditorMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsResizingEditor(true);
+      const startX = e.clientX;
+      const startWidth = editorWidth;
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        moveEvent.preventDefault();
+        const delta = startX - moveEvent.clientX; // Dragging left expands editor
+        const maxAllowed = Math.max(340, window.innerWidth - (isLeftNavOpen ? binderWidth : 0) - 500);
+        const newWidth = Math.max(320, Math.min(Math.min(800, maxAllowed), startWidth + delta));
+        setEditorWidth(newWidth);
+      };
+
+      const handleMouseUp = () => {
+        setIsResizingEditor(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        try {
+          setEditorWidth((current) => {
+            localStorage.setItem('cadence_editor_width', current.toString());
+            return current;
+          });
+        } catch {}
+      };
+
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    },
+    [editorWidth, binderWidth, isLeftNavOpen]
+  );
+
+  const handleResetBinderWidth = useCallback(() => {
+    setBinderWidth(320);
+    try {
+      localStorage.setItem('cadence_binder_width', '320');
+    } catch {}
+  }, []);
+
+  const handleResetEditorWidth = useCallback(() => {
+    setEditorWidth(420);
+    try {
+      localStorage.setItem('cadence_editor_width', '420');
+    } catch {}
+  }, []);
 
   const handleToggleBinder = useCallback(() => {
     setIsLeftNavOpen((prev) => {
@@ -664,8 +782,23 @@ export function App() {
         width: '100vw',
         backgroundColor: 'var(--bg-canvas)',
         overflow: 'hidden',
+        position: 'relative',
+        isolation: 'isolate',
       }}
     >
+      {/* S3 / S7 — fixed atmospheric light bed: pure-CSS aurora orbs (no WebGL) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-20 overflow-hidden"
+      >
+        <div
+          className="absolute -top-[35%] left-[10%] h-[70vh] w-[70vw] rounded-full bg-indigo-600/10 blur-[130px]"
+        />
+        <div
+          className="absolute -right-[15%] top-[20%] h-[60vh] w-[55vw] rounded-full bg-cyan-500/10 blur-[120px]"
+        />
+      </div>
+
       {/* 1. TOP GLOBAL HEADER (56px) - Stitch Architecture */}
       <header
         style={{
@@ -675,11 +808,12 @@ export function App() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '0 16px',
-          backgroundColor: '#0d0f16',
+          backgroundColor: 'rgba(15, 17, 24, 0.8)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.45)',
+          backdropFilter: 'blur(24px) saturate(1.4)',
+          WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+          boxShadow:
+            'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 10px 30px -10px rgba(0, 0, 0, 0.8)',
           zIndex: 100,
           flexShrink: 0,
           boxSizing: 'border-box',
@@ -757,15 +891,16 @@ export function App() {
             </span>
             <span
               style={{
-                fontSize: '9px',
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                color: '#94a3b8',
+                fontSize: '10px',
+                fontWeight: 500,
+                letterSpacing: '0.08em',
+                color: 'var(--zinc-400)',
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '1px 5px',
-                borderRadius: '4px',
+                padding: '2px 8px',
+                borderRadius: '9999px',
                 fontFamily: 'var(--font-mono)',
+                lineHeight: 1.4,
               }}
             >
               NOVEL OS
@@ -780,7 +915,8 @@ export function App() {
               gap: '6px',
               fontSize: '11px',
               color: '#b0b6c3',
-              fontFamily: 'var(--font-mono)',
+              fontFamily: 'var(--font-sans)',
+              fontWeight: 500,
               backgroundColor: '#1a1e28',
               padding: '3px 9px',
               borderRadius: '6px',
@@ -796,46 +932,38 @@ export function App() {
             <span>{projectPath}</span>
           </div>
 
-          {/* Toggle Manuscript Binder Button (⌘B) */}
+          {/* Toggle Manuscript Binder Button (⌘B) - Sci-Fi Action Pill */}
           <button
             onClick={handleToggleBinder}
             title="Alternar Binder de Manuscrito (⌘B)"
+            className="action-pill"
             style={{
-              padding: '0 10px',
-              height: '28px',
-              fontSize: '11px',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              fontSize: '12px',
               fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginLeft: '2px',
-              borderRadius: '6px',
-              cursor: 'pointer',
               backgroundColor:
                 isLeftNavOpen && leftNavTab === 'binder'
-                  ? 'rgba(255, 255, 255, 0.1)'
-                  : 'rgba(255, 255, 255, 0.02)',
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(255, 255, 255, 0.04)',
               border:
                 isLeftNavOpen && leftNavTab === 'binder'
-                  ? '1px solid rgba(129, 140, 248, 0.4)'
-                  : '1px solid rgba(255, 255, 255, 0.05)',
+                  ? '1px solid rgba(255, 255, 255, 0.2)'
+                  : '1px solid rgba(255, 255, 255, 0.1)',
               color:
-                isLeftNavOpen && leftNavTab === 'binder' ? '#ffffff' : 'var(--text-secondary)',
-              boxShadow:
-                isLeftNavOpen && leftNavTab === 'binder' ? '0 1px 3px rgba(0, 0, 0, 0.3)' : 'none',
-              transition: 'all 0.15s ease',
+                isLeftNavOpen && leftNavTab === 'binder' ? '#ffffff' : 'var(--zinc-300, #d4d4d8)',
             }}
           >
-            <BookOpen size={14} strokeWidth={1.5} color={isLeftNavOpen && leftNavTab === 'binder' ? '#818cf8' : 'var(--text-muted)'} />
+            <BookOpen size={13} strokeWidth={1.5} color={isLeftNavOpen && leftNavTab === 'binder' ? '#38bdf8' : 'var(--zinc-400, #a1a1aa)'} />
             <span>Manuscrito</span>
             <span
               style={{
-                fontSize: '9px',
+                fontSize: '10px',
                 fontFamily: 'var(--font-mono)',
-                color: 'var(--text-muted)',
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                padding: '1px 4px',
-                borderRadius: '3px',
+                color: 'var(--zinc-400, #a1a1aa)',
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                padding: '1px 5px',
+                borderRadius: '4px',
               }}
             >
               ⌘B
@@ -862,106 +990,38 @@ export function App() {
           )}
         </div>
 
-        {/* Center: Unified Capsule Switcher with React Bits Multi-Spectral Neon Border Glow */}
-        <BorderGlow variant="rainbow" glowSize={220} borderRadius="8px">
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#0c0e11',
-              padding: '2px',
-              borderRadius: '7px',
-              gap: '3px',
-            }}
+        {/* Center: view selector — native Tailwind pill (no WebGL, no solid cyan fill) */}
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="bg-[#181A22] text-zinc-100 font-medium text-xs border border-white/15 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-sm hover:border-white/25 transition-all"
+            aria-label="Selector de vista del espacio de trabajo"
+            aria-current="page"
+            title="Timeline"
           >
-            <button
-              onClick={() => setShowConstellation(false)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: !showConstellation ? 600 : 500,
-                color: !showConstellation ? '#ffffff' : '#9da5b4',
-                backgroundColor: !showConstellation ? '#1a1e2b' : 'transparent',
-                border: !showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                boxShadow: !showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Layers size={14} strokeWidth={1.5} color={!showConstellation ? '#818cf8' : 'var(--text-muted)'} />
-              <span>Secuenciador</span>
-            </button>
+            <Layers size={13} strokeWidth={1.5} color="#a1a1aa" />
+            <span>Timeline</span>
+          </button>
+        </div>
 
-            <button
-              onClick={() => setShowConstellation(true)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: showConstellation ? 600 : 500,
-                color: showConstellation ? '#ffffff' : '#9da5b4',
-                backgroundColor: showConstellation ? '#1a1e2b' : 'transparent',
-                border: showConstellation ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid transparent',
-                boxShadow: showConstellation ? '0 1px 3px rgba(0, 0, 0, 0.35)' : 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <Network size={14} strokeWidth={1.5} color={showConstellation ? '#818cf8' : 'var(--text-muted)'} />
-              <span>Red Orbital</span>
-            </button>
-          </div>
-        </BorderGlow>
-
-        {/* Right: Refined Matte Toolbar (Exportar, Ajustes) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Export button with React Bits Specular Glow */}
-          <GlowButton
-            variant="specular"
-            glowRadius="7px"
+        {/* Right: Quiet ghost actions (Exportar, Ajustes) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            type="button"
             onClick={() => setIsExportOpen(true)}
             title="Exportar y compilar manuscrito (.docx, .md, .txt, .json)"
-            style={{ height: '30px' }}
+            className="btn-ghost-pill"
           >
             <Download size={14} strokeWidth={1.5} />
             <span>Exportar</span>
-          </GlowButton>
+          </button>
 
-          {/* Settings button */}
           <button
+            type="button"
             onClick={() => setIsSettingsOpen(true)}
             aria-label="Ajustes"
             title="Configuración de la Estación"
-            style={{
-              padding: '0 12px',
-              height: '30px',
-              borderRadius: '7px',
-              fontSize: '11.5px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#cbd5e1',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
-              e.currentTarget.style.color = '#cbd5e1';
-            }}
+            className="btn-ghost-pill"
           >
             <Settings size={14} strokeWidth={1.5} />
             <span>Ajustes</span>
@@ -984,7 +1044,7 @@ export function App() {
           style={{
             flex: 1,
             display: 'flex',
-            gap: '12px',
+            gap: '6px',
             padding: '12px 14px 14px 14px',
             overflow: 'hidden',
             minHeight: 0,
@@ -992,7 +1052,7 @@ export function App() {
           }}
         >
           {/* 2. UNIFIED LEFT NAVIGATOR (max 320px: [Binder] · [Estructura] · [Metas]) */}
-          {isLeftNavOpen && !showConstellation && (
+          {isLeftNavOpen && (
             <ManuscriptBinder
               scenes={scenes}
               tracks={tracks}
@@ -1014,79 +1074,127 @@ export function App() {
               onShowAnalytics={() => {
                 setStatus('Analítica de Ritmo: Gary Provost variance index en 5.4.');
               }}
+              width={binderWidth}
             />
           )}
 
-          {/* Center Stage: Timeline Canvas and Radial Constellation */}
+          {/* Left Binder Splitter Handle */}
+          {isLeftNavOpen && (
+            <div
+              onMouseDown={handleBinderMouseDown}
+              onDoubleClick={handleResetBinderWidth}
+              className="binder-resize-splitter"
+              title="Arrastrar para redimensionar el Binder · Doble clic para restablecer (320px)"
+              style={{
+                width: '8px',
+                margin: '0 -1px',
+                cursor: 'col-resize',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                zIndex: 26,
+                userSelect: 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: '2px',
+                  height: isResizingBinder ? '100%' : '32px',
+                  borderRadius: '2px',
+                  backgroundColor: isResizingBinder ? 'var(--accent-indigo)' : 'rgba(255, 255, 255, 0.12)',
+                  transition: 'background-color 0.15s ease, height 0.15s ease',
+                }}
+              />
+            </div>
+          )}
+
+          {/* Center Stage: Timeline DAW Canvas */}
           <section
             style={{
               flex: 1,
-              backgroundColor: 'var(--bg-surface)',
-              border: '1px solid var(--border-default)',
-              borderRadius: '10px',
+              backgroundColor: 'rgba(15, 17, 24, 0.8)',
+              backdropFilter: 'blur(24px) saturate(1.35)',
+              WebkitBackdropFilter: 'blur(24px) saturate(1.35)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
               overflow: 'hidden',
               position: 'relative',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+              boxShadow:
+                'inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 10px 30px -10px rgba(0, 0, 0, 0.8)',
               minWidth: 0,
             }}
           >
-            {/* Timeline DAW Canvas View */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                visibility: showConstellation ? 'hidden' : 'visible',
-                opacity: showConstellation ? 0 : 1,
-                pointerEvents: showConstellation ? 'none' : 'auto',
-                transition: 'opacity 0.15s ease, visibility 0.15s ease',
-              }}
-            >
-              <ErrorBoundary>
-                <DawCanvas
-                  tracks={tracks}
-                  scenes={scenes}
-                  anchors={anchors}
-                  selectedSceneId={selectedSceneId}
-                  onSelectScene={handleSelectScene}
-                  onMoveScene={handleMoveScene}
-                  onCreateScene={handleCreateScene}
-                  onDeleteScene={handleDeleteScene}
-                  onToggleMuteTrack={handleToggleMuteTrack}
-                  onCreateAnchor={handleCreateAnchor}
-                  onDuplicateScene={handleDuplicateScene}
-                  onSplitScene={handleSplitScene}
-                  onUpdateSceneTitle={handleUpdateSceneTitle}
-                  onCreateTrackClick={() => setIsCreateTrackOpen(true)}
-                />
-              </ErrorBoundary>
-            </div>
-
-            {/* Radial Constellation View */}
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                visibility: showConstellation ? 'visible' : 'hidden',
-                opacity: showConstellation ? 1 : 0,
-                pointerEvents: showConstellation ? 'auto' : 'none',
-                transition: 'opacity 0.15s ease, visibility 0.15s ease',
-              }}
-            >
-              <RadialConstellation
-                projectPath={projectPath}
-                projectId={project?.id || 'mock-proj-1'}
+            <ErrorBoundary>
+              <DawCanvas
+                tracks={tracks}
                 scenes={scenes}
+                anchors={anchors}
                 selectedSceneId={selectedSceneId}
-                onSelectScene={(sceneId) => setSelectedSceneId(sceneId)}
-                onClose={() => setShowConstellation(false)}
+                onSelectScene={handleSelectScene}
+                onMoveScene={handleMoveScene}
+                onCreateScene={handleCreateScene}
+                onDeleteScene={handleDeleteScene}
+                onToggleMuteTrack={handleToggleMuteTrack}
+                onCreateAnchor={handleCreateAnchor}
+                onDuplicateScene={handleDuplicateScene}
+                onSplitScene={handleSplitScene}
+                onUpdateSceneTitle={handleUpdateSceneTitle}
+                onCreateTrackClick={() => setIsCreateTrackOpen(true)}
+              />
+            </ErrorBoundary>
+
+            {/* S1 — crystal bevel: inset top highlight above the canvas */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: 'inherit',
+                boxShadow: 'inset 0 1px 0 0 rgba(255, 255, 255, 0.12)',
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            />
+          </section>
+
+          {/* Right Editor Splitter Handle */}
+          {selectedScene && (
+            <div
+              onMouseDown={handleEditorMouseDown}
+              onDoubleClick={handleResetEditorWidth}
+              className="editor-resize-splitter"
+              title="Arrastrar para redimensionar el Editor · Doble clic para restablecer (420px)"
+              style={{
+                width: '8px',
+                margin: '0 -1px',
+                cursor: 'col-resize',
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                zIndex: 26,
+                userSelect: 'none',
+              }}
+            >
+              <div
+                style={{
+                  width: '2px',
+                  height: isResizingEditor ? '100%' : '32px',
+                  borderRadius: '2px',
+                  backgroundColor: isResizingEditor ? 'var(--accent-indigo)' : 'rgba(255, 255, 255, 0.12)',
+                  transition: 'background-color 0.15s ease, height 0.15s ease',
+                }}
               />
             </div>
-          </section>
+          )}
 
           {/* Right Stage: Atomic Editor (Displayed smoothly with fluid drawer transition) */}
           <aside
             style={{
-              width: selectedScene ? '420px' : '0px',
+              width: selectedScene ? `${editorWidth}px` : '0px',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -1094,7 +1202,9 @@ export function App() {
               opacity: selectedScene ? 1 : 0,
               visibility: selectedScene ? 'visible' : 'hidden',
               transform: selectedScene ? 'translateX(0)' : 'translateX(16px)',
-              transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s',
+              transition: isResizingEditor
+                ? 'none'
+                : 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.22s', // transition: 'width 0.22s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
           >
             {selectedScene && (
